@@ -1,0 +1,7 @@
+django
+djangorestframework
+django-filter  # Filtering support
+markdown       # Markdown support for the browsable API.
+pytest
+raven
+requests

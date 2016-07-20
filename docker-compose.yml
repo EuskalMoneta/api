@@ -1,0 +1,88 @@
+version: '2'
+services:
+  api:
+    build: src/api
+    volumes:
+      - ./src/api/euskoapi:/usr/src/app
+    ports:
+      - 8000:8000
+    depends_on:
+      - dolibarr-app
+    links:
+      - dolibarr-app
+
+  dolibarr-app:
+    build: src/dolibarr
+    ports:
+      - 8080:80
+    volumes:
+      # - ./src/dolibarr/htdocs:/var/www/html
+      - ./data/documents:/var/www/documents
+    links:
+      - dolibarr-db
+    depends_on:
+      - dolibarr-db
+
+  dolibarr-db:
+    image: mariadb:10.1
+    ports:
+      - 3306:3306
+    volumes:
+      - ./log/mariadb:/var/log/mysql
+      - ./data/mariadb:/var/lib/mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=pass
+      - MYSQL_DATABASE=pass
+      - MYSQL_USER=pass
+      - MYSQL_PASSWORD=pass
+
+  sentry-redis:
+    image: redis
+
+  sentry-postgres:
+    image: postgres
+    environment:
+      - POSTGRES_PASSWORD=sentry
+      - POSTGRES_USER=sentry
+    volumes:
+      - ./data/postgresql:/var/lib/postgresql/data
+
+  sentry:
+    image: sentry
+    environment:
+      - SENTRY_SECRET_KEY="x4^nd^1k9k8=8#sa1$gu72p-g15a(ft8(d@jy@^d$ec!oe!"
+      - SENTRY_POSTGRES_HOST=sentry-postgres
+      - SENTRY_DB_USER=sentry
+      - SENTRY_DB_PASSWORD=sentry
+      - SENTRY_REDIS_HOST=sentry-redis
+    links:
+      - sentry-redis:redis
+      - sentry-postgres:postgres
+    ports:
+      - "8081:9000"
+
+  sentry-cron:
+    image: sentry
+    environment:
+      - SENTRY_SECRET_KEY="x4^nd^1k9k8=8#sa1$gu72p-g15a(ft8(d@jy@^d$ec!oe!"
+      - SENTRY_POSTGRES_HOST=sentry-postgres
+      - SENTRY_DB_USER=sentry
+      - SENTRY_DB_PASSWORD=sentry
+      - SENTRY_REDIS_HOST=sentry-redis
+    links:
+      - sentry-redis:redis
+      - sentry-postgres:postgres
+    command: sentry run cron
+
+  sentry-worker:
+    image: sentry
+    environment:
+      - SENTRY_SECRET_KEY="x4^nd^1k9k8=8#sa1$gu72p-g15a(ft8(d@jy@^d$ec!oe!"
+      - SENTRY_POSTGRES_HOST=sentry-postgres
+      - SENTRY_DB_USER=sentry
+      - SENTRY_DB_PASSWORD=sentry
+      - SENTRY_REDIS_HOST=sentry-redis
+    links:
+      - sentry-redis:redis
+      - sentry-postgres:postgres
+    command: sentry run worker

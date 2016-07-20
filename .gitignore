@@ -1,0 +1,12 @@
+*.pyc
+*.db
+
+data/
+log/
+old/
+
+db.sqlite3
+
+eusko.sublime-project
+eusko.sublime-workspace
+CR.md
