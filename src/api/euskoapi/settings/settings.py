@@ -33,6 +33,7 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'members',
 
+    'corsheaders',
     'raven.contrib.django.raven_compat',
     'rest_framework',
 
@@ -44,6 +45,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE_CLASSES = [
+    'corsheaders.middleware.CorsMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -127,6 +130,9 @@ STATIC_URL = '/static/'
 DOLIBARR_URL = 'http://dolibarr-app/api/index.php'
 CYCLOS_URL = 'http://cyclos-app:7000/toto'
 
+CORS_ORIGIN_WHITELIST = [
+    'localhost:8001',
+]
 
 # Raven + Logging
 RAVEN_CONFIG = {
