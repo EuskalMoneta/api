@@ -1,5 +1,7 @@
 *.pyc
 *.db
+.~lock*
+.cache/
 
 data/
 log/

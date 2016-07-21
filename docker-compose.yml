@@ -1,5 +1,15 @@
 version: '2'
 services:
+
+  bureaudechange:
+    build: src/bureaudechange
+    volumes:
+      - ./src/bureaudechange:/usr/src/app
+    ports:
+      - 8001:8000
+    links:
+      - api
+
   api:
     build: src/api
     volumes:

@@ -1,0 +1,4 @@
+django
+pytest
+raven
+selenium

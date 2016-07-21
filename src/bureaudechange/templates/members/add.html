@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% load i18n %}
+
+{% block container %}
+  <div class="container">
+    <div class="form-group row{% if errors %} has-danger{% endif %}">
+        <p>{{ form }}</p>
+
+        {% for error in errors %}
+          <p class="alert alert-danger">{{ error }}</p>
+        {% endfor %}
+      </div>
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+{% endblock %}
