@@ -1,5 +1,5 @@
-{% load staticfiles %}
-{% load i18n %}
+{% load render_bundle from webpack_loader %}
+{% load staticfiles i18n %}
 <!DOCTYPE html>
 <html lang="{{ LANGUAGE_CODE }}">
 <head>
@@ -13,11 +13,6 @@
   <link rel="stylesheet" href="{% static 'css/style.css' %}" media="screen">
   {% block extra_css %}
   {% endblock %}
-  <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
-  <!--[if lt IE 9]>
-    <script src="{% static 'js/html5shiv.min.js' %}"></script>
-    <script src="{% static 'js/respond.min.js' %}"></script>
-  <![endif]-->
 </head>
 <body>
   <div class="navbar navbar-default navbar-fixed-top">
@@ -76,11 +71,10 @@
         </div>
       </footer>
   </div>
-  <script src="{% static 'js/jquery-1.11.2.min.js' %}"></script>
-  <script src="{% static 'js/bootstrap.min.js' %}"></script>
-  <script src="{% static 'js/moment-with-locales.min.js' %}"></script>
-  <script src="{% static 'js/bootstrap3-typeahead.min.js' %}"></script>
-  <script>
+  {% render_bundle 'main' %}
+  {% block extra_js %}
+  {% endblock %}
+<!--   <script>
     $(function()
     {
       // Appel vers la vue générique d'i18n de Django
@@ -108,8 +102,6 @@
            });
       });
     });
-  </script>
-  {% block extra_js %}
-  {% endblock %}
+  </script> -->
   </body>
   </html>

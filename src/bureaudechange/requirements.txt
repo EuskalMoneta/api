@@ -2,3 +2,4 @@ django
 pytest
 raven
 selenium
+django-webpack-loader

@@ -4,7 +4,7 @@ from selenium import webdriver
 
 
 class BaseTestCase(unittest.TestCase):
-    """docstring for BaseTestCase
+    """ BaseTestCase
     """
 
     def __init__(self, *args, **kwargs):

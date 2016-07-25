@@ -2,7 +2,7 @@ from base.tests import BaseTestCase
 
 
 class TestMembers(BaseTestCase):
-    """ docstring for TestMembers
+    """ TestMembers
     """
 
     def setUp(self):

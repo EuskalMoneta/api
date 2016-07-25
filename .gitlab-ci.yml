@@ -1,0 +1,28 @@
+image: gitlab/dind
+
+
+variables:
+  CONTAINER_IMAGE: sources.meta-it.fr:4567/euskal-moneta/eusko
+  CONTAINER_TEST_IMAGE: sources.meta-it.fr:4567/euskal-moneta/eusko:$CI_BUILD_REF
+
+before_script:
+  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN sources.meta-it.fr:4567
+
+stages:
+  - build
+  - test
+
+build:
+  stage: build
+  script:
+    - docker build -t $CONTAINER_TEST_IMAGE .
+    - docker push $CONTAINER_TEST_IMAGE
+  tags:
+    - dind
+
+test:
+  script:
+    - bash test.sh
+  stage: test
+  tags:
+    - dind

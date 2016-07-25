@@ -8,7 +8,18 @@ log/
 old/
 
 db.sqlite3
-
+CR.md
 eusko.sublime-project
 eusko.sublime-workspace
-CR.md
+
+# NodeJS / npm
+
+## webpack & bundles
+bundles/
+webpack-stats.json
+
+## Dependency directories
+node_modules/
+
+## Optional npm cache directory
+.npm/
