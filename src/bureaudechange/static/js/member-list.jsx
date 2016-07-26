@@ -1,5 +1,3 @@
-var React = require('react')
-
 const MemberList = React.createClass({
     getInitialState: function() {
         return {data: []};
@@ -61,7 +59,7 @@ const Member = React.createClass({
     }
 });
 
-module.exports = {
-    memberlist: MemberList,
-    member: Member
-}
+ReactDOM.render(
+    <MemberList url="http://localhost:8000/members/?format=json" />,
+    document.getElementById('member-list')
+)

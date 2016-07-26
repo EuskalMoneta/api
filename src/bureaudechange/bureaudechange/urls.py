@@ -34,6 +34,7 @@ urlpatterns = [
 
     # our bureau de change Django apps
     url(r'^members/?$', members_views.index),
+    url(r'^members/list$', members_views.index),
     url(r'^members/add$', members_views.add),
 
     url(r'^admin/', admin.site.urls),
