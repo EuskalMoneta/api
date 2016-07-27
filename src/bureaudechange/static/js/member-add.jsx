@@ -60,8 +60,9 @@ class MemberAddPage extends React.Component {
 
         // Default state
         this.state = {
-            canSubmit: false
-        };
+            canSubmit: false,
+            birth: moment().set({'year': 1980, 'month': 0, 'date': 1})  // !! month 0 = January
+        }
     }
 
     enableButton = () => {
@@ -76,22 +77,37 @@ class MemberAddPage extends React.Component {
         });
     }
 
-    submitForm = (data) => {
-        console.log(data);
-        return data;
-
-        $.ajax({
-            type: this.props.method,
-            url: this.props.url,
-            dataType: 'json',
-            success: function(data)
-            {
-              this.setState({data: data.results});
-            }.bind(this),
-            error: function(xhr, status, err) {
-              console.error(this.props.url, status, err.toString());
-            }.bind(this),
+    handleBirthChange = (date) => {
+        this.setState({
+          birth: date
         });
+    }
+
+    submitForm = (data) => {
+        // We push the 'birth' field into the data passed at the server
+        data['birth'] = document.querySelector('[data-eusko="memberaddform-birth"] > div > input').value
+
+        fetch(this.props.url,
+        {
+            body: JSON.stringify(data),
+            method: this.props.method,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(function(response) {
+            console.log(response)
+            return response.json()
+        })
+        .then(function(json) {
+            console.log(json)
+            this.setState({data: json.results})
+        }.bind(this))
+        .catch(function(err) {
+            // Error during parsing :(
+            console.error(this.props.url, err)
+        }.bind(this))
     }
 
     render = () => {
@@ -121,7 +137,7 @@ class MemberAddPage extends React.Component {
                             placeholder="N° adhérent (Exxxxx)"
                             validations="isMemberIdEusko"
                             validationErrors={{
-                                isMemberIdEusko: "Ceci n'est pas un N° adhérent Eusko."
+                                isMemberIdEusko: "Ceci n'est pas un N° adhérent Eusko valide."
                             }}
                             required
                         />
@@ -163,12 +179,15 @@ class MemberAddPage extends React.Component {
                                 Date de naissance
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9">
+                            <div className="col-sm-9 memberaddform-birth" data-eusko="memberaddform-birth">
                                 <DatePicker
                                     name="birth"
                                     className="form-control"
-                                    data-eusko="memberaddform-birth"
                                     placeholderText="Date de naissance"
+                                    selected={this.state.birth}
+                                    onChange={this.handleBirthChange}
+                                    showYearDropdown
+                                    locale="fr"
                                     required
                                 />
                             </div>
@@ -242,6 +261,6 @@ class MemberAddPage extends React.Component {
 
 
 ReactDOM.render(
-    <MemberAddPage url="http://localhost:8000/members" method="POST" />,
+    <MemberAddPage url="http://localhost:8000/members/" method="POST" />,
     document.getElementById('member-add')
 );

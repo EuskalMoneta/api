@@ -1,6 +1,7 @@
 // require our dependencies
 var webpack = require('webpack')
 
+
 module.exports = {
     // the base directory (absolute path) for resolving the entry option
     context: __dirname,
@@ -9,16 +10,17 @@ module.exports = {
     // your current directory. You don't have to specify the extension  now,
     // because you will specify extensions later in the `resolve` section
 
-    entry: {Base : './static/js/base', // Your global app's entry point
+    entry: {
+            Base : './static/js/base', // Your global app's entry point
             MemberList : './static/js/member-list',
             MemberAdd : './static/js/member-add'
             },
 
     output: {
         // where you want your compiled bundle to be stored
-        path: './static/js/bundles/',
+        path: './static/bundles/',
         // naming convention webpack should use for your files
-        filename: '[name].js',
+        filename: 'js/[name].js',
     },
 
     plugins: [
@@ -26,15 +28,14 @@ module.exports = {
         new webpack.NoErrorsPlugin(),
         // makes our dependencies available in every module
         new webpack.ProvidePlugin({
-            $: 'jquery',
-            jQuery: 'jquery',
-            'window.jQuery': 'jquery',
+            Promise: 'imports?this=>global!exports?global.Promise!es6-promise',
+            fetch: 'imports?this=>global!exports?global.fetch!whatwg-fetch',
             React: 'react',
             ReactDOM: 'react-dom',
             Formsy: 'formsy-react',
             FRC: 'formsy-react-components',
             moment: 'moment'
-        })
+        }),
     ],
 
     module: {
@@ -49,8 +50,20 @@ module.exports = {
                 // use the babel loader
                 loader: 'babel'
             },
-            { test: /\.css$/, exclude: /\.useable\.css$/, loader: "style!css" },
-            { test: /\.useable\.css$/, loader: "style/useable!css" }
+            // Classic CSS + SASS preprocessor
+            {
+                test: /\.css$/,
+                exclude: /\.useable\.css$/,
+                loaders: ['style', 'css']
+            },
+            {
+                test: /\.useable\.css$/,
+                loaders: ['style/useable', 'css']
+            },
+            {
+                test: /\.scss$/,
+                loaders: ["style", "css?sourceMap", "sass?sourceMap"]
+            }
         ]
     },
 

@@ -3,22 +3,24 @@ const MemberList = React.createClass({
         return {data: []};
     },
     componentDidMount: function() {
-        $.ajax({
-            type: "get",
-            // URL que l'on va requeter
-            url: this.props.url,
-            // Données à passer pour faire une recherche
-            dataType: 'json',
-            // Fonction exécutée en cas de réussite de la requete,
-            // la var data étant ce que l'on a récupéré comme résultat
-            success: function(data)
-            {
-                this.setState({data: data.results});
-            }.bind(this),
-            error: function(xhr, status, err) {
-                console.error(this.props.url, status, err.toString());
-            }.bind(this),
-        });
+        fetch(this.props.url,
+        {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(function(response) {
+            return response.json()
+        })
+        .then(function(json) {
+            this.setState({data: json.results})
+        }.bind(this))
+        .catch(function(err) {
+            // Error during parsing :(
+            console.error(this.props.url, err)
+        }.bind(this))
     },
     render: function() {
         // loop over this.props.data

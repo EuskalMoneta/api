@@ -1,0 +1,7 @@
+// Adjust the size for the "birthdate" field in MemberAddForm
+
+.memberaddform-birth {
+  .react-datepicker__input-container {
+    display: block;
+  }
+}
