@@ -20,9 +20,23 @@ class BaseAPIView(viewsets.ViewSet):
         objects = self.dolibarr.get(model=self.model)
         paginator = CustomPagination()
         result_page = paginator.paginate_queryset(objects, request)
-        serializer = MemberSerializer(result_page, many=True)
 
+        serializer = MemberSerializer(result_page, many=True)
+        # Return a 400 response if the data was invalid
+        serializer.is_valid(raise_exception=True)
         return paginator.get_paginated_response(serializer.data)
 
     def retrieve(self, request, pk=None):
         return Response(self.dolibarr.get(model=self.model, id=pk))
+
+    def create(self, request):
+        pass
+
+    def update(self, request, pk=None):
+        pass
+
+    def partial_update(self, request, pk=None):
+        pass
+
+    def destroy(self, request, pk=None):
+        pass

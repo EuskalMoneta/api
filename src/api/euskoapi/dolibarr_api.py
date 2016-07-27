@@ -31,22 +31,22 @@ class DolibarrAPI(object):
 
         return r.json()
 
-    def post(self, model, id=None):
+    def post(self, model, data, id=None):
         if id:
             query = '{}/{}/{}?api_key={}'.format(self.url, model, id, self.api_key)
         else:
             query = '{}/{}?api_key={}'.format(self.url, model, self.api_key)
 
-        r = requests.post(query, headers={'content-type': 'application/json'})
+        r = requests.post(query, json=data, headers={'content-type': 'application/json'})
         return r.json()
 
-    def patch(self, model, id=None):
+    def patch(self, model, data, id=None):
         if id:
             query = '{}/{}/{}?api_key={}'.format(self.url, model, id, self.api_key)
         else:
             query = '{}/{}?api_key={}'.format(self.url, model, self.api_key)
 
-        r = requests.patch(query, headers={'content-type': 'application/json'})
+        r = requests.patch(query, json=data, headers={'content-type': 'application/json'})
         return r.json()
 
     def delete(self, model, id=None):

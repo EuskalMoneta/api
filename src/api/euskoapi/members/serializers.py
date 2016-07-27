@@ -4,7 +4,7 @@ from rest_framework import serializers
 
 class ArrayOptionsSerializer(serializers.Serializer):
 
-    options_recevoir_actus = serializers.BooleanField()
+    options_recevoir_actus = serializers.BooleanField(read_only=True)
 
 
 class MemberSerializer(serializers.Serializer):
@@ -29,6 +29,7 @@ class MemberSerializer(serializers.Serializer):
     phone_mobile = serializers.CharField(allow_null=True)
     email = serializers.EmailField(allow_blank=True)
     array_options = ArrayOptionsSerializer()  # contient le champ "newsletter": (recevoir_actus)
+    options_recevoir_actus = serializers.BooleanField(write_only=True)
     # TODO Ajouter association parainée
     # fk_asso = serializers.CharField()
 
