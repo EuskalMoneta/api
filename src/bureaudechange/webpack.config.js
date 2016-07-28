@@ -14,7 +14,7 @@ module.exports = {
             Base : './static/js/base', // Your global app's entry point
             MemberList : './static/js/member-list',
             MemberAdd : './static/js/member-add'
-            },
+    },
 
     output: {
         // where you want your compiled bundle to be stored

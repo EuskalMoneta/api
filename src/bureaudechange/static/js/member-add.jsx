@@ -1,4 +1,4 @@
-const { Checkbox, Input, Select, File, RadioGroup, Row } = FRC;
+const { Input, RadioGroup, Row } = FRC;
 
 import DatePicker from 'react-datepicker'
 require('react-datepicker/dist/react-datepicker.css');
@@ -79,12 +79,12 @@ class MemberAddPage extends React.Component {
 
     handleBirthChange = (date) => {
         this.setState({
-          birth: date
+            birth: date
         });
     }
 
     submitForm = (data) => {
-        // We push the 'birth' field into the data passed at the server
+        // We push the 'birth' field into the data passed to the server
         data['birth'] = document.querySelector('[data-eusko="memberaddform-birth"] > div > input').value
 
         fetch(this.props.url,
@@ -96,18 +96,18 @@ class MemberAddPage extends React.Component {
                 'Content-Type': 'application/json'
             }
         })
-        .then(function(response) {
+        .then(response => {
             console.log(response)
             return response.json()
         })
-        .then(function(json) {
+        .then(json => {
             console.log(json)
             this.setState({data: json.results})
-        }.bind(this))
-        .catch(function(err) {
+        })
+        .catch(err => {
             // Error during parsing :(
             console.error(this.props.url, err)
-        }.bind(this))
+        })
     }
 
     render = () => {
@@ -202,6 +202,42 @@ class MemberAddPage extends React.Component {
                             required
                         />
                         <Input
+                            name="town"
+                            data-eusko="memberaddform-town"
+                            value=""
+                            label="Ville"
+                            type="text"
+                            placeholder="Ville"
+                            required
+                        />
+                        <Input
+                            name="zip"
+                            data-eusko="memberaddform-zip"
+                            value=""
+                            label="Code Postal"
+                            type="text"
+                            placeholder="Code Postal"
+                            required
+                        />
+                        <Input
+                            name="state_id"
+                            data-eusko="memberaddform-state_id"
+                            value=""
+                            label="Département"
+                            type="text"
+                            placeholder="Département"
+                            required
+                        />
+                        <Input
+                            name="country_id"
+                            data-eusko="memberaddform-country_id"
+                            value=""
+                            label="Pays"
+                            type="text"
+                            placeholder="Pays"
+                            required
+                        />
+                        <Input
                             name="phone"
                             data-eusko="memberaddform-phone"
                             value=""
@@ -229,7 +265,7 @@ class MemberAddPage extends React.Component {
                             required
                         />
                         <RadioGroup
-                            name="options-recevoir-actus"
+                            name="options_recevoir_actus"
                             data-eusko="memberaddform-options-recevoir-actus"
                             type="inline"
                             label="Souhaite être informé des actualités liées à l'eusko"

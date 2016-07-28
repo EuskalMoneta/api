@@ -11,16 +11,16 @@ const MemberList = React.createClass({
                 'Content-Type': 'application/json'
             }
         })
-        .then(function(response) {
+        .then(response => {
             return response.json()
         })
-        .then(function(json) {
+        .then(json => {
             this.setState({data: json.results})
-        }.bind(this))
-        .catch(function(err) {
+        })
+        .catch(err => {
             // Error during parsing :(
             console.error(this.props.url, err)
-        }.bind(this))
+        })
     },
     render: function() {
         // loop over this.props.data
