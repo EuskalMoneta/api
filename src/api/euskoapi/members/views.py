@@ -1,5 +1,6 @@
 import datetime
 import logging
+import time
 
 from rest_framework import status
 from rest_framework.response import Response
@@ -54,19 +55,13 @@ class MembersAPIView(BaseAPIView):
         """
         We need to validate the birthdate format.
         """
-        # validate format dateformat
+        datetime_birthdate = {}
         try:
-            datetime.datetime.strptime(birthdate, '%d/%m/%Y')
+            datetime_birthdate = datetime.datetime.strptime(birthdate, '%d/%m/%Y')
         except ValueError:
-            raise ValueError("Incorrect data format, should be DD-MM-YYYY")
+            raise ValueError("Incorrect data format, should be DD/MM/YYYY")
 
-        res = "{} 00:00:00".format(birthdate)
-
-        try:
-            datetime.datetime.strptime(res, '%d/%m/%Y %H:%M:%S')
-        except ValueError:
-            raise ValueError("Incorrect data format, should be DD-MM-YYYY HH:MM:SS")
-
+        res = int(time.mktime(datetime_birthdate.timetuple()))
         return res
 
     def _validate_options(self, data):
