@@ -40,7 +40,7 @@ class DolibarrAPI(object):
         if api_response.status_code == requests.codes.ok:
             response_data = api_response.json()
         else:
-            log.critical('Dolibarr API Exception: {}'.format(api_response))
+            log.critical('Dolibarr API Exception: {} - {}'.format(api_response, api_response.text))
             raise DolibarrAPIException(detail='Dolibarr API Exception')
 
         # We don't have errors in our response, we can go on... and handle the response in our view.

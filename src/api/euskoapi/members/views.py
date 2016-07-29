@@ -1,5 +1,7 @@
+import datetime
 import logging
 
+from rest_framework import status
 from rest_framework.response import Response
 
 from base_api import BaseAPIView
@@ -17,13 +19,13 @@ class MembersAPIView(BaseAPIView):
         data = request.data
         serializer = MemberSerializer(data=data)
         if serializer.is_valid():  # raise_exception=True ?
-            data = self._add_fixed_data(data)
+            data = self._validate_data(data)
         else:
             log.critical(serializer.errors)
 
         response_obj = self.dolibarr.post(model=self.model, data=data)
         log.info(response_obj)
-        return Response(response_obj)
+        return Response(response_obj, status=status.HTTP_201_CREATED)
 
     def update(self, request, pk=None):
         return Response(self.dolibarr.patch(model=self.model))
@@ -31,10 +33,7 @@ class MembersAPIView(BaseAPIView):
     def partial_update(self, request, pk=None):
         return Response(self.dolibarr.patch(model=self.model))
 
-    def destroy(self, request, pk=None):
-        return Response(self.dolibarr.delete(model=self.model))
-
-    def _add_fixed_data(self, data):
+    def _validate_data(self, data):
         """
         1. Dolibarr.llx_adherent.fk_adherent_type : typeid in the Dolibarr API = "3" (particulier)
         2. Dolibarr.llx_adherent.morphy = "phy" (personne physique)
@@ -45,10 +44,30 @@ class MembersAPIView(BaseAPIView):
         data['morphy'] = "phy"
         data['statut'] = "1"
         data['public'] = "0"
+        data['birth'] = self._validate_birthdate(data['birth'])
         data = self._validate_options(data)
         data = self._validate_phones(data)
 
         return data
+
+    def _validate_birthdate(self, birthdate):
+        """
+        We need to validate the birthdate format.
+        """
+        # validate format dateformat
+        try:
+            datetime.datetime.strptime(birthdate, '%d/%m/%Y')
+        except ValueError:
+            raise ValueError("Incorrect data format, should be DD-MM-YYYY")
+
+        res = "{} 00:00:00".format(birthdate)
+
+        try:
+            datetime.datetime.strptime(res, '%d/%m/%Y %H:%M:%S')
+        except ValueError:
+            raise ValueError("Incorrect data format, should be DD-MM-YYYY HH:MM:SS")
+
+        return res
 
     def _validate_options(self, data):
         """

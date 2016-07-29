@@ -36,5 +36,5 @@ class BaseAPIView(viewsets.ViewSet):
     def partial_update(self, request, pk=None):
         pass
 
-    def destroy(self, request, pk=None):
-        pass
+    def destroy(self, request, pk):
+        return Response(self.dolibarr.delete(model=self.model, id=pk))
