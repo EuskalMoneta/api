@@ -3,7 +3,7 @@
 
 {% block container %}
 <div class="container">
-  <form method="POST" action="{% url 'django.contrib.auth.views.login' %}" class="form-signin">
+  <form method="POST" action="{% url 'login' %}" class="form-signin">
     {% csrf_token %}
     <h2 class="form-signin-heading">{% trans "Se connecter" %}</h2>
     {% if form.errors %}

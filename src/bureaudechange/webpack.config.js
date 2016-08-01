@@ -1,5 +1,6 @@
 // require our dependencies
 var webpack = require('webpack')
+var path = require('path')
 
 
 module.exports = {
@@ -11,9 +12,9 @@ module.exports = {
     // because you will specify extensions later in the `resolve` section
 
     entry: {
-            Base : './static/js/base', // Your global app's entry point
-            MemberList : './static/js/member-list',
-            MemberAdd : './static/js/member-add'
+        Base : './static/js/base', // Your global app's entry point
+        MemberList : './static/js/member-list',
+        MemberAdd : './static/js/member-add'
     },
 
     output: {
@@ -30,14 +31,19 @@ module.exports = {
         new webpack.ProvidePlugin({
             Promise: 'imports?this=>global!exports?global.Promise!es6-promise',
             fetch: 'imports?this=>global!exports?global.fetch!whatwg-fetch',
+            Raven: 'raven-js',
             React: 'react',
             ReactDOM: 'react-dom',
+            ReactToastr: 'react-toastr',
             Formsy: 'formsy-react',
             FRC: 'formsy-react-components',
             moment: 'moment'
         }),
     ],
 
+    url: {
+        dataUrlLimit: 1024 // 1 kB
+    },
     module: {
         loaders: [
             // a regexp that tells webpack use the following loaders on all
@@ -63,12 +69,33 @@ module.exports = {
             {
                 test: /\.scss$/,
                 loaders: ["style", "css?sourceMap", "sass?sourceMap"]
+            },
+            // We want to use bootstrap
+            // Bootstrap is based on webfonts / svg and other cool things
+            // We need webpack to handle those for us
+            {
+                test: /\.svg/,
+                loader: 'svg-url-loader'
+            },
+            {
+                test: /\.woff(2)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+                loader: "url-loader?limit=10000&mimetype=application/font-woff"
+            },
+            {
+                test: /\.(ttf|eot|svg)(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+                loader: "file-loader"
             }
         ]
     },
 
     resolve: {
-        // tells webpack where to look for modules
+        root: path.resolve(__dirname),
+
+        alias: {
+            Utils: 'static/js/utils'
+        },
+
+      // tells webpack where to look for modules
         modulesDirectories: ['node_modules'],
         // extensions that should be used to resolve modules
         extensions: ['', '.js', '.jsx']

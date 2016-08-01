@@ -8,10 +8,6 @@
   <title>{% trans "Euskal Moneta" %}</title>
   <link rel="shortcut icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
   <link rel="icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
-  <link rel="stylesheet" href="{% static 'css/bootstrap.min.css' %}" media="screen">
-  <link rel="stylesheet" href="{% static 'css/style.css' %}" media="screen">
-  {% block extra_css %}
-  {% endblock %}
 </head>
 <body>
   <div class="navbar navbar-default navbar-fixed-top">
@@ -28,14 +24,14 @@
         <ul class="nav navbar-nav">
           {% if not user.is_authenticated %}
           <li>
-            <a href="{% url 'django.contrib.auth.views.login' %}">{% trans "Connexion" %}</a>
+            <a href="{% url 'login' %}">{% trans "Connexion" %}</a>
           </li>
           {% else %}
           <li>
             <a href="{% url 'home' %}">{% trans "Accueil" %}</a>
           </li>
           <li>
-            <a href="{% url 'django.contrib.auth.views.logout' %}">{% trans "Déconnexion" %}</a>
+            <a href="{% url 'logout' %}">{% trans "Déconnexion" %}</a>
           </li>
           {% endif %}
         </ul>
@@ -70,38 +66,8 @@
         </div>
       </footer>
   </div>
-  <script src="https://cdn.ravenjs.com/3.1.1/raven.min.js"></script>
   <script src="{% static 'bundles/js/Base.js' %}"></script>
   {% block extra_js %}
   {% endblock %}
-<!--   <script>
-    $(function()
-    {
-      // Appel vers la vue générique d'i18n de Django
-      // Lors du clic sur un des drapeaux...
-      $('.lang-select').click(function(e)
-      {
-        // Empeche que le navigateur ne suive l'href automatiquement
-        event.preventDefault();
-
-        if ($(this).hasClass('eu')) {
-          var lang_select = 'eu-fr';
-        }
-        else {
-          var lang_select = 'fr-fr';
-        }
-
-        $.post
-          ($(this).attr('href'),
-           {language: lang_select,
-            next: '/',
-            csrfmiddlewaretoken: '{{ csrf_token }}'},
-           function() {
-             // en cas de succès de la requête POST: redirection forcée vers l'accueil
-             top.location.href = '/';
-           });
-      });
-    });
-  </script> -->
   </body>
   </html>

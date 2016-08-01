@@ -1,7 +1,12 @@
-const { Input, RadioGroup, Row } = FRC;
+import { checkStatus, parseJSON } from 'Utils'
+
+const { Input, RadioGroup, Row } = FRC
 
 import DatePicker from 'react-datepicker'
-require('react-datepicker/dist/react-datepicker.css');
+require('react-datepicker/dist/react-datepicker.css')
+
+var { ToastContainer } = ReactToastr
+var ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
 
 
 Formsy.addValidationRule('isMemberIdEusko', (values, value) =>
@@ -85,7 +90,7 @@ class MemberAddPage extends React.Component {
 
     submitForm = (data) => {
         // We push the 'birth' field into the data passed to the server
-        data['birth'] = document.querySelector('[data-eusko="memberaddform-birth"] > div > input').value
+        data['birth'] = this.state.birth.format('DD/MM/YYYY')
 
         fetch(this.props.url,
         {
@@ -96,26 +101,35 @@ class MemberAddPage extends React.Component {
                 'Content-Type': 'application/json'
             }
         })
-        .then(response => {
-            console.log(response)
-            return response.json()
-        })
+        .then(checkStatus)
+        .then(parseJSON)
         .then(json => {
             console.log(json)
             this.setState({data: json.results})
+            this.refs.container.success(
+                "La création de l'adhérent s'est déroulée correctement.",
+                {
+                    timeOut: 3000,
+                    extendedTimeOut: 10000,
+                    closeButton:true
+                }
+            )
         })
         .catch(err => {
-            // Error during parsing :(
+            // Error during request, or parsing NOK :(
             console.error(this.props.url, err)
+            this.refs.container.error(
+                "Une erreur s'est produite lors de la création de l'adhérent !",
+                {
+                    timeOut: 3000,
+                    extendedTimeOut: 10000,
+                    closeButton:true
+                }
+            )
         })
     }
 
     render = () => {
-
-        // zip
-        // town
-        // state_id
-        // country_id
 
         return (
             <div className="row">
@@ -256,7 +270,6 @@ class MemberAddPage extends React.Component {
                             value=""
                             label="Email"
                             type="email"
-                            autoComplete="off"
                             placeholder="Email de l'adhérent"
                             validations="isEmail"
                             validationErrors={{
@@ -290,6 +303,9 @@ class MemberAddPage extends React.Component {
                         </Row>
                     </fieldset>
                 </MemberAddForm>
+                <ToastContainer ref="container"
+                                toastMessageFactory={ToastMessageFactory}
+                                className="toast-top-right" />
             </div>
         );
     }

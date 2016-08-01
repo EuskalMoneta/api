@@ -28,9 +28,9 @@ urlpatterns = [
     # home
     url(r'^$', base_views.home, name='home'),
     # login
-    url(r'^login/?$', login, {'template_name': 'login.html'}),
+    url(r'^login/?$', login, {'template_name': 'login.html'}, name='login'),
     # logout
-    url(r'^logout/?$', logout, {'next_page': reverse_lazy('home')}),
+    url(r'^logout/?$', logout, {'next_page': reverse_lazy('home')}, name='logout'),
 
     # our bureau de change Django apps
     url(r'^members/?$', members_views.index),
