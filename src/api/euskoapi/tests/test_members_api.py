@@ -7,11 +7,10 @@ class TestMembersAPI:
 
     @pytest.fixture(scope="session")
     def api(self):
-        return {'url': 'http://localhost:8000',
-                'model': 'members',
-                'headers': {'Accept': 'application/json', 'Content-Type': 'application/json'},
-                'member_created_id': int()
-                }
+        return {"url": "http://localhost:8000",
+                "model": "members",
+                "headers": {"Accept": "application/json", "Content-Type": "application/json"},
+                "member_created_id": str()}
 
     def test_1_get_all(self, api):
         query = '{}/{}/'.format(api['url'], api['model'])

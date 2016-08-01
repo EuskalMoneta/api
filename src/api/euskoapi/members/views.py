@@ -79,6 +79,7 @@ class MembersAPIView(BaseAPIView):
         1. 'phone' named "Téléphone pro"
         2. 'phone_mobile' named "Téléphone mobile"
         3. 'phone_perso' named "Téléphone personnel"
+        TODO
         """
         if data['phone'] and data['phone'].startswith(('06', '07')):
             data['phone_mobile'] = data['phone']
