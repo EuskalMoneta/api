@@ -19,7 +19,7 @@ module.exports = {
 
     output: {
         // where you want your compiled bundle to be stored
-        path: './static/bundles/',
+        path: '/usr/src/app/static/bundles/',
         // naming convention webpack should use for your files
         filename: 'js/[name].js',
     },

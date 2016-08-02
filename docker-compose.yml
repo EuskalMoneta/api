@@ -5,6 +5,8 @@ services:
     build: src/bureaudechange
     volumes:
       - ./src/bureaudechange:/usr/src/app
+      - /usr/src/app/node_modules
+      - /usr/src/app/static/bundles
     ports:
       - 8001:8000
     links:

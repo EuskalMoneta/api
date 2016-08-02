@@ -56,6 +56,15 @@ MIDDLEWARE_CLASSES = [
 
 ROOT_URLCONF = 'bureaudechange.urls'
 
+LOGIN_REDIRECT_URL = '/'
+LOGIN_URL = '/login'
+LOGOUT_URL = '/logout'
+
+LANGUAGES = (
+    ('fr-fr', 'Francais'),
+    ('eu', 'Euskara'),
+)
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -77,7 +86,6 @@ TEMPLATES = [
 TEMPLATE_VISIBLE_SETTINGS = ['LANGUAGES', 'LOGIN_REDIRECT_URL',
                              'LOGIN_URL', 'LOGOUT_URL',
                              'API_URL']
-
 
 WSGI_APPLICATION = 'bureaudechange.wsgi.application'
 
