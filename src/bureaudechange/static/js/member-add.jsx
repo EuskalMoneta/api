@@ -108,6 +108,7 @@ class MemberAddPage extends React.Component {
             this.setState({data: json.results})
             this.refs.container.success(
                 "La création de l'adhérent s'est déroulée correctement.",
+                "",
                 {
                     timeOut: 3000,
                     extendedTimeOut: 10000,
@@ -117,9 +118,10 @@ class MemberAddPage extends React.Component {
         })
         .catch(err => {
             // Error during request, or parsing NOK :(
-            console.error(this.props.url, err)
+            console.log(this.props.url, err)
             this.refs.container.error(
                 "Une erreur s'est produite lors de la création de l'adhérent !",
+                "",
                 {
                     timeOut: 3000,
                     extendedTimeOut: 10000,
@@ -216,21 +218,21 @@ class MemberAddPage extends React.Component {
                             required
                         />
                         <Input
-                            name="town"
-                            data-eusko="memberaddform-town"
-                            value=""
-                            label="Ville"
-                            type="text"
-                            placeholder="Ville"
-                            required
-                        />
-                        <Input
                             name="zip"
                             data-eusko="memberaddform-zip"
                             value=""
                             label="Code Postal"
                             type="text"
                             placeholder="Code Postal"
+                            required
+                        />
+                        <Input
+                            name="town"
+                            data-eusko="memberaddform-town"
+                            value=""
+                            label="Ville"
+                            type="text"
+                            placeholder="Ville"
                             required
                         />
                         <Input
@@ -260,7 +262,7 @@ class MemberAddPage extends React.Component {
                             placeholder="N° téléphone"
                             validations="isFrenchPhoneNumber"
                             validationErrors={{
-                                isFrenchPhoneNumber: "Ceci n'est pas un N° téléphone valide."
+                                isFrenchPhoneNumber: "Ceci n'est pas un N° téléphone valide. Exemple: 0612345678."
                             }}
                             required
                         />
