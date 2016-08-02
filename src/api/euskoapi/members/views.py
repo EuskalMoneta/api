@@ -75,14 +75,17 @@ class MembersAPIView(BaseAPIView):
 
     def _validate_phones(self, data):
         """
-        In Dolibarr, they are 3 field for phonenumbers... We want to deal with them.
+        In Dolibarr, they are 3 fields for phonenumbers... We want to deal with them.
         1. 'phone' named "Téléphone pro"
         2. 'phone_mobile' named "Téléphone mobile"
         3. 'phone_perso' named "Téléphone personnel"
-        TODO
         """
-        if data['phone'] and data['phone'].startswith(('06', '07')):
-            data['phone_mobile'] = data['phone']
+        if data['phone']:
+            if data['phone'].startswith(('06', '07')):
+                data['phone_mobile'] = data['phone']
+            else:
+                data['phone_perso'] = data['phone']
+
             del data['phone']
 
         return data
