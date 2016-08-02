@@ -17,27 +17,27 @@
 
 La méthode que j'utilise pour travailler dans cet environnement:
 
-1. Je lance tous les services
+1) Je lance tous les services
 
 ```
 docker-compose up -d
 ```
 
-2. Je stoppe ceux que je vais avoir besoin de redémarrer manuellement
+2) Je stoppe ceux que je vais avoir besoin de redémarrer manuellement
 
 ```
 docker-compose stop api
 docker-compose stop bureaudechange
 ```
 
-3. Je les relance individuellement pour pouvoir les relancer facilement
+3) Je les relance individuellement pour pouvoir les relancer facilement
 
 ```
 docker-compose up api
 docker-compose up bureaudechange
 ```
 
-4. Si vous modifiez du React (JavaScript ou JSX), il est **obligatoire** de lancer cette commande:
+4) Si vous modifiez du React (JavaScript ou JSX), il est **obligatoire** de lancer cette commande:
 
 Elle lance le watcher webpack, et c'est lui qui compile notre JSX et gère nos dépendances Web, l'output de cette commande
 est un (ou +) bundle(s) se trouvant dans `src/bureaudechange/static/bundles`.
@@ -48,7 +48,7 @@ docker-compose run bureaudechange npm run watch
 
 Il existe également 2 autres commandes:
 
-Cette commande est lancé automagiquement dans le Dockerfile du front BDC, il va lui aussi compiler et produire les output bundles (avec les dépendances de Dev), mais sans le watch évidemment.
+Cette commande est lancée automagiquement lors d'un build du docker bureaudechange (cf. Dockerfile), il va lui aussi compiler et produire les output bundles (avec les dépendances de Dev), mais sans le watch évidemment.
 
 ```
 docker-compose run bureaudechange npm run build
