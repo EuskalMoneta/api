@@ -43,6 +43,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE_CLASSES = [
+    'csp.middleware.CSPMiddleware',
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -53,6 +55,12 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.locale.LocaleMiddleware',
 ]
+
+# CSP headers
+CSP_DEFAULT_SRC = ["'self'"]
+CSP_FONT_SRC = ["'self", "http://fonts.gstatic.com"]
+CSP_SCRIPT_SRC = ["'self'"]
+CSP_STYLE_SRC = ["'self'", "'unsafe-inline'", "http://fonts.googleapis.com", "data: blob:"]
 
 ROOT_URLCONF = 'bureaudechange.urls'
 
