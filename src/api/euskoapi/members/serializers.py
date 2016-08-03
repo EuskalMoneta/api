@@ -21,7 +21,7 @@ class MemberSerializer(serializers.Serializer):
     zip = serializers.CharField()
     town = serializers.CharField()
     state = serializers.CharField(read_only=True)
-    state_id = serializers.CharField()
+    state_id = serializers.CharField(read_only=True)
     country = serializers.CharField(read_only=True)
     country_id = serializers.CharField()
     phone = serializers.CharField(allow_null=True)
