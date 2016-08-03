@@ -70,6 +70,10 @@ module.exports = {
                 test: /\.scss$/,
                 loaders: ["style", "css?sourceMap", "sass?sourceMap"]
             },
+            {
+                test: /\.json/,
+                loader: 'json-loader'
+            },
             // We want to use bootstrap
             // Bootstrap is based on webfonts / svg and other cool things
             // We need webpack to handle those for us
@@ -92,7 +96,8 @@ module.exports = {
         root: path.resolve(__dirname),
 
         alias: {
-            Utils: 'static/js/utils'
+            Utils: 'static/js/utils',
+            i18n: 'static/js/i18n'
         },
 
       // tells webpack where to look for modules

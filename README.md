@@ -30,7 +30,7 @@ docker-compose stop api
 docker-compose stop bureaudechange
 ```
 
-3) Je les relance individuellement pour pouvoir les relancer facilement
+3) Je les relance individuellement
 
 ```
 docker-compose up api
@@ -40,7 +40,7 @@ docker-compose up bureaudechange
 4) Si vous modifiez du React (JavaScript ou JSX), il est **obligatoire** de lancer cette commande:
 
 Elle lance le watcher webpack, et c'est lui qui compile notre JSX et gère nos dépendances Web, l'output de cette commande
-est un (ou +) bundle(s) se trouvant dans `src/bureaudechange/static/bundles`.
+est un (ou +) bundle(s) se trouvant dans `/assets/static/bundles` du container `bureaudechange`.
 
 ```
 docker-compose run bureaudechange npm run watch

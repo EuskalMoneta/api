@@ -1,3 +1,5 @@
+import i18n from 'i18n'
+
 import { checkStatus, parseJSON } from 'Utils'
 
 const { Input, RadioGroup, Row } = FRC
@@ -136,7 +138,7 @@ class MemberAddPage extends React.Component {
         return (
             <div className="row">
                 <div className="page-header">
-                    <h1>Adhésion</h1>
+                    <h1>{ this.props.i18n.t('key') }</h1>
                 </div>
                 <MemberAddForm
                     onValidSubmit={this.submitForm}
@@ -148,17 +150,16 @@ class MemberAddPage extends React.Component {
                             name="login"
                             data-eusko="memberaddform-login"
                             value=""
-                            label="N° adhérent (Exxxxx)"
+                            label="N° adhérent"
                             type="text"
-                            placeholder="N° adhérent (Exxxxx)"
+                            placeholder="N° adhérent"
+                            help="Format: E12345"
                             validations="isMemberIdEusko"
                             validationErrors={{
                                 isMemberIdEusko: "Ceci n'est pas un N° adhérent Eusko valide."
                             }}
                             required
                         />
-                    </fieldset>
-                    <fieldset>
                         <RadioGroup
                             name="civility_id"
                             data-eusko="memberaddform-civility_id"
@@ -236,15 +237,6 @@ class MemberAddPage extends React.Component {
                             required
                         />
                         <Input
-                            name="state_id"
-                            data-eusko="memberaddform-state_id"
-                            value=""
-                            label="Département"
-                            type="text"
-                            placeholder="Département"
-                            required
-                        />
-                        <Input
                             name="country_id"
                             data-eusko="memberaddform-country_id"
                             value=""
@@ -258,6 +250,7 @@ class MemberAddPage extends React.Component {
                             data-eusko="memberaddform-phone"
                             value=""
                             label="N° téléphone"
+                            help="Format: 0612345678"
                             type="tel"
                             placeholder="N° téléphone"
                             validations="isFrenchPhoneNumber"
@@ -315,6 +308,6 @@ class MemberAddPage extends React.Component {
 
 
 ReactDOM.render(
-    <MemberAddPage url="http://localhost:8000/members/" method="POST" />,
+    <MemberAddPage url="http://localhost:8000/members/" method="POST" i18n=i18n />,
     document.getElementById('member-add')
 );
