@@ -68,11 +68,6 @@ LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/login'
 LOGOUT_URL = '/logout'
 
-LANGUAGES = (
-    ('fr', 'Francais'),
-    ('eu', 'Euskara'),
-)
-
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -84,6 +79,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'django.template.context_processors.i18n',
                 'base.context_processors.get_django_settings',
             ],
         },
@@ -91,7 +87,7 @@ TEMPLATES = [
 ]
 
 # base.context_processors.get_django_settings needs it
-TEMPLATE_VISIBLE_SETTINGS = ['LANGUAGES', 'LOGIN_REDIRECT_URL',
+TEMPLATE_VISIBLE_SETTINGS = ['LOGIN_REDIRECT_URL',
                              'LOGIN_URL', 'LOGOUT_URL',
                              'API_URL']
 
@@ -131,8 +127,6 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
 
-LANGUAGE_CODE = 'fr-fr'
-
 TIME_ZONE = 'Europe/Paris'
 
 USE_I18N = True
@@ -140,6 +134,13 @@ USE_I18N = True
 USE_L10N = True
 
 USE_TZ = True
+
+LANGUAGE_CODE = 'fr'
+
+LANGUAGES = (
+    ('fr', 'Francais'),
+    ('eu', 'Euskara'),
+)
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.9/howto/static-files/

@@ -5,3 +5,101 @@
     display: block;
   }
 }
+
+/* base.html */
+.lang-select {
+  cursor: pointer;
+}
+
+.lang-select-flag-fr {
+  height: 14px;
+  width: 20px;
+}
+
+/* index2 */
+body {
+    padding-top: 70px;
+}
+
+/* login.html */
+
+.login {
+  background-color: #eee;
+  padding-top: 50px;
+}
+
+.form-signin {
+  max-width: 330px;
+  padding: 15px;
+  margin: 0 auto;
+  margin-top: 25px;
+}
+
+.form-signin .form-signin-heading,
+.form-signin .checkbox {
+  margin-bottom: 10px;
+}
+
+.form-signin .checkbox {
+  font-weight: normal;
+}
+
+.form-signin .form-control {
+  position: relative;
+  height: auto;
+  -webkit-box-sizing: border-box;
+     -moz-box-sizing: border-box;
+          box-sizing: border-box;
+  padding: 10px;
+  font-size: 16px;
+}
+
+.form-signin .form-control:focus { z-index: 2; }
+
+.form-signin input[type="email"] {
+  margin-bottom: -1px;
+  border-bottom-right-radius: 0;
+  border-bottom-left-radius: 0;
+}
+
+.form-signin input[type="password"] {
+  margin-bottom: 10px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+footer { margin-top: 30px; }
+
+/* index.html */
+
+.index-header { margin-top:30px; }
+
+.index-header .row {
+  margin-top: 30px;
+  margin-bottom: 30px;
+}
+
+.index-header .second-row {
+  margin-top: 50px;
+  margin-bottom: 40px;
+}
+
+.index-header button {
+  height: 150px;
+  border-radius: 16px;
+  font-size: 30px;
+}
+
+.index-header i { margin-left: 30px; }
+
+@media only screen and (max-width: 1199px) {
+  .btn-primary { margin-top: 50px; }
+}
+
+.red { color: #FF0000; }
+
+.green { color: #33CC33; }
+
+/* divers */
+
+.hidden { display:none }

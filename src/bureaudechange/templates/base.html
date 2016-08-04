@@ -35,18 +35,8 @@
           </li>
           {% endif %}
         </ul>
-        <ul class="nav navbar-nav pull-right">
-          <li>
-            <a href="/i18n/setlang/" class="lang-select eu">
-              <img class="lang-select-flag-eu" alt="Euskara" src="{% static 'img/eu.gif' %}">
-            </a>
-          </li>
-          <li>
-            <a href="/i18n/setlang/" class="lang-select fr">
-              <img class="lang-select-flag-fr" alt="Français" src="{% static 'img/fr.gif' %}">
-            </a>
-          </li>
-        </ul>
+        <div id="flags">
+        </div>
       </div>
     </div>
   </div>
@@ -66,8 +56,11 @@
         </div>
       </footer>
   </div>
-  <script src="{% static 'bundles/js/Base.js' %}"></script>
+  {% with 'bundles/js/'|add:LANGUAGE_CODE|add:'.Base.js' as base_js_static %}
+    <script src="{% static base_js_static %}"></script>
+  {% endwith %}
   {% block extra_js %}
   {% endblock %}
+  <input type="hidden" id="csrfmiddlewaretoken" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 </body>
 </html>

@@ -1,5 +1,3 @@
-import i18n from 'i18n'
-
 import { checkStatus, parseJSON } from 'Utils'
 
 const { Input, RadioGroup, Row } = FRC
@@ -9,7 +7,6 @@ require('react-datepicker/dist/react-datepicker.css')
 
 var { ToastContainer } = ReactToastr
 var ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
-
 
 Formsy.addValidationRule('isMemberIdEusko', (values, value) =>
 {
@@ -58,7 +55,7 @@ const MemberAddForm = React.createClass({
             </Formsy.Form>
         );
     }
-});
+})
 
 class MemberAddPage extends React.Component {
 
@@ -109,7 +106,7 @@ class MemberAddPage extends React.Component {
             console.log(json)
             this.setState({data: json.results})
             this.refs.container.success(
-                "La création de l'adhérent s'est déroulée correctement.",
+                __("La création de l'adhérent s'est déroulée correctement."),
                 "",
                 {
                     timeOut: 3000,
@@ -122,7 +119,7 @@ class MemberAddPage extends React.Component {
             // Error during request, or parsing NOK :(
             console.log(this.props.url, err)
             this.refs.container.error(
-                "Une erreur s'est produite lors de la création de l'adhérent !",
+                __("Une erreur s'est produite lors de la création de l'adhérent !"),
                 "",
                 {
                     timeOut: 3000,
@@ -138,7 +135,7 @@ class MemberAddPage extends React.Component {
         return (
             <div className="row">
                 <div className="page-header">
-                    <h1>{ this.props.i18n.t('key') }</h1>
+                    <h1>{__("Adhésion")}</h1>
                 </div>
                 <MemberAddForm
                     onValidSubmit={this.submitForm}
@@ -150,13 +147,13 @@ class MemberAddPage extends React.Component {
                             name="login"
                             data-eusko="memberaddform-login"
                             value=""
-                            label="N° adhérent"
+                            label={__("N° adhérent")}
                             type="text"
-                            placeholder="N° adhérent"
-                            help="Format: E12345"
+                            placeholder={__("N° adhérent")}
+                            help={__("Format: E12345")}
                             validations="isMemberIdEusko"
                             validationErrors={{
-                                isMemberIdEusko: "Ceci n'est pas un N° adhérent Eusko valide."
+                                isMemberIdEusko: __("Ceci n'est pas un N° adhérent Eusko valide.")
                             }}
                             required
                         />
@@ -164,9 +161,9 @@ class MemberAddPage extends React.Component {
                             name="civility_id"
                             data-eusko="memberaddform-civility_id"
                             type="inline"
-                            label="Civilité"
-                            options={[{value: 'MME', label: 'Madame'},
-                                     {value: 'MR', label: 'Monsieur'}
+                            label={__("Civilité")}
+                            options={[{value: 'MME', label: __('Madame')},
+                                     {value: 'MR', label: __('Monsieur')}
                             ]}
                             required
                         />
@@ -174,18 +171,18 @@ class MemberAddPage extends React.Component {
                             name="lastname"
                             data-eusko="memberaddform-lastname"
                             value=""
-                            label="Nom"
+                            label={__("Nom")}
                             type="text"
-                            placeholder="Nom"
+                            placeholder={__("Nom")}
                             required
                         />
                         <Input
                             name="firstname"
                             data-eusko="memberaddform-firstname"
                             value=""
-                            label="Prénom"
+                            label={__("Prénom")}
                             type="text"
-                            placeholder="Prénom"
+                            placeholder={__("Prénom")}
                             required
                         />
                        <div className="form-group row">
@@ -193,14 +190,14 @@ class MemberAddPage extends React.Component {
                                 className="control-label col-sm-3"
                                 data-required="true"
                                 htmlFor="memberaddform-birth">
-                                Date de naissance
+                                {__("Date de naissance")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
                             <div className="col-sm-9 memberaddform-birth" data-eusko="memberaddform-birth">
                                 <DatePicker
                                     name="birth"
                                     className="form-control"
-                                    placeholderText="Date de naissance"
+                                    placeholderText={__("Date de naissance")}
                                     selected={this.state.birth}
                                     onChange={this.handleBirthChange}
                                     showYearDropdown
@@ -213,49 +210,49 @@ class MemberAddPage extends React.Component {
                             name="address"
                             data-eusko="memberaddform-address"
                             value=""
-                            label="Adresse postale"
+                            label={__("Adresse postale")}
                             type="text"
-                            placeholder="Adresse postale"
+                            placeholder={__("Adresse postale")}
                             required
                         />
                         <Input
                             name="zip"
                             data-eusko="memberaddform-zip"
                             value=""
-                            label="Code Postal"
+                            label={__("Code Postal")}
                             type="text"
-                            placeholder="Code Postal"
+                            placeholder={__("Code Postal")}
                             required
                         />
                         <Input
                             name="town"
                             data-eusko="memberaddform-town"
                             value=""
-                            label="Ville"
+                            label={__("Ville")}
                             type="text"
-                            placeholder="Ville"
+                            placeholder={__("Ville")}
                             required
                         />
                         <Input
                             name="country_id"
                             data-eusko="memberaddform-country_id"
                             value=""
-                            label="Pays"
+                            label={__("Pays")}
                             type="text"
-                            placeholder="Pays"
+                            placeholder={__("Pays")}
                             required
                         />
                         <Input
                             name="phone"
                             data-eusko="memberaddform-phone"
                             value=""
-                            label="N° téléphone"
-                            help="Format: 0612345678"
+                            label={__("N° téléphone")}
+                            help={__("Format: 0612345678")}
                             type="tel"
-                            placeholder="N° téléphone"
+                            placeholder={__("N° téléphone")}
                             validations="isFrenchPhoneNumber"
                             validationErrors={{
-                                isFrenchPhoneNumber: "Ceci n'est pas un N° téléphone valide. Exemple: 0612345678."
+                                isFrenchPhoneNumber: __("Ceci n'est pas un N° téléphone valide. Exemple: 0612345678.")
                             }}
                             required
                         />
@@ -263,12 +260,12 @@ class MemberAddPage extends React.Component {
                             name="email"
                             data-eusko="memberaddform-email"
                             value=""
-                            label="Email"
+                            label={__("Email")}
                             type="email"
-                            placeholder="Email de l'adhérent"
+                            placeholder={__("Email de l'adhérent")}
                             validations="isEmail"
                             validationErrors={{
-                                isEmail: "Adresse email non valide"
+                                isEmail: __("Adresse email non valide")
                             }}
                             required
                         />
@@ -276,10 +273,10 @@ class MemberAddPage extends React.Component {
                             name="options_recevoir_actus"
                             data-eusko="memberaddform-options-recevoir-actus"
                             type="inline"
-                            label="Souhaite être informé des actualités liées à l'eusko"
-                            help="L'adhérent recevra un à deux mails par semaine."
-                            options={[{value: '1', label: 'Oui'},
-                                      {value: '0', label: 'Non'}
+                            label={__("Souhaite être informé des actualités liées à l'eusko")}
+                            help={__("L'adhérent recevra un à deux mails par semaine.")}
+                            options={[{value: '1', label: __('Oui')},
+                                      {value: '0', label: __('Non')}
                             ]}
                             required
                         />
@@ -290,7 +287,7 @@ class MemberAddPage extends React.Component {
                                 name="submit"
                                 data-eusko="memberaddform-submit"
                                 type="submit"
-                                defaultValue="Envoyer"
+                                defaultValue={__("Envoyer")}
                                 className="btn btn-primary"
                                 formNoValidate={true}
                                 disabled={!this.state.canSubmit}
@@ -308,6 +305,6 @@ class MemberAddPage extends React.Component {
 
 
 ReactDOM.render(
-    <MemberAddPage url="http://localhost:8000/members/" method="POST" i18n=i18n />,
+    <MemberAddPage url="http://localhost:8000/members/" method="POST" />,
     document.getElementById('member-add')
 );

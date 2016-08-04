@@ -1,4 +1,4 @@
-var checkStatus = function (response) {
+var checkStatus = (response) => {
     if (response.status >= 200 && response.status < 300) {
         return response
     } else {
@@ -8,11 +8,21 @@ var checkStatus = function (response) {
     }
 }
 
-var parseJSON = function (response) {
+var parseJSON = (response) => {
   return response.json()
+}
+
+var getCurrentLang = () => {
+  return document.documentElement.lang
+}
+
+var getCSRFToken = () => {
+    return document.getElementById('csrfmiddlewaretoken').value
 }
 
 module.exports = {
     checkStatus: checkStatus,
-    parseJSON: parseJSON
+    parseJSON: parseJSON,
+    getCurrentLang: getCurrentLang,
+    getCSRFToken: getCSRFToken
 }

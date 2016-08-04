@@ -24,6 +24,7 @@
     "font-awesome-webpack": "0.0.4",
     "formsy-react": "^0.18.1",
     "formsy-react-components": "^0.8.1",
+    "i18n-webpack-plugin": "^0.3.0",
     "imports-loader": "^0.6.5",
     "less": "^2.7.1",
     "moment": "^2.14.1",

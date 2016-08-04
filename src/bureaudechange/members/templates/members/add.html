@@ -10,5 +10,7 @@
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'bundles/js/MemberAdd.js' %}"></script>
+  {% with 'bundles/js/'|add:LANGUAGE_CODE|add:'.MemberAdd.js' as memberadd_js_static %}
+    <script src="{% static memberadd_js_static %}"></script>
+  {% endwith %}
 {% endblock %}
