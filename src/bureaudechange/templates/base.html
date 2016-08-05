@@ -1,6 +1,7 @@
 {% load staticfiles i18n %}
+{% get_current_language as CURRENT_LANG %}
 <!DOCTYPE html>
-<html lang="{{ LANGUAGE_CODE }}">
+<html lang="{{ CURRENT_LANG }}">
 <head>
   <meta charset="utf-8">
   <meta http-equiv="X-UA-Compatible" content="IE=edge">
@@ -56,7 +57,7 @@
         </div>
       </footer>
   </div>
-  {% with 'bundles/js/'|add:LANGUAGE_CODE|add:'.Base.js' as base_js_static %}
+  {% with 'bundles/js/'|add:CURRENT_LANG|add:'.Base.js' as base_js_static %}
     <script src="{% static base_js_static %}"></script>
   {% endwith %}
   {% block extra_js %}

@@ -13,7 +13,7 @@ Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
 """
-from django.conf.urls import include, url, i18n
+from django.conf.urls import url
 from django.contrib import admin
 from django.contrib.auth.views import login, logout
 from django.core.urlresolvers import reverse_lazy
@@ -22,8 +22,10 @@ from members import views as members_views
 from base import views as base_views
 
 urlpatterns = [
-    # built-in Django i18n
-    url(r'^i18n/', include(i18n)),
+    # built-in Django i18n:
+    # from django.conf.urls import include, i18n
+    # url(r'^i18n/', include(i18n)),
+    url(r'^i18n/setlang_custom/$', base_views.setlang_custom, name='setlang_custom'),
 
     # home
     url(r'^$', base_views.home, name='home'),

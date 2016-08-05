@@ -22,46 +22,46 @@ Raven.config('http://02c622eee5004e9fa9b661395e6ca409@localhost:8081/3').install
 const Flag = React.createClass({
 
     handleClick() {
-        console.log(getCurrentLang())
-        var data = {language: this.props.lang,
-                    next: '/',
-                    csrfmiddlewaretoken: getCSRFToken()}
+        var data = {language: this.props.lang}
 
-        fetch('/i18n/setlang/',
+        fetch('/i18n/setlang_custom/',
         {
-            body: JSON.stringify(data),
+            body: data,
             method: 'POST',
             credentials: 'same-origin',
             headers: {
-                'X-CSRFToken': getCSRFToken()
+                'X-CSRFToken': getCSRFToken(),
+                'Accept-Language': this.props.lang
             }
         })
-        .then(checkStatus)
+        // .then(checkStatus)
         .then(response => {
-            // refresh page + flush i18n cookie ?
-            console.log(data)
-            console.log(getCurrentLang())
-            console.log('isok')
-            // top.location.reload()
+            // refresh page
+            top.location.reload()
+            console.log('i18n lang change from ' + getCurrentLang()  + ' to:' + this.props.lang)
         })
         .catch(err => {
             // Error during request, or parsing NOK :(
-            console.log('/i18n/setlang/' + this.props.lang, err)
+            console.log('/i18n/setlang_custom/' + this.props.lang, err)
         })
     },
 
     render() {
-        return (
-            <li>
-                <a className={"lang-select " + this.props.lang}
-                   onClick={this.handleClick}>
-                    <img className={"lang-select-flag-" + this.props.lang}
-                         alt={this.props.langname}
-                         src={"/static/img/" + this.props.lang + ".gif"}
-                         />
-                </a>
-            </li>
-        )
+        // We want to hide the flag showing the current lang
+        if (this.props.lang != getCurrentLang()) {
+            return (
+                    <li>
+                        <a className={"lang-select " + this.props.lang}
+                           onClick={this.handleClick}>
+                            <img className={"lang-select-flag-" + this.props.lang}
+                                 alt={this.props.langname}
+                                 src={"/static/img/" + this.props.lang + ".gif"}
+                                 />
+                        </a>
+                    </li>
+            )
+        }
+        else { return null }
     }
 })
 

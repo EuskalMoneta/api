@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% load staticfiles i18n %}
+{% get_current_language as CURRENT_LANG %}
 
 {% block container %}
   <div class="container">
@@ -10,7 +11,7 @@
 {% endblock %}
 
 {% block extra_js %}
-  {% with 'bundles/js/'|add:LANGUAGE_CODE|add:'.MemberAdd.js' as memberadd_js_static %}
+  {% with 'bundles/js/'|add:CURRENT_LANG|add:'.MemberAdd.js' as memberadd_js_static %}
     <script src="{% static memberadd_js_static %}"></script>
   {% endwith %}
 {% endblock %}
