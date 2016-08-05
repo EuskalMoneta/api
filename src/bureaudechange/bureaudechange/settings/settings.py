@@ -34,6 +34,8 @@ INSTALLED_APPS = [
     'members',
     'base',
 
+    'raven.contrib.django.raven_compat',
+
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -151,5 +153,61 @@ STATICFILES_DIRS = (
     '/assets/',
     os.path.join(os.path.dirname(BASE_DIR), 'static'),
 )
+
+# Raven + Logging
+RAVEN_CONFIG = {
+    'dsn': 'http://02c622eee5004e9fa9b661395e6ca409:f5b69a7e169f4bd7a716d8d8f476b3c6@sentry:9000/3',
+    # If you are using git, you can also automatically configure the
+    # release based on the git info.
+    'release': 'dev',
+}
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': True,
+    'root': {
+        'level': 'DEBUG',
+        'handlers': [],
+    },
+    'formatters': {
+        'simple': {
+            'format': '%(asctime)s %(levelname)s %(name)s %(funcName)s '
+                      '%(message)s'
+        },
+        'verbose': {
+            'format': '%(levelname)s %(asctime)s %(module)s '
+                      '%(process)d %(thread)d %(message)s'
+        },
+    },
+    'handlers': {
+        'sentry': {
+            'level': 'DEBUG',
+            'class': 'raven.contrib.django.raven_compat.handlers.'
+                     'SentryHandler',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose'
+        }
+    },
+    'loggers': {
+        'all': {
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'handlers': ['sentry', 'console'],
+            'propagate': True,
+        },
+        'sentry': {
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'handlers': ['sentry'],
+            'propagate': True,
+        },
+        'console': {
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'handlers': ['console'],
+            'propagate': True,
+        },
+    },
+}
 
 API_URL = 'http://localhost:8000/'
