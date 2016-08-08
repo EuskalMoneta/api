@@ -32,6 +32,7 @@ ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
     'members',
+    'dolibarr_data',
 
     'corsheaders',
     'raven.contrib.django.raven_compat',

@@ -63,8 +63,9 @@ class DolibarrAPI(object):
             query = '{}/{}/{}?api_key={}'.format(self.url, model, id, self.api_key)
         else:
             query = '{}/{}?api_key={}'.format(self.url, model, self.api_key)
-            for key, value in kwargs.items():
-                query = "{}&{}={}".format(query, key, value)
+
+        for key, value in kwargs.items():
+            query = "{}&{}={}".format(query, key, value)
 
         r = requests.get(query, headers={'content-type': 'application/json'})
 
