@@ -11,6 +11,8 @@
   <link rel="icon" href="{% static 'img/favicon.ico' %}" type="image/x-icon">
 </head>
 <body>
+  <input type="hidden" id="csrfmiddlewaretoken" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+  <input type="hidden" id="apibaseurl" name="apibaseurl" value="{{ django_settings.API_URL }}">
   <div class="navbar navbar-default navbar-fixed-top">
     <div class="container">
       <div class="navbar-header">
@@ -62,6 +64,5 @@
   {% endwith %}
   {% block extra_js %}
   {% endblock %}
-  <input type="hidden" id="csrfmiddlewaretoken" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
 </body>
 </html>

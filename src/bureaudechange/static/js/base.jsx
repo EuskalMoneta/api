@@ -8,6 +8,7 @@ import { checkStatus, getCSRFToken, getCurrentLang } from 'Utils'
 require('../css/bootstrap.min.css')
 require('../css/animate.min.css')
 require('../css/toastr.min.css')
+require('node_modules/react-selectize/themes/index.css')
 
 // Load our base Sass stylesheet
 require('../scss/style.scss')

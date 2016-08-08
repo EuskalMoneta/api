@@ -9,20 +9,25 @@ var checkStatus = (response) => {
 }
 
 var parseJSON = (response) => {
-  return response.json()
+    return response.json()
 }
 
 var getCurrentLang = () => {
-  return document.documentElement.lang
+    return document.documentElement.lang
 }
 
 var getCSRFToken = () => {
     return document.getElementById('csrfmiddlewaretoken').value
 }
 
+var getAPIBaseURL = () => {
+    return document.getElementById('apibaseurl').value
+}
+
 module.exports = {
     checkStatus: checkStatus,
     parseJSON: parseJSON,
     getCurrentLang: getCurrentLang,
-    getCSRFToken: getCSRFToken
+    getCSRFToken: getCSRFToken,
+    getAPIBaseURL: getAPIBaseURL
 }

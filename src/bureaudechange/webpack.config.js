@@ -43,7 +43,8 @@ module.exports = Object.keys(languages).map(function(language) {
                 ReactToastr: 'react-toastr',
                 Formsy: 'formsy-react',
                 FRC: 'formsy-react-components',
-                moment: 'moment'
+                moment: 'moment',
+                "_": 'underscore'
             }),
             new I18nPlugin(
                 languages[language]

@@ -1,12 +1,16 @@
-import { checkStatus, parseJSON } from 'Utils'
+import { checkStatus, parseJSON, getAPIBaseURL } from 'Utils'
 
 const { Input, RadioGroup, Row } = FRC
 
 import DatePicker from 'react-datepicker'
 require('react-datepicker/dist/react-datepicker.css')
 
-var { ToastContainer } = ReactToastr
-var ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
+import ReactSelectize from 'react-selectize'
+const SimpleSelect = ReactSelectize.SimpleSelect
+
+const { ToastContainer } = ReactToastr
+const ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
+
 
 Formsy.addValidationRule('isMemberIdEusko', (values, value) =>
 {
@@ -65,8 +69,39 @@ class MemberAddPage extends React.Component {
         // Default state
         this.state = {
             canSubmit: false,
+            country_id: undefined,
             birth: moment().set({'year': 1980, 'month': 0, 'date': 1})  // !! month 0 = January
         }
+
+        // Get countries for the country selector
+        fetch(getAPIBaseURL() + "countries/",
+        {
+            method: 'get',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(checkStatus)
+        .then(parseJSON)
+        .then(json => {
+            var france = _.findWhere(json, {label: "France"})
+            var france = {label: france.label, value: france.id}
+
+            var res = _.chain(json)
+                .filter(function(item){ return item.active == 1 && item.code != "" &&  item.label != "France" })
+                .map(function(item){ return {label: item.label, value: item.id} })
+                .sortBy(function(item){ return item.label })
+                .value()
+
+            // We add France is first position of the Array
+            res.unshift(france)
+            this.setState({countries: res})
+        })
+        .catch(err => {
+            // Error during request, or parsing NOK :(
+            console.log(this.props.url, err)
+        })
     }
 
     enableButton = () => {
@@ -87,9 +122,76 @@ class MemberAddPage extends React.Component {
         });
     }
 
+    // zipcode / towns
+    handleZipChange = (zip) => {
+        if (zip.length >= 4) {
+            // We use fetch API to ... fetch towns for this zipcode
+            fetch(getAPIBaseURL() + "towns/?zipcode=" + zip,
+            {
+                method: 'get',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(checkStatus)
+            .then(parseJSON)
+            .then(json => {
+                console.log(json.results)
+                this.setState({townsSuggest: json.results})
+            })
+            .catch(err => {
+                // Error during request, or parsing NOK :(
+                console.log(this.props.url, err)
+            })
+
+        }
+    }
+
+    // countries
+    countriesCreateFromSearch = (options, search) => {
+        // Pretty much self explanatory:
+        // this function is called when we start typing inside the select
+        if (search.length == 0 || (options.map(function(option)
+        {
+            return option.label;
+        })).indexOf(search) > -1)
+            return null;
+        else
+            return {label: search, value: search};
+    }
+
+    countriesOnValueChange = (item) => {
+        this.setState({country: item});
+    }
+
+    countriesRenderOption = (item) => {
+        // This is how the list itself is displayed
+        return <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
+                    <div style={{
+                        backgroundColor: item.label, borderRadius: "50%", width: 24, height: 24
+                    }}></div>
+                    <div style={{marginLeft: 10}}>
+                        {!!item.newOption ? "Add " + item.label + " ..." : item.label}
+                    </div>
+                </div>
+    }
+
+    countriesRenderValue = (item) => {
+        // When we select a value, this is how we display it
+        return <div className="simple-value">
+                    <span style={{
+                        backgroundColor: item.label, borderRadius: "50%",
+                        verticalAlign: "middle", width: 24, height: 24
+                    }}></span>
+                    <span style={{marginLeft: 10, verticalAlign: "middle"}}>{item.label}</span>
+                </div>
+    }
+
     submitForm = (data) => {
         // We push the 'birth' field into the data passed to the server
         data['birth'] = this.state.birth.format('DD/MM/YYYY')
+        data['country_id'] = this.state.country_id
 
         fetch(this.props.url,
         {
@@ -220,6 +322,7 @@ class MemberAddPage extends React.Component {
                             data-eusko="memberaddform-zip"
                             value=""
                             label={__("Code Postal")}
+                            onChange={this.handleZipChange}
                             type="text"
                             placeholder={__("Code Postal")}
                             required
@@ -233,15 +336,31 @@ class MemberAddPage extends React.Component {
                             placeholder={__("Ville")}
                             required
                         />
-                        <Input
-                            name="country_id"
-                            data-eusko="memberaddform-country_id"
-                            value=""
-                            label={__("Pays")}
-                            type="text"
-                            placeholder={__("Pays")}
-                            required
-                        />
+                        <div className="form-group row">
+                            <label
+                                className="control-label col-sm-3"
+                                data-required="true"
+                                htmlFor="memberaddform-country_id">
+                                {__("Pays")}
+                                <span className="required-symbol">&nbsp;*</span>
+                            </label>
+                            <div className="col-sm-9 memberaddform-country_id" data-eusko="memberaddform-country_id">
+                                <SimpleSelect
+                                    name="country_id"
+                                    ref="select"
+                                    value={this.state.country}
+                                    options={this.state.countries}
+                                    data-eusko="memberaddform-country_id"
+                                    placeholder={__("Pays")}
+                                    theme="bootstrap3"
+                                    createFromSearch={this.countriesCreateFromSearch}
+                                    onValueChange={this.countriesOnValueChange}
+                                    renderOption={this.countriesRenderOption}
+                                    renderValue={this.countriesRenderValue}
+                                    required
+                                />
+                            </div>
+                        </div>
                         <Input
                             name="phone"
                             data-eusko="memberaddform-phone"
@@ -305,6 +424,6 @@ class MemberAddPage extends React.Component {
 
 
 ReactDOM.render(
-    <MemberAddPage url="http://localhost:8000/members/" method="POST" />,
+    <MemberAddPage url={getAPIBaseURL() + "members/"} method="POST" />,
     document.getElementById('member-add')
 );

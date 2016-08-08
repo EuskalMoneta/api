@@ -1,9 +1,14 @@
-// Adjust the size for the "birthdate" field in MemberAddForm
+// Adjust size for the "birthdate" field in MemberAddForm
 
 .memberaddform-birth {
   .react-datepicker__input-container {
     display: block;
   }
+}
+
+// Adjust size for the "country_id" field in MemberAddForm
+.react-selectize.root-node {
+  width: auto;
 }
 
 /* base.html */
