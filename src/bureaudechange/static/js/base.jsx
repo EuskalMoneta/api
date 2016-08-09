@@ -35,7 +35,6 @@ const Flag = React.createClass({
                 'Accept-Language': this.props.lang
             }
         })
-        // .then(checkStatus)
         .then(response => {
             // refresh page
             top.location.reload()

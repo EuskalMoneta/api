@@ -69,7 +69,10 @@ class MemberAddPage extends React.Component {
         // Default state
         this.state = {
             canSubmit: false,
-            country_id: undefined,
+            country: undefined,
+            zip: undefined,
+            zipSearch: undefined,
+            zipList: undefined,
             birth: moment().set({'year': 1980, 'month': 0, 'date': 1})  // !! month 0 = January
         }
 
@@ -86,7 +89,7 @@ class MemberAddPage extends React.Component {
         .then(parseJSON)
         .then(json => {
             var france = _.findWhere(json, {label: "France"})
-            var france = {label: france.label, value: france.id}
+            var france = {label: "France", value: france.id}
 
             var res = _.chain(json)
                 .filter(function(item){ return item.active == 1 && item.code != "" &&  item.label != "France" })
@@ -94,9 +97,9 @@ class MemberAddPage extends React.Component {
                 .sortBy(function(item){ return item.label })
                 .value()
 
-            // We add France is first position of the Array
+            // We add France at first position of the Array, and we set it as the default value
             res.unshift(france)
-            this.setState({countries: res})
+            this.setState({countries: res, country: france})
         })
         .catch(err => {
             // Error during request, or parsing NOK :(
@@ -122,11 +125,14 @@ class MemberAddPage extends React.Component {
         });
     }
 
-    // zipcode / towns
-    handleZipChange = (zip) => {
-        if (zip.length >= 4) {
+    // zip
+    zipOnSearchChange = (search) => {
+        this.setState({zipSearch: search})
+        console.log(search)
+        // Search for towns for this zipcode for France only
+        if (search.length >= 4 && this.state.country.label == "France") {
             // We use fetch API to ... fetch towns for this zipcode
-            fetch(getAPIBaseURL() + "towns/?zipcode=" + zip,
+            fetch(getAPIBaseURL() + "towns/?zipcode=" + search,
             {
                 method: 'get',
                 headers: {
@@ -137,19 +143,69 @@ class MemberAddPage extends React.Component {
             .then(checkStatus)
             .then(parseJSON)
             .then(json => {
-                console.log(json.results)
-                this.setState({townsSuggest: json.results})
+                console.log(json)
+                // I don't why but I can't use here WTF:
+                this.setState({zipList: json})
+                // this.state.zipList = json
+                // this.setState({zipList: json})
+                // console.log(this.state.zipList)
             })
             .catch(err => {
                 // Error during request, or parsing NOK :(
-                console.log(this.props.url, err)
+                console.log(getAPIBaseURL() + "towns/?zipcode=" + search, err)
             })
-
         }
     }
 
-    // countries
-    countriesCreateFromSearch = (options, search) => {
+    zipRenderOption = (item) => {
+        // This is how the list itself is displayed
+        return  <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
+                    <div className="memberaddform" style={{marginLeft: 10}}>
+                        {item.zip + " - " + item.town}
+                    </div>
+                </div>
+    }
+
+    zipRenderValue = (item) => {
+        // When we select a value, this is how we display it
+        return  <div className="simple-value">
+                    <span className="memberaddform" style={{marginLeft: 10, verticalAlign: "middle"}}>{item.zip}</span>
+                </div>
+    }
+
+    zipRenderNoResultsFound = (item, search) => {
+        console.log("zipList: " + this.state.zipList)
+        var message = ""
+
+        // We have a search term (not empty)
+        if (search)
+        {
+            // We have a sinificative search term
+            if (search.length < 4)
+                message = __("Taper 4 chiffres minimum ...")
+            else
+            {
+                // We have a positive result (zip+town list) for this search term
+                if (this.state.zipList == undefined)
+                    message = __("Pas de résultat")
+            }
+        }
+        else
+            message = __("Taper 4 chiffres minimum ...")
+
+        if (message) {
+            return  <div className="no-results-found" style={{fontSize: 13}}>
+                        {message}
+                    </div>
+        }
+    }
+
+
+    // town
+    // TODO
+
+    // country
+    countryCreateFromSearch = (options, search) => {
         // Pretty much self explanatory:
         // this function is called when we start typing inside the select
         if (search.length == 0 || (options.map(function(option)
@@ -161,37 +217,30 @@ class MemberAddPage extends React.Component {
             return {label: search, value: search};
     }
 
-    countriesOnValueChange = (item) => {
-        this.setState({country: item});
+    countryOnValueChange = (item) => {
+        this.setState({country: item})
     }
 
-    countriesRenderOption = (item) => {
+    countryRenderOption = (item) => {
         // This is how the list itself is displayed
-        return <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
-                    <div style={{
-                        backgroundColor: item.label, borderRadius: "50%", width: 24, height: 24
-                    }}></div>
-                    <div style={{marginLeft: 10}}>
-                        {!!item.newOption ? "Add " + item.label + " ..." : item.label}
+        return  <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
+                    <div className="memberaddform" style={{marginLeft: 10}}>
+                        {!!item.newOption ? __("Ajouter") + " " + item.label + " ..." : item.label}
                     </div>
                 </div>
     }
 
-    countriesRenderValue = (item) => {
+    countryRenderValue = (item) => {
         // When we select a value, this is how we display it
-        return <div className="simple-value">
-                    <span style={{
-                        backgroundColor: item.label, borderRadius: "50%",
-                        verticalAlign: "middle", width: 24, height: 24
-                    }}></span>
-                    <span style={{marginLeft: 10, verticalAlign: "middle"}}>{item.label}</span>
+        return  <div className="simple-value">
+                    <span className="memberaddform" style={{marginLeft: 10, verticalAlign: "middle"}}>{item.label}</span>
                 </div>
     }
 
     submitForm = (data) => {
-        // We push the 'birth' field into the data passed to the server
+        // We push custom fields (like DatePickers, Selectize, ...) into the data passed to the server
         data['birth'] = this.state.birth.format('DD/MM/YYYY')
-        data['country_id'] = this.state.country_id
+        data['country_id'] = this.state.country.value
 
         fetch(this.props.url,
         {
@@ -287,7 +336,7 @@ class MemberAddPage extends React.Component {
                             placeholder={__("Prénom")}
                             required
                         />
-                       <div className="form-group row">
+                        <div className="form-group row">
                             <label
                                 className="control-label col-sm-3"
                                 data-required="true"
@@ -317,46 +366,49 @@ class MemberAddPage extends React.Component {
                             placeholder={__("Adresse postale")}
                             required
                         />
-                        <Input
-                            name="zip"
-                            data-eusko="memberaddform-zip"
-                            value=""
-                            label={__("Code Postal")}
-                            onChange={this.handleZipChange}
-                            type="text"
-                            placeholder={__("Code Postal")}
-                            required
-                        />
-                        <Input
-                            name="town"
-                            data-eusko="memberaddform-town"
-                            value=""
-                            label={__("Ville")}
-                            type="text"
-                            placeholder={__("Ville")}
-                            required
-                        />
                         <div className="form-group row">
                             <label
                                 className="control-label col-sm-3"
                                 data-required="true"
-                                htmlFor="memberaddform-country_id">
+                                htmlFor="memberaddform-zip">
+                                {__("Code Postal")}
+                                <span className="required-symbol">&nbsp;*</span>
+                            </label>
+                            <div className="col-sm-9 memberaddform-zip" data-eusko="memberaddform-zip">
+                                <SimpleSelect
+                                    ref="select"
+                                    value={this.state.zip}
+                                    search={this.state.zipSearch}
+                                    options={this.state.zipList}
+                                    placeholder={__("Code Postal")}
+                                    theme="bootstrap3"
+                                    onSearchChange={this.zipOnSearchChange}
+                                    renderOption={this.zipRenderOption}
+                                    renderValue={this.zipRenderValue}
+                                    //renderNoResultsFound={this.zipRenderNoResultsFound}
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div className="form-group row">
+                            <label
+                                className="control-label col-sm-3"
+                                data-required="true"
+                                htmlFor="memberaddform-country">
                                 {__("Pays")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddform-country_id" data-eusko="memberaddform-country_id">
+                            <div className="col-sm-9 memberaddform-country" data-eusko="memberaddform-country">
                                 <SimpleSelect
-                                    name="country_id"
                                     ref="select"
                                     value={this.state.country}
                                     options={this.state.countries}
-                                    data-eusko="memberaddform-country_id"
                                     placeholder={__("Pays")}
                                     theme="bootstrap3"
-                                    createFromSearch={this.countriesCreateFromSearch}
-                                    onValueChange={this.countriesOnValueChange}
-                                    renderOption={this.countriesRenderOption}
-                                    renderValue={this.countriesRenderValue}
+                                    createFromSearch={this.countryCreateFromSearch}
+                                    onValueChange={this.countryOnValueChange}
+                                    renderOption={this.countryRenderOption}
+                                    renderValue={this.countryRenderValue}
                                     required
                                 />
                             </div>

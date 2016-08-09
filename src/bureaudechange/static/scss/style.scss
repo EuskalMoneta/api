@@ -1,14 +1,45 @@
-// Adjust size for the "birthdate" field in MemberAddForm
-
+/* MemberAddForm */
+// Adjust size for the "birthdate" field
 .memberaddform-birth {
   .react-datepicker__input-container {
     display: block;
   }
 }
 
-// Adjust size for the "country_id" field in MemberAddForm
+// Adjust size for the country field
 .react-selectize.root-node {
   width: auto;
+}
+
+// Set the correct font for the react-selectize fields
+.memberaddform-country {
+  .react-selectize-placeholder {
+    font-size: 16px;
+    font-family: Georgia,"Times New Roman",Times,serif;
+    line-height: 1.42857143;
+  }
+}
+
+.memberaddform-town {
+  .react-selectize-placeholder {
+    font-size: 16px;
+    font-family: Georgia,"Times New Roman",Times,serif;
+    line-height: 1.42857143;
+  }
+}
+
+.memberaddform-zip {
+  .react-selectize-placeholder {
+    font-size: 16px;
+    font-family: Georgia,"Times New Roman",Times,serif;
+    line-height: 1.42857143;
+  }
+}
+
+.memberaddform {
+  font-size: 16px;
+  font-family: Georgia,"Times New Roman",Times,serif;
+  line-height: 1.42857143;
 }
 
 /* base.html */
