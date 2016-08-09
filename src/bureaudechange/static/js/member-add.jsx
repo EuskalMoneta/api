@@ -144,11 +144,17 @@ class MemberAddPage extends React.Component {
             .then(parseJSON)
             .then(json => {
                 console.log(json)
+                console.log(this.state.zipList)
+
+                var res = _.chain(json)
+                    .map(function(item){ return {label: item.zip + " - " + item.town, value: item.zip} })
+                    .sortBy(function(item){ return item.label })
+                    .value()
+
                 // I don't why but I can't use here WTF:
-                this.setState({zipList: json})
-                // this.state.zipList = json
-                // this.setState({zipList: json})
-                // console.log(this.state.zipList)
+                //this.setState({zipList: json})
+                this.state.zipList = res
+                console.log(this.state.zipList)
             })
             .catch(err => {
                 // Error during request, or parsing NOK :(
@@ -161,7 +167,7 @@ class MemberAddPage extends React.Component {
         // This is how the list itself is displayed
         return  <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
                     <div className="memberaddform" style={{marginLeft: 10}}>
-                        {item.zip + " - " + item.town}
+                        {item.label}
                     </div>
                 </div>
     }
@@ -169,7 +175,7 @@ class MemberAddPage extends React.Component {
     zipRenderValue = (item) => {
         // When we select a value, this is how we display it
         return  <div className="simple-value">
-                    <span className="memberaddform" style={{marginLeft: 10, verticalAlign: "middle"}}>{item.zip}</span>
+                    <span className="memberaddform" style={{marginLeft: 10, verticalAlign: "middle"}}>{item.value}</span>
                 </div>
     }
 
