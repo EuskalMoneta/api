@@ -50,8 +50,8 @@ class DolibarrAPI(object):
     def _login(self, login=None, password=None):
         """ Login function for Dolibarr API users. """
         if not login or not password:
-            login = 'florian'
-            password = 'florian'
+            login = 'admin'
+            password = 'admin'
 
         r = requests.get('{}/login?login={}&password={}'.format(self.url, login, password),
                          headers={'content-type': 'application/json'})
