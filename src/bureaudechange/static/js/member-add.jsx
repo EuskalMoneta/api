@@ -73,6 +73,8 @@ class MemberAddPage extends React.Component {
             zip: undefined,
             zipSearch: undefined,
             zipList: undefined,
+            town: undefined,
+            townList: undefined,
             birth: moment().set({'year': 1980, 'month': 0, 'date': 1})  // !! month 0 = January
         }
 
@@ -125,6 +127,24 @@ class MemberAddPage extends React.Component {
         });
     }
 
+    // generic callback for all selectize objects
+    selectizeCreateFromSearch = (options, search) => {
+        // Pretty much self explanatory:
+        // this function is called when we start typing inside the select
+        if (search)
+        {
+            if (search.length == 0 || (options.map(function(option)
+            {
+                return option.label;
+            })).indexOf(search) > -1)
+                return null;
+            else
+                return {label: search, value: search};
+        }
+        else
+            return null;
+    }
+
     // zip
     zipOnSearchChange = (search) => {
         this.setState({zipSearch: search})
@@ -143,18 +163,17 @@ class MemberAddPage extends React.Component {
             .then(checkStatus)
             .then(parseJSON)
             .then(json => {
-                console.log(json)
-                console.log(this.state.zipList)
-
-                var res = _.chain(json)
-                    .map(function(item){ return {label: item.zip + " - " + item.town, value: item.zip} })
+                var zipList = _.chain(json)
+                    .map(function(item){ return {label: item.zip + " - " + item.town, value: item.zip, town: item.town} })
                     .sortBy(function(item){ return item.label })
                     .value()
 
-                // I don't why but I can't use here WTF:
-                //this.setState({zipList: json})
-                this.state.zipList = res
-                console.log(this.state.zipList)
+                var townList = _.chain(json)
+                    .map(function(item){ return {label: item.town, value: item.town} })
+                    .sortBy(function(item){ return item.label })
+                    .value()
+
+                this.setState({zipList: zipList, townList: townList})
             })
             .catch(err => {
                 // Error during request, or parsing NOK :(
@@ -180,7 +199,7 @@ class MemberAddPage extends React.Component {
     }
 
     zipRenderNoResultsFound = (item, search) => {
-        console.log("zipList: " + this.state.zipList)
+        // console.log("zipList: " + this.state.zipList)
         var message = ""
 
         // We have a search term (not empty)
@@ -206,23 +225,32 @@ class MemberAddPage extends React.Component {
         }
     }
 
-
-    // town
-    // TODO
-
-    // country
-    countryCreateFromSearch = (options, search) => {
-        // Pretty much self explanatory:
-        // this function is called when we start typing inside the select
-        if (search.length == 0 || (options.map(function(option)
-        {
-            return option.label;
-        })).indexOf(search) > -1)
-            return null;
+    zipOnValueChange = (item) => {
+        if (item) {
+            this.setState({zip: item, town: {label: item.town, value: item.town}})
+        }
         else
-            return {label: search, value: search};
+            this.setState({zip: null, town: null})
     }
 
+
+    zipOnBlur = () => {
+        this.setState({zipList: null, townList: null})
+    }
+
+    // town
+    townOnValueChange = (item) => {
+        this.setState({town: item})
+    }
+
+    townRenderValue = (item) => {
+        // When we select a value, this is how we display it
+        return  <div className="simple-value">
+                    <span className="memberaddform" style={{marginLeft: 10, verticalAlign: "middle"}}>{item.label}</span>
+                </div>
+    }
+
+    // country
     countryOnValueChange = (item) => {
         this.setState({country: item})
     }
@@ -247,6 +275,8 @@ class MemberAddPage extends React.Component {
         // We push custom fields (like DatePickers, Selectize, ...) into the data passed to the server
         data['birth'] = this.state.birth.format('DD/MM/YYYY')
         data['country_id'] = this.state.country.value
+        data['zip'] = this.state.zip.value
+        data['town'] = this.state.town.value
 
         fetch(this.props.url,
         {
@@ -266,11 +296,12 @@ class MemberAddPage extends React.Component {
                 __("La création de l'adhérent s'est déroulée correctement."),
                 "",
                 {
-                    timeOut: 3000,
+                    timeOut: 5000,
                     extendedTimeOut: 10000,
                     closeButton:true
                 }
             )
+            // TODO redirect to create subscription page
         })
         .catch(err => {
             // Error during request, or parsing NOK :(
@@ -279,7 +310,7 @@ class MemberAddPage extends React.Component {
                 __("Une erreur s'est produite lors de la création de l'adhérent !"),
                 "",
                 {
-                    timeOut: 3000,
+                    timeOut: 5000,
                     extendedTimeOut: 10000,
                     closeButton:true
                 }
@@ -388,10 +419,35 @@ class MemberAddPage extends React.Component {
                                     options={this.state.zipList}
                                     placeholder={__("Code Postal")}
                                     theme="bootstrap3"
+                                    createFromSearch={this.selectizeCreateFromSearch}
                                     onSearchChange={this.zipOnSearchChange}
+                                    onValueChange={this.zipOnValueChange}
                                     renderOption={this.zipRenderOption}
                                     renderValue={this.zipRenderValue}
+                                    onBlur={this.zipOnBlur}
                                     //renderNoResultsFound={this.zipRenderNoResultsFound}
+                                    required
+                                />
+                            </div>
+                        </div>
+                        <div className="form-group row">
+                            <label
+                                className="control-label col-sm-3"
+                                data-required="true"
+                                htmlFor="memberaddform-town">
+                                {__("Ville")}
+                                <span className="required-symbol">&nbsp;*</span>
+                            </label>
+                            <div className="col-sm-9 memberaddform-town" data-eusko="memberaddform-town">
+                                <SimpleSelect
+                                    ref="select"
+                                    value={this.state.town}
+                                    options={this.state.townList}
+                                    placeholder={__("Ville")}
+                                    theme="bootstrap3"
+                                    createFromSearch={this.selectizeCreateFromSearch}
+                                    onValueChange={this.townOnValueChange}
+                                    renderValue={this.townRenderValue}
                                     required
                                 />
                             </div>
@@ -411,7 +467,7 @@ class MemberAddPage extends React.Component {
                                     options={this.state.countries}
                                     placeholder={__("Pays")}
                                     theme="bootstrap3"
-                                    createFromSearch={this.countryCreateFromSearch}
+                                    //createFromSearch={this.selectizeCreateFromSearch}
                                     onValueChange={this.countryOnValueChange}
                                     renderOption={this.countryRenderOption}
                                     renderValue={this.countryRenderValue}
