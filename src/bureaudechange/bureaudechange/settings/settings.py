@@ -63,6 +63,7 @@ CSP_DEFAULT_SRC = ["'self'"]
 CSP_FONT_SRC = ["'self", "http://fonts.gstatic.com"]
 CSP_SCRIPT_SRC = ["'self'"]
 CSP_STYLE_SRC = ["'self'", "'unsafe-inline'", "http://fonts.googleapis.com", "data: blob:"]
+CSP_CONNECT_SRC = ["http://localhost:8000", "http://localhost:8081"]
 
 ROOT_URLCONF = 'bureaudechange.urls'
 
