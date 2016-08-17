@@ -13,19 +13,17 @@ module.exports = Object.keys(languages).map(function(language) {
         // the base directory (absolute path) for resolving the entry option
         context: __dirname,
 
-        // If you have a big problem on the front-side (React, etc ...)
-        // You can activate this, its generates the .map for the bundles, and
-        // using Chrome this helps to locate where the problem is in your code exactly
+        // If you have a big problem on the front-side (with React, etc ...)
+        // You can activate this, its generates the .map for the bundles,
+        // and using Chrome this helps a LOT to locate where the problem is in your code exactly:
         // devtool: 'source-map',
-
-        // the entry point we created earlier. Note that './' means
-        // your current directory. You don't have to specify the extension  now,
-        // because you will specify extensions later in the `resolve` section
 
         entry: {
             Base : './static/js/base', // Your global app's entry point
             MemberList : './static/js/member-list',
-            MemberAdd : './static/js/member-add'
+            MemberAdd : './static/js/member-add',
+            MemberAddSubscription : './static/js/member-add-subscription',
+            MemberSearch : './static/js/member-search',
         },
 
         output: {

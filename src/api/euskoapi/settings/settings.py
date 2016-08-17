@@ -128,8 +128,12 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# APIs URLs
 DOLIBARR_URL = 'http://dolibarr-app/api/index.php'
 CYCLOS_URL = 'http://cyclos-app:7000/toto'
+
+# Euskal Moneta custom variable
+DATE_COTISATION_ANTICIPEE = '01/11'
 
 CORS_ORIGIN_WHITELIST = [
     'localhost:8001',
@@ -148,7 +152,7 @@ LOGGING = {
     'disable_existing_loggers': True,
     'root': {
         'level': 'DEBUG',
-        'handlers': [],
+        'handlers': ['console'],
     },
     'formatters': {
         'simple': {
@@ -163,8 +167,7 @@ LOGGING = {
     'handlers': {
         'sentry': {
             'level': 'DEBUG',
-            'class': 'raven.contrib.django.raven_compat.handlers.'
-                     'SentryHandler',
+            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
         },
         'console': {
             'level': 'DEBUG',

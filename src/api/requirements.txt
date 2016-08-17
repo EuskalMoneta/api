@@ -1,8 +1,10 @@
+arrow
 django
 django-cors-headers
 djangorestframework
 django-filter  # Filtering support
 markdown       # Markdown support for the browsable API.
 pytest
+pytest-django
 raven
 requests

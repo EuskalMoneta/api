@@ -1,12 +1,11 @@
-import datetime
 import logging
-import time
 
 from rest_framework import status
 from rest_framework.response import Response
 
 from base_api import BaseAPIView
-from members.serializers import MemberSerializer
+from members.serializers import MemberSerializer, MembersSubscriptionsSerializer
+from members.misc import Member, Subscription
 
 log = logging.getLogger()
 
@@ -20,7 +19,7 @@ class MembersAPIView(BaseAPIView):
         data = request.data
         serializer = MemberSerializer(data=data)
         if serializer.is_valid():  # raise_exception=True ?
-            data = self._validate_data(data)
+            data = Member.validate_data(data)
         else:
             log.critical(serializer.errors)
 
@@ -29,63 +28,49 @@ class MembersAPIView(BaseAPIView):
         return Response(response_obj, status=status.HTTP_201_CREATED)
 
     def update(self, request, pk=None):
-        return Response(self.dolibarr.patch(model=self.model))
+        # return Response(self.dolibarr.patch(model=self.model))
+        pass
 
     def partial_update(self, request, pk=None):
-        return Response(self.dolibarr.patch(model=self.model))
+        # return Response(self.dolibarr.patch(model=self.model))
+        pass
 
-    def _validate_data(self, data):
-        """
-        1. Dolibarr.llx_adherent.fk_adherent_type : typeid in the Dolibarr API = "3" (particulier)
-        2. Dolibarr.llx_adherent.morphy = "phy" (personne physique)
-        3. Dolibarr.llx_adherent.statut = "1" (1 = actif, 0 = brouillon, -1 = résilié)
-        4. Dolibarr.llx_adherent.public = "0" (données privées)
-        """
-        data['typeid'] = "3"
-        data['morphy'] = "phy"
-        data['statut'] = "1"
-        data['public'] = "0"
-        data['birth'] = self._validate_birthdate(data['birth'])
-        data = self._validate_options(data)
-        data = self._validate_phones(data)
 
-        return data
+class MembersSubscriptionsAPIView(BaseAPIView):
 
-    def _validate_birthdate(self, birthdate):
-        """
-        We need to validate the birthdate format.
-        """
-        datetime_birthdate = {}
-        try:
-            datetime_birthdate = datetime.datetime.strptime(birthdate, '%d/%m/%Y')
-        except ValueError:
-            raise ValueError("Incorrect data format, should be DD/MM/YYYY")
+    def __init__(self, **kwargs):
+        super(MembersSubscriptionsAPIView, self).__init__(model='members/%_%/subcriptions')
 
-        res = int(time.mktime(datetime_birthdate.timetuple()))
-        return res
+    def create(self, request):
+        data = request.data
+        log.critical("data: {}".format(data))
+        serializer = MembersSubscriptionsSerializer(data=data)
+        if not serializer.is_valid():  # raise_exception=True ?
+            log.critical("serializer.errors: {}".format(serializer.errors))
 
-    def _validate_options(self, data):
-        """
-        We don't want to create sub-objects on the front-side, thus our API have to deal with them.
-        """
-        data['array_options'] = {'options_recevoir_actus': data['options_recevoir_actus']}
-        del data['options_recevoir_actus']
+        member_id = data.get('member_id', '')
+        if not member_id:
+            Response('A member id must be provided !', status=status.HTTP_400_BAD_REQUEST)
+        self.model = self.model.replace('%_%', member_id)
+        log.critical("self.model: {}".format(self.model))
 
-        return data
+        member = self.dolibarr.get(model='members', id=member_id)
+        data['start_date'] = Subscription.calculate_start_date(member['datefin'])
+        data['end_date'] = Subscription.calculate_end_date(data['start_date'])
+        data['label'] = Subscription.calculate_label(data['end_date'])
 
-    def _validate_phones(self, data):
-        """
-        In Dolibarr, they are 3 fields for phonenumbers... We want to deal with them.
-        1. 'phone' named "Téléphone pro"
-        2. 'phone_mobile' named "Téléphone mobile"
-        3. 'phone_perso' named "Téléphone personnel"
-        """
-        if data['phone']:
-            if data['phone'].startswith(('06', '07')):
-                data['phone_mobile'] = data['phone']
-            else:
-                data['phone_perso'] = data['phone']
+        log.critical("data after: {}".format(data))
+        return Response({'member': member, 'data': data})
 
-            del data['phone']
+        response_obj = self.dolibarr.post(model=self.model, data=data)
+        log.critical("response_obj: {}".format(response_obj))
+        return Response(response_obj, status=status.HTTP_201_CREATED)
 
-        return data
+    def update(self, request, pk=None):
+        pass
+
+    def partial_update(self, request, pk=None):
+        pass
+
+    def destroy(self, request, pk):
+        pass

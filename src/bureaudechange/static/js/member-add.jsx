@@ -26,13 +26,13 @@ Formsy.addValidationRule('isMemberIdEusko', (values, value) =>
     }
 });
 
-Formsy.addValidationRule('isFrenchPhoneNumber', (values, value) =>
+Formsy.addValidationRule('isValidPhoneNumber', (values, value) =>
 {
     if (!value) {
         return false;
     }
 
-    if (value.startsWith("0", 0) && value.length === 10) {
+    if (value.indexOf('.') === -1 && value.indexOf(' ') === -1) {
         return true;
     }
     else {
@@ -411,7 +411,7 @@ class MemberAddPage extends React.Component {
                                 {__("Code Postal")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddform-zip" data-eusko="memberaddform-zip">
+                            <div className="col-sm-9 memberaddform" data-eusko="memberaddform-zip">
                                 <SimpleSelect
                                     ref="select"
                                     value={this.state.zip}
@@ -438,7 +438,7 @@ class MemberAddPage extends React.Component {
                                 {__("Ville")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddform-town" data-eusko="memberaddform-town">
+                            <div className="col-sm-9 memberaddform" data-eusko="memberaddform-town">
                                 <SimpleSelect
                                     ref="select"
                                     value={this.state.town}
@@ -460,7 +460,7 @@ class MemberAddPage extends React.Component {
                                 {__("Pays")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddform-country" data-eusko="memberaddform-country">
+                            <div className="col-sm-9 memberaddform" data-eusko="memberaddform-country">
                                 <SimpleSelect
                                     ref="select"
                                     value={this.state.country}
@@ -483,9 +483,9 @@ class MemberAddPage extends React.Component {
                             help={__("Format: 0612345678")}
                             type="tel"
                             placeholder={__("N° téléphone")}
-                            validations="isFrenchPhoneNumber"
+                            validations="isValidPhoneNumber"
                             validationErrors={{
-                                isFrenchPhoneNumber: __("Ceci n'est pas un N° téléphone valide. Exemple: 0612345678.")
+                                isValidPhoneNumber: __("Ceci n'est pas un N° téléphone valide. Evitez les points et les espaces.")
                             }}
                             required
                         />

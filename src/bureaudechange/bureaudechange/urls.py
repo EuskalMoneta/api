@@ -38,6 +38,8 @@ urlpatterns = [
     url(r'^members/?$', members_views.index),
     url(r'^members/list$', members_views.index),
     url(r'^members/add$', members_views.add),
+    url(r'^members/subscription/add/(?P<member_id>\d+)/?$', members_views.add_subscription),
+    url(r'^members/search$', members_views.search),
 
     url(r'^admin/', admin.site.urls),
 ]

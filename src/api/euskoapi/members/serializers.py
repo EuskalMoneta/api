@@ -48,3 +48,11 @@ class MemberSerializer(serializers.Serializer):
     # last_subscription_date_start = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
     # last_subscription_date_end = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
     # last_subscription_amount = serializers.CharField()
+
+
+class MembersSubscriptionsSerializer(serializers.Serializer):
+    start_date = serializers.CharField(read_only=True)
+    end_date = serializers.CharField(read_only=True)
+    amount = serializers.IntegerField()
+    payment_mode = serializers.CharField(write_only=True)
+    label = serializers.CharField()

@@ -12,7 +12,7 @@
 }
 
 // Set the correct font for the react-selectize fields
-.memberaddform-country {
+.memberaddform {
   .react-selectize-placeholder {
     font-size: 16px;
     font-family: Georgia,"Times New Roman",Times,serif;
@@ -20,15 +20,7 @@
   }
 }
 
-.memberaddform-town {
-  .react-selectize-placeholder {
-    font-size: 16px;
-    font-family: Georgia,"Times New Roman",Times,serif;
-    line-height: 1.42857143;
-  }
-}
-
-.memberaddform-zip {
+.memberaddsubscription {
   .react-selectize-placeholder {
     font-size: 16px;
     font-family: Georgia,"Times New Roman",Times,serif;
@@ -41,6 +33,26 @@
   font-family: Georgia,"Times New Roman",Times,serif;
   line-height: 1.42857143;
 }
+
+.has-error .form-control {
+  border-color: #d9534f;
+  -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,0.075);
+  box-shadow: inset 0 1px 1px rgba(0,0,0,0.075);
+}
+
+.has-error-value {
+  color: #d9534f;
+}
+
+.has-error .form-control {
+  .react-selectize-control {
+    border-color: #d9534f !important;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,0.075);
+    box-shadow: inset 0 1px 1px rgba(0,0,0,0.075);
+  }
+}
+
+
 
 /* base.html */
 .lang-select {

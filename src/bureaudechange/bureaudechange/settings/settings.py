@@ -27,7 +27,6 @@ DEBUG = True
 
 ALLOWED_HOSTS = ['*']
 
-
 # Application definition
 
 INSTALLED_APPS = [
@@ -68,6 +67,7 @@ CSP_CONNECT_SRC = ["http://localhost:8000", "http://localhost:8081"]
 
 ROOT_URLCONF = 'bureaudechange.urls'
 
+APPEND_SLASH = False
 LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/login'
 LOGOUT_URL = '/logout'
