@@ -35,7 +35,7 @@ services:
       - dolibarr-db
 
   dolibarr-db:
-    image: mariadb:10.1
+    build: src/dolibarr/db
     ports:
       - 3306:3306
     volumes:
