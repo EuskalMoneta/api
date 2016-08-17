@@ -59,7 +59,7 @@ MIDDLEWARE_CLASSES = [
 
 # CSP headers
 CSP_DEFAULT_SRC = ["'self'"]
-CSP_FONT_SRC = ["'self", "http://fonts.gstatic.com"]
+CSP_FONT_SRC = ["'self'", "http://fonts.gstatic.com"]
 CSP_SCRIPT_SRC = ["'self'"]
 CSP_IMG_SRC = ["'self'", "data: image:"]
 CSP_STYLE_SRC = ["'self'", "'unsafe-inline'", "http://fonts.googleapis.com", "data: blob:"]
