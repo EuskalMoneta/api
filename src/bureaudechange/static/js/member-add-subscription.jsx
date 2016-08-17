@@ -49,10 +49,27 @@ class MemberSubscriptionPage extends React.Component {
                          {value: '20', label: '20 (cotisation de soutien)'},
                          {value: '21 ou +', label: 'ou +'}],
             paymentMode: '',
-            paymentModeList: [{value: 'LIQ', label: 'Espèces (€)'},
-                              {value: 'CHQ', label: 'Chèque (€)'},
-                              {value: 'eusko', label: 'Eusko'}]
+            paymentModeList: undefined
         }
+
+        // Get payment_modes
+        fetch(getAPIBaseURL() + "payment-modes/",
+        {
+            method: 'get',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(checkStatus)
+        .then(parseJSON)
+        .then(json => {
+            this.setState({paymentModeList: json})
+        })
+        .catch(err => {
+            // Error during request, or parsing NOK :(
+            console.log(this.props.url, err)
+        })
     }
 
     enableButton = () => {
