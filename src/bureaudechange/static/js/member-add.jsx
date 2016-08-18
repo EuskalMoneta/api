@@ -148,7 +148,6 @@ class MemberAddPage extends React.Component {
     // zip
     zipOnSearchChange = (search) => {
         this.setState({zipSearch: search})
-        console.log(search)
         // Search for towns for this zipcode for France only
         if (search.length >= 4 && this.state.country.label == "France") {
             // We use fetch API to ... fetch towns for this zipcode
@@ -291,17 +290,17 @@ class MemberAddPage extends React.Component {
         .then(parseJSON)
         .then(json => {
             console.log(json)
-            this.setState({data: json.results})
             this.refs.container.success(
                 __("La création de l'adhérent s'est déroulée correctement."),
                 "",
                 {
-                    timeOut: 5000,
+                    timeOut: 3000,
                     extendedTimeOut: 10000,
                     closeButton:true
                 }
             )
-            // TODO redirect to create subscription page
+            // redirect to create subscription page in 3 seconds
+            setTimeout(() => window.location.assign("/members/subscription/add/" + json), 3000)
         })
         .catch(err => {
             // Error during request, or parsing NOK :(
@@ -310,7 +309,7 @@ class MemberAddPage extends React.Component {
                 __("Une erreur s'est produite lors de la création de l'adhérent !"),
                 "",
                 {
-                    timeOut: 5000,
+                    timeOut: 3000,
                     extendedTimeOut: 10000,
                     closeButton:true
                 }
@@ -362,6 +361,10 @@ class MemberAddPage extends React.Component {
                             label={__("Nom")}
                             type="text"
                             placeholder={__("Nom")}
+                            validations="maxLength:45"
+                            validationErrors={{
+                                maxLength: __("Ce champ ne peut pas faire plus de 45 caractères!")
+                            }}
                             required
                         />
                         <Input
@@ -371,6 +374,10 @@ class MemberAddPage extends React.Component {
                             label={__("Prénom")}
                             type="text"
                             placeholder={__("Prénom")}
+                            validations="maxLength:45"
+                            validationErrors={{
+                                maxLength: __("Ce champ ne peut pas faire plus de 45 caractères!")
+                            }}
                             required
                         />
                         <div className="form-group row">
@@ -480,7 +487,6 @@ class MemberAddPage extends React.Component {
                             data-eusko="memberaddform-phone"
                             value=""
                             label={__("N° téléphone")}
-                            help={__("Format: 0612345678")}
                             type="tel"
                             placeholder={__("N° téléphone")}
                             validations="isValidPhoneNumber"
