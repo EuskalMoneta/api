@@ -27,7 +27,6 @@ class DolibarrAPI(object):
         try:
             self.api_key = login_data['success']['token']
         except KeyError:
-            log.critical(login_data)
             try:
                 message = 'Dolibarr API Exception: {}'.format(login_data['errors']['message'])
             except KeyError:
@@ -35,16 +34,18 @@ class DolibarrAPI(object):
                 raise DolibarrAPIException(detail=message)
 
     def _handle_api_response(self, api_response):
-        """ In some cases, we have to deal with errors in the api_response from the dolibarr api !
+        """ In some cases, we have to deal with errors in the response from the dolibarr api !
         """
         if api_response.status_code == requests.codes.ok:
             response_data = api_response.json()
         else:
-            log.critical('Dolibarr API Exception: {} - {}'.format(api_response, api_response.text))
-            raise DolibarrAPIException(detail='Dolibarr API Exception')
+            message = 'Dolibarr API Exception in {} - {}: {} - {}'.format(
+                api_response.request.method, api_response.url, api_response, api_response.text)
+            log.critical(message)
+            raise DolibarrAPIException(detail=message)
 
         # We don't have errors in our response, we can go on... and handle the response in our view.
-        log.info(response_data)
+        log.info("response_data for {} - {}: {}".format(api_response.request.method, api_response.url, response_data))
         return response_data
 
     def _login(self, login=None, password=None):
