@@ -1,8 +1,27 @@
+from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from dolibarr_api import DolibarrAPI
+
+
+@api_view(['GET'])
+def associations(request):
+    """
+    List all associations, and if you want, you can filter them.
+    """
+    dolibarr = DolibarrAPI()
+    results = dolibarr.get(model='associations')
+    approved = request.GET.get('approved', '')
+    if approved:
+        # We want to filter out the associations that doesn't have the required sponsorships
+        filtered_results = [item
+                            for item in results
+                            if int(item['nb_parrains']) >= settings.MINIMUM_PARRAINAGES_3_POURCENTS]
+        return Response(filtered_results)
+    else:
+        return Response(results)
 
 
 @api_view(['GET'])

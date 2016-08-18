@@ -135,8 +135,9 @@ DOLIBARR_PUBLIC_URL = 'http://localhost:8080'
 DOLIBARR_URL = 'http://dolibarr-app/api/index.php'
 CYCLOS_URL = 'http://cyclos-app:7000/toto'
 
-# Euskal Moneta custom variable
-DATE_COTISATION_ANTICIPEE = '01/11'
+# Euskal Moneta internal settings
+DATE_COTISATION_ANTICIPEE = '01/11'  # 1er Novembre
+MINIMUM_PARRAINAGES_3_POURCENTS = 3  # En production, ce sera bien 30 parrainages et non PAS 3 !
 
 CORS_ORIGIN_WHITELIST = [
     'localhost:8001',
