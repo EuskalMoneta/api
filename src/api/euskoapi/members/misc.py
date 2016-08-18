@@ -135,3 +135,13 @@ class Subscription:
         which was calculated by _calculate_end_date() just before this method was called.
         """
         return 'Adhésion/cotisation {}'.format(arrow.get(end_date).to('Europe/Paris').year)
+
+    @staticmethod
+    def account_and_type_from_payment_mode(payment_mode):
+        """
+        Simply match account and type for this payment mode.
+        """
+        accounts = {'Euro-LIQ': 2, 'Euro-CHQ': 2, 'Eusko-LIQ': 3}
+        types = {'Euro-LIQ': 'LIQ', 'Euro-CHQ': 'CHQ', 'Eusko-LIQ': 'LIQ'}
+
+        return accounts.get(payment_mode, ''), types.get(payment_mode, '')

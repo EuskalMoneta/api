@@ -128,6 +128,9 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
+# Public URLs
+DOLIBARR_PUBLIC_URL = 'http://localhost:8080'
+
 # APIs URLs
 DOLIBARR_URL = 'http://dolibarr-app/api/index.php'
 CYCLOS_URL = 'http://cyclos-app:7000/toto'
@@ -152,11 +155,11 @@ LOGGING = {
     'disable_existing_loggers': True,
     'root': {
         'level': 'DEBUG',
-        'handlers': ['console'],
+        'handlers': ['console', 'sentry'],
     },
     'formatters': {
         'simple': {
-            'format': '%(asctime)s %(levelname)s %(name)s %(funcName)s '
+            'format': '%(asctime)s %(levelname)s %(lineno)d %(name)s %(funcName)s '
                       '%(message)s'
         },
         'verbose': {
@@ -166,7 +169,7 @@ LOGGING = {
     },
     'handlers': {
         'sentry': {
-            'level': 'DEBUG',
+            'level': 'WARNING',
             'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
         },
         'console': {

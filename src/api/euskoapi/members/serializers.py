@@ -55,4 +55,4 @@ class MembersSubscriptionsSerializer(serializers.Serializer):
     end_date = serializers.CharField(read_only=True)
     amount = serializers.IntegerField()
     payment_mode = serializers.CharField(write_only=True)
-    label = serializers.CharField()
+    label = serializers.CharField(read_only=True)
