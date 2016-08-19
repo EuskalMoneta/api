@@ -21,11 +21,14 @@ class MembersAPIView(BaseAPIView):
     def create(self, request):
         data = request.data
         serializer = MemberSerializer(data=data)
-        if serializer.is_valid():  # raise_exception=True ?
+        if serializer.is_valid():
             data = Member.validate_data(data)
         else:
             log.critical(serializer.errors)
+            return Response('Oops! Something is wrong in your request data: {}'.format(serializer.errors),
+                            status=status.HTTP_400_BAD_REQUEST)
 
+        log.info('posted data: {}'.format(data))
         response_obj = self.dolibarr.post(model=self.model, data=data)
         log.info(response_obj)
         return Response(response_obj, status=status.HTTP_201_CREATED)

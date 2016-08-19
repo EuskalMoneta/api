@@ -5,6 +5,7 @@ from rest_framework import serializers
 class ArrayOptionsSerializer(serializers.Serializer):
 
     options_recevoir_actus = serializers.CharField(read_only=True)
+    options_asso_saisie_libre = serializers.CharField(read_only=True)
 
 
 class MemberSerializer(serializers.Serializer):
@@ -30,8 +31,10 @@ class MemberSerializer(serializers.Serializer):
     email = serializers.EmailField(allow_blank=True)
     array_options = ArrayOptionsSerializer(read_only=True)  # contient le champ "newsletter": (recevoir_actus)
     options_recevoir_actus = serializers.CharField(write_only=True)
-    # TODO Ajouter association parainée
-    # fk_asso = serializers.CharField()
+    # Ajouter association parainée
+    options_asso_saisie_libre = serializers.CharField(write_only=True, required=False)
+    fk_asso = serializers.CharField(required=False)
+    fk_asso_2 = serializers.CharField(required=False)
 
     # Donées fixes lors de l'ajout d'un adhérent:
     # Mis en read_only car données gérées par l'API elle même (en dur)
@@ -40,14 +43,6 @@ class MemberSerializer(serializers.Serializer):
     morphy = serializers.CharField(read_only=True)
     statut = serializers.CharField(read_only=True)
     public = serializers.CharField(read_only=True)
-
-    # DateTimeField example 2016-01-01 00:00:00
-    # first_subscription_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
-    # first_subscription_amount = serializers.CharField()
-    # last_subscription_date = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
-    # last_subscription_date_start = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
-    # last_subscription_date_end = serializers.DateTimeField(format="%Y-%m-%d %H:%M:%S", allow_null=True)
-    # last_subscription_amount = serializers.CharField()
 
 
 class MembersSubscriptionsSerializer(serializers.Serializer):
