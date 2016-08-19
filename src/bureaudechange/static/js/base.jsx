@@ -31,14 +31,14 @@ const Flag = React.createClass({
             method: 'POST',
             credentials: 'same-origin',
             headers: {
-                'X-CSRFToken': getCSRFToken(),
+                'X-CSRFToken': getCSRFToken,
                 'Accept-Language': this.props.lang
             }
         })
         .then(response => {
-            // refresh page
-            top.location.reload()
-            console.log('i18n lang change from ' + getCurrentLang()  + ' to:' + this.props.lang)
+            // Reload the current page, without using the cache
+            window.location.reload(true)
+            console.log('i18n lang change from ' + getCurrentLang  + ' to:' + this.props.lang)
         })
         .catch(err => {
             // Error during request, or parsing NOK :(
@@ -48,7 +48,7 @@ const Flag = React.createClass({
 
     render() {
         // We want to hide the flag showing the current lang
-        if (this.props.lang != getCurrentLang()) {
+        if (this.props.lang != getCurrentLang) {
             return (
                     <li>
                         <a className={"lang-select " + this.props.lang}

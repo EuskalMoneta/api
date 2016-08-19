@@ -72,6 +72,8 @@ LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/login'
 LOGOUT_URL = '/logout'
 
+API_URL = 'http://localhost:8000/'
+
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
@@ -211,5 +213,3 @@ LOGGING = {
         },
     },
 }
-
-API_URL = 'http://localhost:8000/'

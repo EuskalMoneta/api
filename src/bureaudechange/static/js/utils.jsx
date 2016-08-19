@@ -12,17 +12,9 @@ var parseJSON = (response) => {
     return response.json()
 }
 
-var getCurrentLang = () => {
-    return document.documentElement.lang
-}
-
-var getCSRFToken = () => {
-    return document.getElementById('csrfmiddlewaretoken').value
-}
-
-var getAPIBaseURL = () => {
-    return document.getElementById('apibaseurl').value
-}
+var getCurrentLang = document.documentElement.lang
+var getCSRFToken = document.getElementById('csrfmiddlewaretoken').value
+var getAPIBaseURL = document.getElementById('apibaseurl').value
 
 module.exports = {
     checkStatus: checkStatus,
