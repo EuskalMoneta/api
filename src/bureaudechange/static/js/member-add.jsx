@@ -211,6 +211,12 @@ class MemberAddPage extends React.Component {
                 </div>
     }
 
+    selectizeNoResultsFound = () => {
+        return  <div className="no-results-found" style={{fontSize: 15}}>
+                    {__("Pas de résultat")}
+                </div>
+    }
+
     // zip
     zipOnSearchChange = (search) => {
         this.setState({zipSearch: search})
@@ -248,7 +254,6 @@ class MemberAddPage extends React.Component {
     }
 
     zipRenderNoResultsFound = (item, search) => {
-        // console.log("zipList: " + this.state.zipList)
         var message = ""
 
         // We have a search term (not empty)
@@ -268,7 +273,7 @@ class MemberAddPage extends React.Component {
             message = __("Taper 4 chiffres minimum ...")
 
         if (message) {
-            return  <div className="no-results-found" style={{fontSize: 13}}>
+            return  <div className="no-results-found" style={{fontSize: 15}}>
                         {message}
                     </div>
         }
@@ -525,7 +530,7 @@ class MemberAddPage extends React.Component {
                                     renderOption={this.selectizeRenderOption}
                                     renderValue={this.zipRenderValue}
                                     onBlur={this.zipOnBlur}
-                                    //renderNoResultsFound={this.zipRenderNoResultsFound}
+                                    renderNoResultsFound={this.zipRenderNoResultsFound}
                                     required
                                 />
                             </div>
@@ -550,6 +555,7 @@ class MemberAddPage extends React.Component {
                                     onValueChange={this.townOnValueChange}
                                     renderValue={this.selectizeRenderValue}
                                     onBlur={this.validateFormOnBlur}
+                                    renderNoResultsFound={this.selectizeNoResultsFound}
                                     required
                                 />
                             </div>
@@ -574,6 +580,7 @@ class MemberAddPage extends React.Component {
                                     renderOption={this.selectizeNewRenderOption}
                                     renderValue={this.selectizeRenderValue}
                                     onBlur={this.validateFormOnBlur}
+                                    renderNoResultsFound={this.selectizeNoResultsFound}
                                     required
                                 />
                             </div>
@@ -657,6 +664,7 @@ class MemberAddPage extends React.Component {
                                     renderOption={this.selectizeRenderOption}
                                     renderValue={this.selectizeRenderValue}
                                     onBlur={this.validateFormOnBlur}
+                                    renderNoResultsFound={this.selectizeNoResultsFound}
                                 />
                             </div>
                         </div>

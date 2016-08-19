@@ -134,6 +134,12 @@ class MemberSubscriptionPage extends React.Component {
             return null
     }
 
+    selectizeNoResultsFound = () => {
+        return  <div className="no-results-found" style={{fontSize: 15}}>
+                    {__("Pas de résultat")}
+                </div>
+    }
+
     validateFormOnBlur = () => {
         if (this.state.amount && this.state.paymentMode && !this.state.amountInvalid)
             this.enableButton()
@@ -292,6 +298,7 @@ class MemberSubscriptionPage extends React.Component {
                                     renderOption={this.paymentModeRenderOption}
                                     renderValue={this.paymentModeRenderValue}
                                     onBlur={this.validateFormOnBlur}
+                                    renderNoResultsFound={this.selectizeNoResultsFound}
                                     required
                                 />
                             </div>
