@@ -53,7 +53,7 @@ class MemberSubscriptionPage extends React.Component {
         }
 
         // Get payment_modes
-        fetch(getAPIBaseURL() + "payment-modes/",
+        fetch(getAPIBaseURL + "payment-modes/",
         {
             method: 'get',
             headers: {
@@ -320,7 +320,7 @@ class MemberSubscriptionPage extends React.Component {
 
 
 ReactDOM.render(
-    <MemberSubscriptionPage url="http://localhost:8000/members-subscriptions/" method="POST" />,
+    <MemberSubscriptionPage url={getAPIBaseURL + "members-subscriptions/"} method="POST" />,
     document.getElementById('member-add-subscription')
 )
 
