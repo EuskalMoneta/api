@@ -31,7 +31,7 @@ def towns_by_zipcode(request):
     """
     search = request.GET.get('zipcode', '')
     if not search:
-        Response('Zipcode must not be empty', status=status.HTTP_400_BAD_REQUEST)
+        Response({'error': 'Zipcode must not be empty'}, status=status.HTTP_400_BAD_REQUEST)
 
     dolibarr = DolibarrAPI()
     return Response(dolibarr.get(model='towns', zipcode=search))

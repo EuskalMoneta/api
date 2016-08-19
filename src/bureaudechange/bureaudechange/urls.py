@@ -29,14 +29,15 @@ urlpatterns = [
 
     # home
     url(r'^$', base_views.home, name='home'),
+    # JavaScript config for this Django/React app
+    url(r'^config\.js$', base_views.config_js, name='config_js'),
     # login
     url(r'^login/?$', login, {'template_name': 'login.html'}, name='login'),
     # logout
     url(r'^logout/?$', logout, {'next_page': reverse_lazy('home')}, name='logout'),
 
     # our bureau de change Django apps
-    url(r'^members/?$', members_views.index),
-    url(r'^members/list$', members_views.index),
+    url(r'^members/(?P<member_id>\d+)/?$', members_views.index),
     url(r'^members/add$', members_views.add),
     url(r'^members/subscription/add/(?P<member_id>\d+)/?$', members_views.add_subscription),
     url(r'^members/search$', members_views.search),

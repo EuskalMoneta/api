@@ -1,14 +1,24 @@
-import { checkStatus, parseJSON, getAPIBaseURL } from 'Utils'
+import {
+    checkStatus,
+    parseJSON,
+    getAPIBaseURL,
+    NavbarTitle,
+    SelectizeUtils
+} from 'Utils'
 
-const { Row } = FRC
+const {
+    Row
+} = FRC
 
 import ReactSelectize from 'react-selectize'
 const SimpleSelect = ReactSelectize.SimpleSelect
 
 import classNames from 'classnames'
 
-var { ToastContainer } = ReactToastr
-var ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
+const {
+    ToastContainer
+} = ReactToastr
+const ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
 
 
 const MemberSubscriptionForm = React.createClass({
@@ -124,22 +134,6 @@ class MemberSubscriptionPage extends React.Component {
         })
     }
 
-    // generic functions
-    selectizeCreateFromSearch = (options, search) => {
-        // Pretty much self explanatory:
-        // this function is called when we start typing inside the select
-        if (search)
-            return {label: search, value: search}
-        else
-            return null
-    }
-
-    selectizeNoResultsFound = () => {
-        return  <div className="no-results-found" style={{fontSize: 15}}>
-                    {__("Pas de résultat")}
-                </div>
-    }
-
     validateFormOnBlur = () => {
         if (this.state.amount && this.state.paymentMode && !this.state.amountInvalid)
             this.enableButton()
@@ -148,6 +142,15 @@ class MemberSubscriptionPage extends React.Component {
     }
 
     // amount
+    amountCreateFromSearch = (options, search) => {
+        // Pretty much self explanatory:
+        // this function is called when we start typing inside the select
+        if (search)
+            return {label: search, value: search}
+        else
+            return null
+    }
+
     amountOnSearchChange = (search) => {
         // Search for towns for this amountcode for France only
         this.setState({amountSearch: search})
@@ -241,9 +244,6 @@ class MemberSubscriptionPage extends React.Component {
 
         return (
             <div className="row">
-                <div className="page-header">
-                    <h1>{__("Enregistrement d'une cotisation")}</h1>
-                </div>
                 <MemberSubscriptionForm
                     onValidSubmit={this.submitForm}
                     onInvalid={this.disableButton}
@@ -258,7 +258,7 @@ class MemberSubscriptionPage extends React.Component {
                                 {__("Montant")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddsubscription" data-eusko="memberaddsubscription-amount">
+                            <div className="col-sm-6 memberaddsubscription" data-eusko="memberaddsubscription-amount">
                                 <SimpleSelect
                                     className={reactSelectizeErrorClass}
                                     ref="select"
@@ -267,7 +267,7 @@ class MemberSubscriptionPage extends React.Component {
                                     options={this.state.amountList}
                                     placeholder={__("Montant de la cotisation")}
                                     theme="bootstrap3"
-                                    createFromSearch={this.selectizeCreateFromSearch}
+                                    createFromSearch={this.amountCreateFromSearch}
                                     onSearchChange={this.amountOnSearchChange}
                                     onValueChange={this.amountOnValueChange}
                                     renderOption={this.amountRenderOption}
@@ -277,6 +277,7 @@ class MemberSubscriptionPage extends React.Component {
                                 />
                                 { spanInvalidAmount }
                             </div>
+                            <div className="col-sm-3"></div>
                         </div>
                         <div className="form-group row">
                             <label
@@ -286,7 +287,7 @@ class MemberSubscriptionPage extends React.Component {
                                 {__("Mode de paiement")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddsubscription" data-eusko="memberaddsubscription-payment_mode">
+                            <div className="col-sm-6 memberaddsubscription" data-eusko="memberaddsubscription-payment_mode">
                                 <SimpleSelect
                                     className={reactSelectizeErrorClass}
                                     ref="select"
@@ -298,10 +299,11 @@ class MemberSubscriptionPage extends React.Component {
                                     renderOption={this.paymentModeRenderOption}
                                     renderValue={this.paymentModeRenderValue}
                                     onBlur={this.validateFormOnBlur}
-                                    renderNoResultsFound={this.selectizeNoResultsFound}
+                                    renderNoResultsFound={SelectizeUtils.selectizeNoResultsFound}
                                     required
                                 />
                             </div>
+                            <div className="col-sm-3"></div>
                         </div>
                     </fieldset>
                     <fieldset>
@@ -311,7 +313,7 @@ class MemberSubscriptionPage extends React.Component {
                                 data-eusko="memberaddsubscription-submit"
                                 type="submit"
                                 defaultValue="Enregistrer la cotisation"
-                                className="btn btn-primary"
+                                className="btn btn-success"
                                 formNoValidate={true}
                                 disabled={!this.state.canSubmit}
                             />
@@ -320,7 +322,7 @@ class MemberSubscriptionPage extends React.Component {
                 </MemberSubscriptionForm>
                 <ToastContainer ref="container"
                                 toastMessageFactory={ToastMessageFactory}
-                                className="toast-top-right" />
+                                className="toast-top-right toast-top-right-navbar" />
             </div>
         );
     }
@@ -330,4 +332,9 @@ class MemberSubscriptionPage extends React.Component {
 ReactDOM.render(
     <MemberSubscriptionPage url={getAPIBaseURL + "members-subscriptions/"} method="POST" />,
     document.getElementById('member-add-subscription')
-);
+)
+
+ReactDOM.render(
+    <NavbarTitle title={__("Enregistrement d'une cotisation")} />,
+    document.getElementById('navbar-title')
+)

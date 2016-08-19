@@ -1,30 +1,31 @@
-import { checkStatus, parseJSON, getAPIBaseURL } from 'Utils'
+import {
+    checkStatus,
+    parseJSON,
+    isMemberIdEusko,
+    getAPIBaseURL,
+    NavbarTitle,
+    SelectizeUtils
+} from 'Utils'
 
-const { Input, RadioGroup, Row } = FRC
+const {
+    Input,
+    RadioGroup,
+    Row
+} = FRC
 
 import DatePicker from 'react-datepicker'
-require('react-datepicker/dist/react-datepicker.css')
+import 'react-datepicker/dist/react-datepicker.css'
 
 import ReactSelectize from 'react-selectize'
 const SimpleSelect = ReactSelectize.SimpleSelect
 
-const { ToastContainer } = ReactToastr
+const {
+    ToastContainer
+} = ReactToastr
 const ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
 
 
-Formsy.addValidationRule('isMemberIdEusko', (values, value) =>
-{
-    if (!value) {
-        return false;
-    }
-
-    if (value.startsWith("E", 0) && value.length === 6) {
-        return true;
-    }
-    else {
-        return false;
-    }
-});
+Formsy.addValidationRule('isMemberIdEusko', isMemberIdEusko);
 
 Formsy.addValidationRule('isValidPhoneNumber', (values, value) =>
 {
@@ -168,55 +169,6 @@ class MemberAddPage extends React.Component {
         this.setState({birth: date});
     }
 
-    // generic callback for all selectize objects
-    selectizeCreateFromSearch = (options, search) => {
-        // Pretty much self explanatory:
-        // this function is called when we start typing inside the select
-        if (search)
-        {
-            if (search.length == 0 || (options.map(function(option)
-            {
-                return option.label;
-            })).indexOf(search) > -1)
-                return null;
-            else
-                return {label: search, value: search};
-        }
-        else
-            return null;
-    }
-
-    selectizeRenderOption = (item) => {
-        // This is how the list itself is displayed
-        return  <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
-                    <div className="memberaddform" style={{marginLeft: 10}}>
-                        {item.label}
-                    </div>
-                </div>
-    }
-
-    selectizeNewRenderOption = (item) => {
-        // This is how the list itself is displayed
-        return  <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
-                    <div className="memberaddform" style={{marginLeft: 10}}>
-                        {!!item.newOption ? __("Ajouter") + " " + item.label + " ..." : item.label}
-                    </div>
-                </div>
-    }
-
-    selectizeRenderValue = (item) => {
-        // When we select a value, this is how we display it
-        return  <div className="simple-value">
-                    <span className="memberaddform" style={{marginLeft: 10, verticalAlign: "middle"}}>{item.label}</span>
-                </div>
-    }
-
-    selectizeNoResultsFound = () => {
-        return  <div className="no-results-found" style={{fontSize: 15}}>
-                    {__("Pas de résultat")}
-                </div>
-    }
-
     // zip
     zipOnSearchChange = (search) => {
         this.setState({zipSearch: search})
@@ -327,7 +279,6 @@ class MemberAddPage extends React.Component {
         this.setState({fkAsso2: item})
     }
 
-
     enableButton = () => {
         this.setState({canSubmit: true});
     }
@@ -371,7 +322,7 @@ class MemberAddPage extends React.Component {
         }
 
         if (this.state.fkAsso2)
-            data['fk_asso2'] = this.state.fkAsso2.value
+            data['fk_asso_2'] = this.state.fkAsso2.value
 
         console.log(data)
         fetch(this.props.url,
@@ -418,9 +369,6 @@ class MemberAddPage extends React.Component {
 
         return (
             <div className="row">
-                <div className="page-header">
-                    <h1>{__("Adhésion")}</h1>
-                </div>
                 <MemberAddForm
                     onValidSubmit={this.submitForm}
                     onInvalid={this.disableButton}
@@ -439,6 +387,7 @@ class MemberAddPage extends React.Component {
                             validationErrors={{
                                 isMemberIdEusko: __("Ceci n'est pas un N° adhérent Eusko valide.")
                             }}
+                            elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-6']}
                             required
                         />
                         <RadioGroup
@@ -449,6 +398,7 @@ class MemberAddPage extends React.Component {
                             options={[{value: 'MME', label: __('Madame')},
                                      {value: 'MR', label: __('Monsieur')}
                             ]}
+                            elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-6']}
                             required
                         />
                         <Input
@@ -462,6 +412,7 @@ class MemberAddPage extends React.Component {
                             validationErrors={{
                                 maxLength: __("Ce champ ne peut pas faire plus de 45 caractères!")
                             }}
+                            elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-6']}
                             required
                         />
                         <Input
@@ -475,6 +426,7 @@ class MemberAddPage extends React.Component {
                             validationErrors={{
                                 maxLength: __("Ce champ ne peut pas faire plus de 45 caractères!")
                             }}
+                            elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-6']}
                             required
                         />
                         <div className="form-group row">
@@ -485,7 +437,7 @@ class MemberAddPage extends React.Component {
                                 {__("Date de naissance")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddform-birth" data-eusko="memberaddform-birth">
+                            <div className="col-sm-6 memberaddform-birth" data-eusko="memberaddform-birth">
                                 <DatePicker
                                     name="birth"
                                     className="form-control"
@@ -505,6 +457,7 @@ class MemberAddPage extends React.Component {
                             label={__("Adresse postale")}
                             type="text"
                             placeholder={__("Adresse postale")}
+                            elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-6']}
                             required
                         />
                         <div className="form-group row">
@@ -515,7 +468,7 @@ class MemberAddPage extends React.Component {
                                 {__("Code Postal")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddform" data-eusko="memberaddform-zip">
+                            <div className="col-sm-6 memberaddform" data-eusko="memberaddform-zip">
                                 <SimpleSelect
                                     ref="select"
                                     value={this.state.zip}
@@ -524,10 +477,10 @@ class MemberAddPage extends React.Component {
                                     placeholder={__("Code Postal")}
                                     theme="bootstrap3"
                                     autocomplete="off"
-                                    createFromSearch={this.selectizeCreateFromSearch}
+                                    createFromSearch={SelectizeUtils.selectizeCreateFromSearch}
                                     onSearchChange={this.zipOnSearchChange}
                                     onValueChange={this.zipOnValueChange}
-                                    renderOption={this.selectizeRenderOption}
+                                    renderOption={SelectizeUtils.selectizeRenderOption}
                                     renderValue={this.zipRenderValue}
                                     onBlur={this.zipOnBlur}
                                     renderNoResultsFound={this.zipRenderNoResultsFound}
@@ -543,7 +496,7 @@ class MemberAddPage extends React.Component {
                                 {__("Ville")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddform" data-eusko="memberaddform-town">
+                            <div className="col-sm-6 memberaddform" data-eusko="memberaddform-town">
                                 <SimpleSelect
                                     ref="select"
                                     value={this.state.town}
@@ -551,11 +504,11 @@ class MemberAddPage extends React.Component {
                                     placeholder={__("Ville")}
                                     autocomplete="off"
                                     theme="bootstrap3"
-                                    createFromSearch={this.selectizeCreateFromSearch}
+                                    createFromSearch={SelectizeUtils.selectizeCreateFromSearch}
                                     onValueChange={this.townOnValueChange}
-                                    renderValue={this.selectizeRenderValue}
+                                    renderValue={SelectizeUtils.selectizeRenderValue}
                                     onBlur={this.validateFormOnBlur}
-                                    renderNoResultsFound={this.selectizeNoResultsFound}
+                                    renderNoResultsFound={SelectizeUtils.selectizeNoResultsFound}
                                     required
                                 />
                             </div>
@@ -568,7 +521,7 @@ class MemberAddPage extends React.Component {
                                 {__("Pays")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddform" data-eusko="memberaddform-country">
+                            <div className="col-sm-6 memberaddform" data-eusko="memberaddform-country">
                                 <SimpleSelect
                                     ref="select"
                                     value={this.state.country}
@@ -577,10 +530,10 @@ class MemberAddPage extends React.Component {
                                     autocomplete="off"
                                     theme="bootstrap3"
                                     onValueChange={this.countryOnValueChange}
-                                    renderOption={this.selectizeNewRenderOption}
-                                    renderValue={this.selectizeRenderValue}
+                                    renderOption={SelectizeUtils.selectizeNewRenderOption}
+                                    renderValue={SelectizeUtils.selectizeRenderValue}
                                     onBlur={this.validateFormOnBlur}
-                                    renderNoResultsFound={this.selectizeNoResultsFound}
+                                    renderNoResultsFound={SelectizeUtils.selectizeNoResultsFound}
                                     required
                                 />
                             </div>
@@ -596,6 +549,7 @@ class MemberAddPage extends React.Component {
                             validationErrors={{
                                 isValidPhoneNumber: __("Ceci n'est pas un N° téléphone valide. Evitez les points et les espaces.")
                             }}
+                            elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-6']}
                             required
                         />
                         <Input
@@ -609,6 +563,7 @@ class MemberAddPage extends React.Component {
                             validationErrors={{
                                 isEmail: __("Adresse email non valide")
                             }}
+                            elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-6']}
                             required
                         />
                         <RadioGroup
@@ -620,6 +575,7 @@ class MemberAddPage extends React.Component {
                             options={[{value: '1', label: __('Oui')},
                                       {value: '0', label: __('Non')}
                             ]}
+                            elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-6']}
                             required
                         />
                         <div className="form-group row">
@@ -629,7 +585,7 @@ class MemberAddPage extends React.Component {
                                 htmlFor="memberaddform-town">
                                 {__("Choix Association 3% #1")}
                             </label>
-                            <div className="col-sm-9 memberaddform" data-eusko="memberaddform-town">
+                            <div className="col-sm-6 memberaddform" data-eusko="memberaddform-town">
                                 <SimpleSelect
                                     ref="select"
                                     value={this.state.fkAsso}
@@ -637,10 +593,10 @@ class MemberAddPage extends React.Component {
                                     placeholder={__("Choix Association 3% #1")}
                                     theme="bootstrap3"
                                     help={__("Blabla")}
-                                    createFromSearch={this.selectizeCreateFromSearch}
+                                    createFromSearch={SelectizeUtils.selectizeCreateFromSearch}
                                     onValueChange={this.fkAssoOnValueChange}
-                                    renderValue={this.selectizeRenderValue}
-                                    renderOption={this.selectizeNewRenderOption}
+                                    renderValue={SelectizeUtils.selectizeRenderValue}
+                                    renderOption={SelectizeUtils.selectizeNewRenderOption}
                                     onBlur={this.validateFormOnBlur}
                                 />
                             </div>
@@ -652,7 +608,7 @@ class MemberAddPage extends React.Component {
                                 htmlFor="memberaddform-town">
                                 {__("Choix Association 3% #2")}
                             </label>
-                            <div className="col-sm-9 memberaddform" data-eusko="memberaddform-town">
+                            <div className="col-sm-6 memberaddform" data-eusko="memberaddform-town">
                                 <SimpleSelect
                                     ref="select"
                                     value={this.state.fkAsso2}
@@ -661,10 +617,10 @@ class MemberAddPage extends React.Component {
                                     theme="bootstrap3"
                                     help={__("Blabla")}
                                     onValueChange={this.fkAsso2OnValueChange}
-                                    renderOption={this.selectizeRenderOption}
-                                    renderValue={this.selectizeRenderValue}
+                                    renderOption={SelectizeUtils.selectizeRenderOption}
+                                    renderValue={SelectizeUtils.selectizeRenderValue}
                                     onBlur={this.validateFormOnBlur}
-                                    renderNoResultsFound={this.selectizeNoResultsFound}
+                                    renderNoResultsFound={SelectizeUtils.selectizeNoResultsFound}
                                 />
                             </div>
                         </div>
@@ -675,8 +631,8 @@ class MemberAddPage extends React.Component {
                                 name="submit"
                                 data-eusko="memberaddform-submit"
                                 type="submit"
-                                defaultValue={__("Envoyer")}
-                                className="btn btn-primary"
+                                defaultValue={__("Création d'un adhérent")}
+                                className="btn btn-success"
                                 formNoValidate={true}
                                 disabled={!this.state.canSubmit}
                             />
@@ -685,7 +641,7 @@ class MemberAddPage extends React.Component {
                 </MemberAddForm>
                 <ToastContainer ref="container"
                                 toastMessageFactory={ToastMessageFactory}
-                                className="toast-top-right" />
+                                className="toast-top-right toast-top-right-navbar" />
             </div>
         );
     }
@@ -695,4 +651,9 @@ class MemberAddPage extends React.Component {
 ReactDOM.render(
     <MemberAddPage url={getAPIBaseURL + "members/"} method="POST" />,
     document.getElementById('member-add')
-);
+)
+
+ReactDOM.render(
+    <NavbarTitle title={__("Adhésion")} />,
+    document.getElementById('navbar-title')
+)
