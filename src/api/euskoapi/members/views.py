@@ -9,6 +9,7 @@ from base_api import BaseAPIView
 from dolibarr_api import DolibarrAPIException
 from members.serializers import MemberSerializer, MembersSubscriptionsSerializer
 from members.misc import Member, Subscription
+from misc import sendmail_euskalmoneta
 
 log = logging.getLogger()
 
@@ -31,6 +32,10 @@ class MembersAPIView(BaseAPIView):
         log.info('posted data: {}'.format(data))
         response_obj = self.dolibarr.post(model=self.model, data=data)
         log.info(response_obj)
+        try:
+            sendmail_euskalmoneta(subject="subject", body="body", to_email=data['email'])
+        except KeyError:
+            log.critical("Oops! No mail sent to the member, we didn't had a email address !")
         return Response(response_obj, status=status.HTTP_201_CREATED)
 
     def update(self, request, pk=None):
@@ -134,11 +139,19 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             log.critical(e)
             return Response(e, status=status.HTTP_400_BAD_REQUEST)
 
+        current_member = self.dolibarr.get(model='members', id=member_id)
         res = {'id_subscription': res_id_subscription,
                'id_payment': res_id_payment,
                'link_sub_payment': res_id_link_sub_payment,
                'id_link_payment_member': res_id_link_payment_member,
-               'member': self.dolibarr.get(model='members', id=member_id)}
+               'member': current_member}
+
+        try:
+            sendmail_euskalmoneta(subject="subject", body="body", to_email=current_member['email'])
+        except KeyError:
+            log.critical("Oops! No mail sent to this member {}, "
+                         "we didn't had a email address !".format(current_member['email']))
+
         return Response(res, status=status.HTTP_201_CREATED)
 
     def update(self, request, pk=None):
