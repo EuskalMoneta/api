@@ -135,7 +135,7 @@ class MemberSearchPage extends React.Component {
                                 data-eusko="membersearch-submit"
                                 type="submit"
                                 defaultValue="Sélection d'un adhérent"
-                                className="btn btn-primary"
+                                className="btn btn-success"
                                 formNoValidate={true}
                                 disabled={!this.state.canSubmit}
                             />

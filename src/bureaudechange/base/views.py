@@ -11,6 +11,11 @@ def home(request):
     return render(request, 'home.html')
 
 
+def config_js(request):
+    # JavaScript config for this Django/React app
+    return render(request, 'config.js')
+
+
 def setlang_custom(request):
     """
     In this React app, I'm using fetch API to do AJAX requests, and in this particular case

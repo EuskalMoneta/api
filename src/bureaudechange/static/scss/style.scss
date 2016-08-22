@@ -1,3 +1,159 @@
+/* base.html */
+
+/* Base variables */
+$font-stack: "Lato","Helvetica Neue",Helvetica,Arial,sans-serif;
+
+.lang-select {
+  cursor: pointer;
+}
+
+.lang-select-flag-fr {
+  height: 14px;
+  width: 20px;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+.navbar-header a:hover {
+  cursor:default;
+  color: #fff !important;
+}
+
+.footer {
+  border-top: solid 1px #CCCCCC;
+  background-color: #f9f6f6;
+  text-align: center;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+}
+
+/* Toggle Styles */
+
+#wrapper {
+  padding-left: 0;
+  -webkit-transition: all 0.5s ease;
+  -moz-transition: all 0.5s ease;
+  -o-transition: all 0.5s ease;
+  transition: all 0.5s ease;
+}
+
+#wrapper.toggled {
+  padding-left: 175px;
+}
+
+#sidebar-wrapper {
+  z-index: 1000;
+  position: fixed;
+  left: 175px;
+  width: 0;
+  height: 100%;
+  margin-left: -175px;
+  overflow-y: auto;
+  background: #2c3e50;
+  -webkit-transition: all 0.5s ease;
+  -moz-transition: all 0.5s ease;
+  -o-transition: all 0.5s ease;
+  transition: all 0.5s ease;
+}
+
+#wrapper.toggled #sidebar-wrapper {
+  width: 175px;
+}
+
+#page-content-wrapper {
+  margin-top: 60px;
+  width: 100%;
+  position: absolute;
+  padding: 15px;
+  margin-bottom: 50px;
+}
+
+#wrapper.toggled #page-content-wrapper {
+  position: absolute;
+  margin-right: -175px;
+}
+
+/* Sidebar Styles */
+
+.sidebar-nav {
+  position: absolute;
+  top: 0;
+  width: 175px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sidebar-nav li {
+  text-indent: 20px;
+  line-height: 40px;
+}
+
+.sidebar-nav li a {
+  display: block;
+  text-decoration: none;
+  color: #fff;
+}
+
+.sidebar-nav li a:hover {
+  text-decoration: none;
+  color: #18bc9c;
+}
+
+.sidebar-nav li a:active,
+.sidebar-nav li a:focus {
+  text-decoration: none;
+}
+
+.sidebar-nav > .sidebar-brand {
+  height: 65px;
+  font-size: 18px;
+  line-height: 60px;
+}
+
+.sidebar-nav > .sidebar-brand a {
+  color: #fff;
+}
+
+.sidebar-nav > .sidebar-brand a:hover {
+  color: #fff;
+  background: none;
+}
+
+@media(min-width:768px) {
+  #wrapper {
+    padding-left: 175px;
+  }
+
+  #wrapper.toggled {
+    padding-left: 0;
+  }
+
+  #sidebar-wrapper {
+    width: 175px;
+  }
+
+  #wrapper.toggled #sidebar-wrapper {
+    width: 0;
+  }
+
+  #page-content-wrapper {
+    padding: 20px;
+    position: relative;
+  }
+
+  #wrapper.toggled #page-content-wrapper {
+    position: relative;
+    margin-right: 0;
+  }
+}
+
 /* MemberAddForm */
 // Adjust size for the "birthdate" field
 .memberaddform-birth {
@@ -6,16 +162,15 @@
   }
 }
 
-// Adjust size for the country field
+// Set the correct font for the react-selectize fields
 .react-selectize.root-node {
-  width: auto;
+  width: 100% !important;
 }
 
-// Set the correct font for the react-selectize fields
 .memberaddform {
   .react-selectize-placeholder {
     font-size: 16px;
-    font-family: Georgia,"Times New Roman",Times,serif;
+    font-family: $font-stack;
     line-height: 1.42857143;
   }
 }
@@ -23,14 +178,14 @@
 .memberaddsubscription {
   .react-selectize-placeholder {
     font-size: 16px;
-    font-family: Georgia,"Times New Roman",Times,serif;
+    font-family: $font-stack;
     line-height: 1.42857143;
   }
 }
 
 .memberaddform {
   font-size: 16px;
-  font-family: Georgia,"Times New Roman",Times,serif;
+  font-family: $font-stack;
   line-height: 1.42857143;
 }
 
@@ -50,23 +205,6 @@
     -webkit-box-shadow: inset 0 1px 1px rgba(0,0,0,0.075);
     box-shadow: inset 0 1px 1px rgba(0,0,0,0.075);
   }
-}
-
-
-
-/* base.html */
-.lang-select {
-  cursor: pointer;
-}
-
-.lang-select-flag-fr {
-  height: 14px;
-  width: 20px;
-}
-
-/* index2 */
-body {
-    padding-top: 70px;
 }
 
 /* login.html */
@@ -115,8 +253,6 @@ body {
   border-top-left-radius: 0;
   border-top-right-radius: 0;
 }
-
-footer { margin-top: 30px; }
 
 /* index.html */
 

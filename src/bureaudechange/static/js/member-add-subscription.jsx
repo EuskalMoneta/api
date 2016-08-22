@@ -1,4 +1,4 @@
-import { checkStatus, parseJSON, getAPIBaseURL } from 'Utils'
+import { checkStatus, parseJSON, getAPIBaseURL, NavbarTitle } from 'Utils'
 
 const { Row } = FRC
 
@@ -235,9 +235,6 @@ class MemberSubscriptionPage extends React.Component {
 
         return (
             <div className="row">
-                <div className="page-header">
-                    <h1>{__("Enregistrement d'une cotisation")}</h1>
-                </div>
                 <MemberSubscriptionForm
                     onValidSubmit={this.submitForm}
                     onInvalid={this.disableButton}
@@ -252,7 +249,7 @@ class MemberSubscriptionPage extends React.Component {
                                 {__("Montant")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddsubscription" data-eusko="memberaddsubscription-amount">
+                            <div className="col-sm-6 memberaddsubscription" data-eusko="memberaddsubscription-amount">
                                 <SimpleSelect
                                     className={reactSelectizeErrorClass}
                                     ref="select"
@@ -271,6 +268,7 @@ class MemberSubscriptionPage extends React.Component {
                                 />
                                 { spanInvalidAmount }
                             </div>
+                            <div className="col-sm-3"></div>
                         </div>
                         <div className="form-group row">
                             <label
@@ -280,7 +278,7 @@ class MemberSubscriptionPage extends React.Component {
                                 {__("Mode de paiement")}
                                 <span className="required-symbol">&nbsp;*</span>
                             </label>
-                            <div className="col-sm-9 memberaddsubscription" data-eusko="memberaddsubscription-payment_mode">
+                            <div className="col-sm-6 memberaddsubscription" data-eusko="memberaddsubscription-payment_mode">
                                 <SimpleSelect
                                     className={reactSelectizeErrorClass}
                                     ref="select"
@@ -295,6 +293,7 @@ class MemberSubscriptionPage extends React.Component {
                                     required
                                 />
                             </div>
+                            <div className="col-sm-3"></div>
                         </div>
                     </fieldset>
                     <fieldset>
@@ -304,7 +303,7 @@ class MemberSubscriptionPage extends React.Component {
                                 data-eusko="memberaddsubscription-submit"
                                 type="submit"
                                 defaultValue="Enregistrer la cotisation"
-                                className="btn btn-primary"
+                                className="btn btn-success"
                                 formNoValidate={true}
                                 disabled={!this.state.canSubmit}
                             />
@@ -323,4 +322,9 @@ class MemberSubscriptionPage extends React.Component {
 ReactDOM.render(
     <MemberSubscriptionPage url="http://localhost:8000/members-subscriptions/" method="POST" />,
     document.getElementById('member-add-subscription')
-);
+)
+
+ReactDOM.render(
+    <NavbarTitle title={__("Enregistrement d'une cotisation")} />,
+    document.getElementById('navbar-title')
+)

@@ -29,6 +29,8 @@ urlpatterns = [
 
     # home
     url(r'^$', base_views.home, name='home'),
+    # JavaScript config for this Django/React app
+    url(r'^config\.js$', base_views.config_js, name='config_js'),
     # login
     url(r'^login/?$', login, {'template_name': 'login.html'}, name='login'),
     # logout
