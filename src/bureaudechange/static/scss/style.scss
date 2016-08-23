@@ -258,35 +258,20 @@ body {
   border-top-right-radius: 0;
 }
 
-/* index.html */
+/* search members */
 
-.index-header { margin-top:30px; }
-
-.index-header .row {
+.search-no-results {
   margin-top: 30px;
-  margin-bottom: 30px;
+  position: relative;
+  font-style: italic;
+  color: #BDBDBD;
 }
 
-.index-header .second-row {
-  margin-top: 50px;
-  margin-bottom: 40px;
+.react-bs-container-body {
+  td {
+    cursor: pointer;
+  }
 }
-
-.index-header button {
-  height: 150px;
-  border-radius: 16px;
-  font-size: 30px;
-}
-
-.index-header i { margin-left: 30px; }
-
-@media only screen and (max-width: 1199px) {
-  .btn-primary { margin-top: 50px; }
-}
-
-.red { color: #FF0000; }
-
-.green { color: #33CC33; }
 
 /* divers */
 

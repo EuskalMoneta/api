@@ -1,6 +1,17 @@
-import { checkStatus, parseJSON } from 'Utils'
+import {
+    checkStatus,
+    parseJSON,
+    isMemberIdEusko,
+    getAPIBaseURL,
+    NavbarTitle,
+    SelectizeUtils
+} from 'Utils'
 
-const { Input, Row } = FRC
+
+const { Input } = FRC
+
+import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table'
+import 'react-bootstrap-table/css/react-bootstrap-table.min.css'
 
 
 const MemberSearchForm = React.createClass({
@@ -31,128 +42,124 @@ class MemberSearchPage extends React.Component {
 
         // Default state
         this.state = {
-            canSubmit: false
+            canSubmit: false,
+            searchValue: undefined,
+            searchString: undefined,
+            searchResults: undefined
         }
     }
 
-    enableButton = () => {
-        this.setState({
-            canSubmit: true
-        });
-    }
+    onSearchChange = (event, search) => {
+        // Search for members, using ?login= OR ?name=
+        var searchString = null;
 
-    disableButton = () => {
-        this.setState({
-            canSubmit: false
-        });
-    }
+        if (!search || search.length < 4) {
+            return false;
+        }
+        else if (search) {
+            if (isMemberIdEusko('', search))
+                var searchString = '?login=' + search
+            else
+                var searchString = '?name=' + search
 
-    getOptions = (input) => {
-      return
-        fetch(this.props.search_url,
-        {
-            body: JSON.stringify(input),
-            method: 'get',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(checkStatus)
-        .then(parseJSON)
-        .then((json) => {
-          return { options: json };
-        })
-    }
-
-    submitForm = (data) => {
-        data = {amount,
-                label}
-
-        fetch(this.props.url,
-        {
-            body: JSON.stringify(data),
-            method: this.props.method,
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(checkStatus)
-        .then(parseJSON)
-        .then(json => {
-            console.log(json)
-            this.setState({data: json.results})
-            this.refs.container.success(
-                "L'enregistrement de la cotisation s'est déroulée correctement.",
-                "",
-                {
-                    timeOut: 3000,
-                    extendedTimeOut: 10000,
-                    closeButton:true
+            // We use fetch API to ... fetch members for this login / name
+            fetch(this.props.search_url + searchString,
+            {
+                method: this.props.method,
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
                 }
-            )
-        })
-        .catch(err => {
-            // Error during request, or parsing NOK :(
-            console.log(this.props.url, err)
-            this.refs.container.error(
-                "Une erreur s'est produite lors de la création de l'adhérent !",
-                "",
-                {
-                    timeOut: 3000,
-                    extendedTimeOut: 10000,
-                    closeButton:true
-                }
-            )
-        })
+            })
+            .then(checkStatus)
+            .then(parseJSON)
+            .then(json => {
+                console.log(json)
+
+                var searchResults = _.chain(json)
+                    .map(function(item){
+                        if (item.login.startsWith("E", 0))
+                            return {name: item.firstname + " " + item.lastname,
+                                    id: item.id, login: item.login}
+
+                        else if (item.login.startsWith("Z", 0))
+                            return {name: item.societe, id: item.id, login: item.login}
+                    })
+                    .sortBy(function(item){ return item.name })
+                    .value()
+
+                this.setState({searchResults: searchResults})
+            })
+            .catch(err => {
+                // Error during request, or parsing NOK :(
+                console.log(this.props.search_url + searchString, err)
+            })
+        }
     }
 
     render = () => {
+        if (this.state.searchResults) {
+
+            const selectRowProp = {
+                mode: 'radio',
+                clickToSelect: true,
+                hideSelectColumn: true,
+                onSelect: (row, isSelected, event) => {
+                    console.log(row.id)
+                }
+            }
+
+            var searchResultsTable = (
+                <BootstrapTable data={this.state.searchResults} striped={true} hover={true} selectRow={selectRowProp}>
+                    <TableHeaderColumn dataField="login" isKey={true} width="100">{__("N° adhérent")}</TableHeaderColumn>
+                    <TableHeaderColumn dataField="name">{__("Nom complet")}</TableHeaderColumn>
+                </BootstrapTable>
+            )
+        }
+        else
+            var searchResultsTable = (
+                <div className="col-sm-offset-4">
+                    <span className="search-no-results">{__("Pas de résultat")}</span>
+                </div>
+            )
 
         return (
             <div className="row">
-                <div className="page-header">
-                    <h1>Recherche d'un adhérent</h1>
-                </div>
-                <MemberSearchForm
-                    onValidSubmit={this.submitForm}
-                    onInvalid={this.disableButton}
-                    onValid={this.enableButton}
-                    ref="membersearch">
-                    <fieldset>
-                        <Select.Async
-                            data-eusko="membersearch-search"
-                            name="search"
-                            value="one"
-                            loadOptions={this.getOptions}
-                        />
-                    </fieldset>
-                    <fieldset>
-                        <Row layout="horizontal">
-                            <input
-                                name="submit"
-                                data-eusko="membersearch-submit"
-                                type="submit"
-                                defaultValue="Sélection d'un adhérent"
-                                className="btn btn-success"
-                                formNoValidate={true}
-                                disabled={!this.state.canSubmit}
+                <div className="row">
+                    <MemberSearchForm
+                        ref="membersearch">
+                        <fieldset>
+                            <Input
+                                name="searchValue"
+                                data-eusko="membersearch-login"
+                                value=""
+                                type="text"
+                                placeholder={__("Recherche d'un adhérent")}
+                                help={__("Saisir Nom, Prénom ou N°adhérent (Format E12345)")}
+                                labelClassName={[{'col-sm-3': false}, 'col-sm-1']}
+                                elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-6']}
+                                onChange={this.onSearchChange}
                             />
-                        </Row>
-                    </fieldset>
-                </MemberSearchForm>
+                        </fieldset>
+                    </MemberSearchForm>
+                </div>
+                <div className="row">
+                    <div className="col-md-9 search-results">
+                        {searchResultsTable}
+                    </div>
+                </div>
             </div>
-        );
+        )
     }
 }
 
 
 ReactDOM.render(
-    <MemberSearchPage
-        url="http://localhost:8000/members-subsubscriptions"
-        search_url="http://localhost:8000/members-search"
-        method="POST"
-    />,
+    <MemberSearchPage search_url={getAPIBaseURL + "members/"} member_url="/members/" method="GET" />,
     document.getElementById('member-search')
-);
+)
+
+ReactDOM.render(
+    <NavbarTitle title={__("Recherche d'un adhérent")} />,
+    document.getElementById('navbar-title')
+)

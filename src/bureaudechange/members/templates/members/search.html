@@ -1,14 +1,17 @@
 {% extends "base.html" %}
 {% load staticfiles i18n %}
+{% get_current_language as CURRENT_LANG %}
 
 {% block container %}
-  <div class="container">
-    <div class="row">
-      <div class="col-lg-12" id="member-search">
-      </div>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-12" id="member-search"></div>
+        </div>
     </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="{% static 'bundles/js/MemberSearch.js' %}"></script>
+  {% with 'bundles/js/'|add:CURRENT_LANG|add:'.MemberSearch.js' as membersearch_js_static %}
+    <script src="{% static membersearch_js_static %}"></script>
+  {% endwith %}
 {% endblock %}
