@@ -12,6 +12,20 @@ var parseJSON = (response) => {
     return response.json()
 }
 
+var isMemberIdEusko = (values, value) =>
+{
+    if (!value) {
+        return false;
+    }
+
+    if ((value.startsWith("E", 0) || value.startsWith("Z", 0)) && value.length === 6) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
 var getCurrentLang = document.documentElement.lang
 var getCSRFToken = window.config.getCSRFToken
 var getAPIBaseURL = window.config.getAPIBaseURL
@@ -103,14 +117,68 @@ class SidebarNav extends React.Component {
     }
 }
 
+class SelectizeUtils {
+    // generic callback for all selectize objects
+    static selectizeCreateFromSearch(options, search) {
+        // Pretty much self explanatory:
+        // this function is called when we start typing inside the select
+        if (search)
+        {
+            if (search.length == 0 || (options.map(function(option)
+            {
+                return option.label;
+            })).indexOf(search) > -1)
+                return null;
+            else
+                return {label: search, value: search};
+        }
+        else
+            return null;
+    }
+
+    static selectizeRenderOption (item) {
+        // This is how the list itself is displayed
+        return  <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
+                    <div className="memberaddform" style={{marginLeft: 10}}>
+                        {item.label}
+                    </div>
+                </div>
+    }
+
+    static selectizeNewRenderOption (item) {
+        // This is how the list itself is displayed
+        return  <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
+                    <div className="memberaddform" style={{marginLeft: 10}}>
+                        {!!item.newOption ? __("Ajouter") + " " + item.label + " ..." : item.label}
+                    </div>
+                </div>
+    }
+
+    static selectizeRenderValue (item) {
+        // When we select a value, this is how we display it
+        return  <div className="simple-value">
+                    <span className="memberaddform" style={{marginLeft: 10, verticalAlign: "middle"}}>{item.label}</span>
+                </div>
+    }
+
+    static selectizeNoResultsFound () {
+        return  <div className="no-results-found" style={{fontSize: 15}}>
+                    {__("Pas de résultat")}
+                </div>
+    }
+}
+
+
 module.exports = {
     checkStatus: checkStatus,
     parseJSON: parseJSON,
+    isMemberIdEusko: isMemberIdEusko,
     getCurrentLang: getCurrentLang,
     getCSRFToken: getCSRFToken,
     getAPIBaseURL: getAPIBaseURL,
     NavbarTitle: NavbarTitle,
     SidebarNav: SidebarNav,
     Flags: Flags,
-    Flag: Flag
+    Flag: Flag,
+    SelectizeUtils: SelectizeUtils
 }

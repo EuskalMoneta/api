@@ -1,30 +1,31 @@
-import { checkStatus, parseJSON, getAPIBaseURL, NavbarTitle } from 'Utils'
+import {
+    checkStatus,
+    parseJSON,
+    isMemberIdEusko,
+    getAPIBaseURL,
+    NavbarTitle,
+    SelectizeUtils
+} from 'Utils'
 
-const { Input, RadioGroup, Row } = FRC
+const {
+    Input,
+    RadioGroup,
+    Row
+} = FRC
 
 import DatePicker from 'react-datepicker'
-require('react-datepicker/dist/react-datepicker.css')
+import 'react-datepicker/dist/react-datepicker.css'
 
 import ReactSelectize from 'react-selectize'
 const SimpleSelect = ReactSelectize.SimpleSelect
 
-const { ToastContainer } = ReactToastr
+const {
+    ToastContainer
+} = ReactToastr
 const ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
 
 
-Formsy.addValidationRule('isMemberIdEusko', (values, value) =>
-{
-    if (!value) {
-        return false;
-    }
-
-    if (value.startsWith("E", 0) && value.length === 6) {
-        return true;
-    }
-    else {
-        return false;
-    }
-});
+Formsy.addValidationRule('isMemberIdEusko', isMemberIdEusko);
 
 Formsy.addValidationRule('isValidPhoneNumber', (values, value) =>
 {
@@ -168,55 +169,6 @@ class MemberAddPage extends React.Component {
         this.setState({birth: date});
     }
 
-    // generic callback for all selectize objects
-    selectizeCreateFromSearch = (options, search) => {
-        // Pretty much self explanatory:
-        // this function is called when we start typing inside the select
-        if (search)
-        {
-            if (search.length == 0 || (options.map(function(option)
-            {
-                return option.label;
-            })).indexOf(search) > -1)
-                return null;
-            else
-                return {label: search, value: search};
-        }
-        else
-            return null;
-    }
-
-    selectizeRenderOption = (item) => {
-        // This is how the list itself is displayed
-        return  <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
-                    <div className="memberaddform" style={{marginLeft: 10}}>
-                        {item.label}
-                    </div>
-                </div>
-    }
-
-    selectizeNewRenderOption = (item) => {
-        // This is how the list itself is displayed
-        return  <div className="simple-option" style={{display: "flex", alignItems: "center"}}>
-                    <div className="memberaddform" style={{marginLeft: 10}}>
-                        {!!item.newOption ? __("Ajouter") + " " + item.label + " ..." : item.label}
-                    </div>
-                </div>
-    }
-
-    selectizeRenderValue = (item) => {
-        // When we select a value, this is how we display it
-        return  <div className="simple-value">
-                    <span className="memberaddform" style={{marginLeft: 10, verticalAlign: "middle"}}>{item.label}</span>
-                </div>
-    }
-
-    selectizeNoResultsFound = () => {
-        return  <div className="no-results-found" style={{fontSize: 15}}>
-                    {__("Pas de résultat")}
-                </div>
-    }
-
     // zip
     zipOnSearchChange = (search) => {
         this.setState({zipSearch: search})
@@ -326,7 +278,6 @@ class MemberAddPage extends React.Component {
     fkAsso2OnValueChange = (item) => {
         this.setState({fkAsso2: item})
     }
-
 
     enableButton = () => {
         this.setState({canSubmit: true});
@@ -526,10 +477,10 @@ class MemberAddPage extends React.Component {
                                     placeholder={__("Code Postal")}
                                     theme="bootstrap3"
                                     autocomplete="off"
-                                    createFromSearch={this.selectizeCreateFromSearch}
+                                    createFromSearch={SelectizeUtils.selectizeCreateFromSearch}
                                     onSearchChange={this.zipOnSearchChange}
                                     onValueChange={this.zipOnValueChange}
-                                    renderOption={this.selectizeRenderOption}
+                                    renderOption={SelectizeUtils.selectizeRenderOption}
                                     renderValue={this.zipRenderValue}
                                     onBlur={this.zipOnBlur}
                                     renderNoResultsFound={this.zipRenderNoResultsFound}
@@ -553,11 +504,11 @@ class MemberAddPage extends React.Component {
                                     placeholder={__("Ville")}
                                     autocomplete="off"
                                     theme="bootstrap3"
-                                    createFromSearch={this.selectizeCreateFromSearch}
+                                    createFromSearch={SelectizeUtils.selectizeCreateFromSearch}
                                     onValueChange={this.townOnValueChange}
-                                    renderValue={this.selectizeRenderValue}
+                                    renderValue={SelectizeUtils.selectizeRenderValue}
                                     onBlur={this.validateFormOnBlur}
-                                    renderNoResultsFound={this.selectizeNoResultsFound}
+                                    renderNoResultsFound={SelectizeUtils.selectizeNoResultsFound}
                                     required
                                 />
                             </div>
@@ -579,10 +530,10 @@ class MemberAddPage extends React.Component {
                                     autocomplete="off"
                                     theme="bootstrap3"
                                     onValueChange={this.countryOnValueChange}
-                                    renderOption={this.selectizeNewRenderOption}
-                                    renderValue={this.selectizeRenderValue}
+                                    renderOption={SelectizeUtils.selectizeNewRenderOption}
+                                    renderValue={SelectizeUtils.selectizeRenderValue}
                                     onBlur={this.validateFormOnBlur}
-                                    renderNoResultsFound={this.selectizeNoResultsFound}
+                                    renderNoResultsFound={SelectizeUtils.selectizeNoResultsFound}
                                     required
                                 />
                             </div>
@@ -642,10 +593,10 @@ class MemberAddPage extends React.Component {
                                     placeholder={__("Choix Association 3% #1")}
                                     theme="bootstrap3"
                                     help={__("Blabla")}
-                                    createFromSearch={this.selectizeCreateFromSearch}
+                                    createFromSearch={SelectizeUtils.selectizeCreateFromSearch}
                                     onValueChange={this.fkAssoOnValueChange}
-                                    renderValue={this.selectizeRenderValue}
-                                    renderOption={this.selectizeNewRenderOption}
+                                    renderValue={SelectizeUtils.selectizeRenderValue}
+                                    renderOption={SelectizeUtils.selectizeNewRenderOption}
                                     onBlur={this.validateFormOnBlur}
                                 />
                             </div>
@@ -666,10 +617,10 @@ class MemberAddPage extends React.Component {
                                     theme="bootstrap3"
                                     help={__("Blabla")}
                                     onValueChange={this.fkAsso2OnValueChange}
-                                    renderOption={this.selectizeRenderOption}
-                                    renderValue={this.selectizeRenderValue}
+                                    renderOption={SelectizeUtils.selectizeRenderOption}
+                                    renderValue={SelectizeUtils.selectizeRenderValue}
                                     onBlur={this.validateFormOnBlur}
-                                    renderNoResultsFound={this.selectizeNoResultsFound}
+                                    renderNoResultsFound={SelectizeUtils.selectizeNoResultsFound}
                                 />
                             </div>
                         </div>
@@ -680,7 +631,7 @@ class MemberAddPage extends React.Component {
                                 name="submit"
                                 data-eusko="memberaddform-submit"
                                 type="submit"
-                                defaultValue={__("Envoyer")}
+                                defaultValue={__("Création d'un adhérent")}
                                 className="btn btn-success"
                                 formNoValidate={true}
                                 disabled={!this.state.canSubmit}
@@ -690,7 +641,7 @@ class MemberAddPage extends React.Component {
                 </MemberAddForm>
                 <ToastContainer ref="container"
                                 toastMessageFactory={ToastMessageFactory}
-                                className="toast-top-right" />
+                                className="toast-top-right toast-top-right-navbar" />
             </div>
         );
     }

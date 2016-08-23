@@ -1,6 +1,6 @@
 # Euskalmoneta
 
-## Applications à développer
+## Applications à développer
 
 - Front BDC: Bureau de change
 - Front GI: Gestion interne
@@ -13,7 +13,7 @@
   - Branche utilisée: develop
 
 
-### Front BDC
+### Front BDC
 
 La méthode que j'utilise pour travailler dans cet environnement:
 

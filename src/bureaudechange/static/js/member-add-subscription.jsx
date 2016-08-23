@@ -1,14 +1,24 @@
-import { checkStatus, parseJSON, getAPIBaseURL, NavbarTitle } from 'Utils'
+import {
+    checkStatus,
+    parseJSON,
+    getAPIBaseURL,
+    NavbarTitle,
+    SelectizeUtils
+} from 'Utils'
 
-const { Row } = FRC
+const {
+    Row
+} = FRC
 
 import ReactSelectize from 'react-selectize'
 const SimpleSelect = ReactSelectize.SimpleSelect
 
 import classNames from 'classnames'
 
-var { ToastContainer } = ReactToastr
-var ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
+const {
+    ToastContainer
+} = ReactToastr
+const ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
 
 
 const MemberSubscriptionForm = React.createClass({
@@ -124,22 +134,6 @@ class MemberSubscriptionPage extends React.Component {
         })
     }
 
-    // generic functions
-    selectizeCreateFromSearch = (options, search) => {
-        // Pretty much self explanatory:
-        // this function is called when we start typing inside the select
-        if (search)
-            return {label: search, value: search}
-        else
-            return null
-    }
-
-    selectizeNoResultsFound = () => {
-        return  <div className="no-results-found" style={{fontSize: 15}}>
-                    {__("Pas de résultat")}
-                </div>
-    }
-
     validateFormOnBlur = () => {
         if (this.state.amount && this.state.paymentMode && !this.state.amountInvalid)
             this.enableButton()
@@ -148,6 +142,15 @@ class MemberSubscriptionPage extends React.Component {
     }
 
     // amount
+    amountCreateFromSearch = (options, search) => {
+        // Pretty much self explanatory:
+        // this function is called when we start typing inside the select
+        if (search)
+            return {label: search, value: search}
+        else
+            return null
+    }
+
     amountOnSearchChange = (search) => {
         // Search for towns for this amountcode for France only
         this.setState({amountSearch: search})
@@ -264,7 +267,7 @@ class MemberSubscriptionPage extends React.Component {
                                     options={this.state.amountList}
                                     placeholder={__("Montant de la cotisation")}
                                     theme="bootstrap3"
-                                    createFromSearch={this.selectizeCreateFromSearch}
+                                    createFromSearch={this.amountCreateFromSearch}
                                     onSearchChange={this.amountOnSearchChange}
                                     onValueChange={this.amountOnValueChange}
                                     renderOption={this.amountRenderOption}
@@ -296,7 +299,7 @@ class MemberSubscriptionPage extends React.Component {
                                     renderOption={this.paymentModeRenderOption}
                                     renderValue={this.paymentModeRenderValue}
                                     onBlur={this.validateFormOnBlur}
-                                    renderNoResultsFound={this.selectizeNoResultsFound}
+                                    renderNoResultsFound={SelectizeUtils.selectizeNoResultsFound}
                                     required
                                 />
                             </div>
@@ -319,7 +322,7 @@ class MemberSubscriptionPage extends React.Component {
                 </MemberSubscriptionForm>
                 <ToastContainer ref="container"
                                 toastMessageFactory={ToastMessageFactory}
-                                className="toast-top-right" />
+                                className="toast-top-right toast-top-right-navbar" />
             </div>
         );
     }
