@@ -20,10 +20,10 @@ module.exports = Object.keys(languages).map(function(language) {
 
         entry: {
             Base : './static/js/base', // Your global app's entry point
-            MemberList : './static/js/member-list',
             MemberAdd : './static/js/member-add',
             MemberAddSubscription : './static/js/member-add-subscription',
             MemberSearch : './static/js/member-search',
+            MemberShow : './static/js/member-show',
         },
 
         output: {

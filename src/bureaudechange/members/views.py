@@ -1,8 +1,8 @@
 from django.shortcuts import render
 
 
-def index(request):
-    return render(request, 'members/list.html')
+def index(request, member_id):
+    return render(request, 'members/show.html', {'member_id': member_id})
 
 
 def add(request):

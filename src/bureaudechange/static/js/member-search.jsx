@@ -74,8 +74,6 @@ class MemberSearchPage extends React.Component {
             .then(checkStatus)
             .then(parseJSON)
             .then(json => {
-                console.log(json)
-
                 var searchResults = _.chain(json)
                     .map(function(item){
                         if (item.login.startsWith("E", 0))
