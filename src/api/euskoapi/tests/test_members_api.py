@@ -41,7 +41,9 @@ class TestMembersAPI:
                 "address": "8 Allée Sagardi Les Vergers Del Hogar",
                 "phone": "0623151353", "email": "florian@lefrioux.fr",
                 "options_recevoir_actus": "0", "birth": "01/01/1980",
+                "fk_asso": "809", "fk_asso2": "825",
                 "country_id": "1", "zip": "64600", "town": "Angelu / Anglet"}
+        # TODO: We also need a way to test the 'options_asso_saisie_libre' field...
 
         query = '{}/{}/'.format(api['url'], api['model'])
         log.info("query: {}".format(query))

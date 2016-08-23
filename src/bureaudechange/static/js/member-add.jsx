@@ -371,7 +371,7 @@ class MemberAddPage extends React.Component {
         }
 
         if (this.state.fkAsso2)
-            data['fk_asso_2'] = this.state.fkAsso2.value
+            data['fk_asso2'] = this.state.fkAsso2.value
 
         console.log(data)
         fetch(this.props.url,
