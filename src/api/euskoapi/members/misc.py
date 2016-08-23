@@ -11,6 +11,13 @@ log = logging.getLogger()
 class Member:
 
     @staticmethod
+    def validate_num_adherent(data):
+        if (data.startswith("E") or data.startswith("Z")) and len(data) == 6:
+            return True
+        else:
+            return False
+
+    @staticmethod
     def validate_data(data):
         """
         1. Dolibarr.llx_adherent.fk_adherent_type : typeid in the Dolibarr API = "3" (particulier)
