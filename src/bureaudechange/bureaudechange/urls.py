@@ -18,8 +18,9 @@ from django.contrib import admin
 from django.contrib.auth.views import login, logout
 from django.core.urlresolvers import reverse_lazy
 
-from members import views as members_views
 from base import views as base_views
+from manager import views as manager_views
+from members import views as members_views
 
 urlpatterns = [
     # built-in Django i18n:
@@ -41,6 +42,8 @@ urlpatterns = [
     url(r'^members/add$', members_views.add),
     url(r'^members/subscription/add/(?P<member_id>\d+)/?$', members_views.add_subscription),
     url(r'^members/search$', members_views.search),
+
+    url(r'^manager/?$', manager_views.index),
 
     url(r'^admin/', admin.site.urls),
 ]

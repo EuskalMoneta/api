@@ -32,6 +32,7 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'members',
     'base',
+    'manager',
 
     'raven.contrib.django.raven_compat',
 

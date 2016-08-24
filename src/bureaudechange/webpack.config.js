@@ -24,6 +24,7 @@ module.exports = Object.keys(languages).map(function(language) {
             MemberAddSubscription : './static/js/member-add-subscription',
             MemberSearch : './static/js/member-search',
             MemberShow : './static/js/member-show',
+            Manager : './static/js/manager',
         },
 
         output: {
