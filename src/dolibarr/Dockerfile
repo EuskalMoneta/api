@@ -15,8 +15,6 @@ RUN cp -r /dolibarr/htdocs/* /var/www/html/
 
 COPY ./conf/conf.php /var/www/html/conf/
 
-RUN chown -hR www-data:www-data /var/www/html \
-    && mkdir /var/www/documents \
-        && chown -hR www-data:www-data /var/www/documents
+RUN chown -hR www-data:www-data /var/www/html
 
 EXPOSE 80

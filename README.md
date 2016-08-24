@@ -60,3 +60,8 @@ webpack va compresser les scripts/css et va retirer les commentaires, entre autr
 ```
 docker-compose run bureaudechange npm run build-production
 ```
+
+Pour corriger les problèmes de droit sur dolibarr :
+```
+docker-compose exec dolibarr-app chown -hR www-data:www-data /var/www/documents
+```
