@@ -6,16 +6,17 @@ import { checkStatus, getCSRFToken, getCurrentLang,
          Flags, Flag, NavbarTitle, SidebarNav } from 'Utils'
 
 // Load the CSS stylesheets for our dependencies
-require('../css/bootstrap.min.css')
-require('../css/animate.min.css')
-require('../css/toastr.min.css')
-require('node_modules/react-selectize/themes/index.css')
+import '../css/bootstrap.min.css'
+import '../css/animate.min.css'
+import '../css/toastr.min.css'
+import 'node_modules/react-selectize/themes/index.css'
 
 // Load our base Sass stylesheet
-require('../scss/style.scss')
+import '../scss/style.scss'
 
 // Setup momentjs to be french :)
 moment.locale('fr')
+moment().utcOffset("+01:00")
 
 // Setup raven (Sentry client)
 Raven.config('http://02c622eee5004e9fa9b661395e6ca409@localhost:8081/3').install()

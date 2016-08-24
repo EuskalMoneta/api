@@ -34,8 +34,6 @@ module.exports = Object.keys(languages).map(function(language) {
         },
 
         plugins: [
-            // prints compilation errors in the console browser
-            new webpack.NoErrorsPlugin(),
             // makes our dependencies available in every module
             new webpack.ProvidePlugin({
                 Promise: 'imports?this=>global!exports?global.Promise!es6-promise',

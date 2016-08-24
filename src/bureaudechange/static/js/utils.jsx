@@ -26,6 +26,15 @@ var isMemberIdEusko = (values, value) =>
     }
 }
 
+var titleCase = (str) => {
+  if ((str===null) || (str===''))
+       return false;
+  else
+   str = str.toString();
+
+ return str.replace(/\w\S*/g, function(txt){return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();});
+}
+
 var getCurrentLang = document.documentElement.lang
 var getCSRFToken = window.config.getCSRFToken
 var getAPIBaseURL = window.config.getAPIBaseURL
@@ -173,6 +182,7 @@ module.exports = {
     checkStatus: checkStatus,
     parseJSON: parseJSON,
     isMemberIdEusko: isMemberIdEusko,
+    titleCase: titleCase,
     getCurrentLang: getCurrentLang,
     getCSRFToken: getCSRFToken,
     getAPIBaseURL: getAPIBaseURL,
