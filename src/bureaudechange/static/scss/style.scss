@@ -37,6 +37,10 @@ body {
   width: 100%;
 }
 
+.margin-top {
+  margin-top: 20px;
+}
+
 .btn-default {
   background-color: #ffffff;
   color: #95a5a6;
@@ -49,6 +53,10 @@ body {
   border-color: #95a5a6;
 }
 
+.btn-danger-inverse {
+  color: red;
+  background-color: white;
+}
 /* Toggle Styles */
 
 #wrapper {
