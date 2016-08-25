@@ -40,38 +40,13 @@ var getCSRFToken = window.config.getCSRFToken
 var getAPIBaseURL = window.config.getAPIBaseURL
 
 var Flag = React.createClass({
-
-    handleClick() {
-        var data = {language: this.props.lang}
-
-        fetch('/i18n/setlang_custom/',
-        {
-            body: data,
-            method: 'POST',
-            credentials: 'same-origin',
-            headers: {
-                'X-CSRFToken': getCSRFToken,
-                'Accept-Language': this.props.lang
-            }
-        })
-        .then(response => {
-            // Reload the current page, without using the cache
-            window.location.reload(true)
-            console.log('i18n lang change from ' + getCurrentLang  + ' to:' + this.props.lang)
-        })
-        .catch(err => {
-            // Error during request, or parsing NOK :(
-            console.log('/i18n/setlang_custom/' + this.props.lang, err)
-        })
-    },
-
     render() {
         // We want to hide the flag showing the current lang
         if (this.props.lang != getCurrentLang) {
             return (
                     <li>
                         <a className={"lang-select " + this.props.lang}
-                           onClick={this.handleClick}>
+                           href={"/i18n/setlang_custom/?lang=" + this.props.lang}>
                             <img className={"lang-select-flag-" + this.props.lang}
                                  alt={this.props.langname}
                                  src={"/static/img/" + this.props.lang + ".gif"}

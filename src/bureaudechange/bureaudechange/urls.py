@@ -38,12 +38,13 @@ urlpatterns = [
     url(r'^logout/?$', logout, {'next_page': reverse_lazy('home')}, name='logout'),
 
     # our bureau de change Django apps
-    url(r'^members/(?P<member_id>\d+)/?$', members_views.index),
-    url(r'^members/add$', members_views.add),
-    url(r'^members/subscription/add/(?P<member_id>\d+)/?$', members_views.add_subscription),
-    url(r'^members/search$', members_views.search),
+    url(r'^members/(?P<member_id>\d+)/?$', members_views.index, name='member-show'),
+    url(r'^members/add$', members_views.add, name='member-add'),
+    url(r'^members/subscription/add/(?P<member_id>\d+)/?$',
+        members_views.add_subscription, name='member-subscription-add'),
+    url(r'^members/search$', members_views.search, name='member-search'),
 
-    url(r'^manager/?$', manager_views.index),
+    url(r'^manager/?$', manager_views.index, name='manager'),
 
     url(r'^admin/', admin.site.urls),
 ]

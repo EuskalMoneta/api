@@ -3,7 +3,7 @@
 // thus we can also setup JavaScript things ... all of those will be used everywhere in our app
 
 import { checkStatus, getCSRFToken, getCurrentLang,
-         Flags, Flag, NavbarTitle, SidebarNav } from 'Utils'
+         Flags, NavbarTitle, SidebarNav } from 'Utils'
 
 // Load the CSS stylesheets for our dependencies
 import '../css/bootstrap.min.css'
