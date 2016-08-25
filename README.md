@@ -43,7 +43,7 @@ Elle lance le watcher webpack, et c'est lui qui compile notre JSX et gère nos d
 est un (ou +) bundle(s) se trouvant dans `/assets/static/bundles` du container `bureaudechange`.
 
 ```
-docker-compose run bureaudechange npm run watch
+docker-compose exec bureaudechange npm run watch
 ```
 
 Il existe également 2 autres commandes:
@@ -51,7 +51,7 @@ Il existe également 2 autres commandes:
 Cette commande est lancée automagiquement lors d'un build du docker bureaudechange (cf. Dockerfile), il va lui aussi compiler et produire les output bundles (avec les dépendances de Dev), mais sans le watch évidemment.
 
 ```
-docker-compose run bureaudechange npm run build
+docker-compose exec bureaudechange npm run build
 ```
 
 Comme précédemment, mais celle-ci est utilisée pour une mise en production (avec les dépendances de Prod, donc),
