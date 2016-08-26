@@ -103,7 +103,7 @@ class MemberSearchPage extends React.Component {
                 clickToSelect: true,
                 hideSelectColumn: true,
                 onSelect: (row, isSelected, event) => {
-                    console.log(row.id)
+                    window.location.assign("/members/" + row.id)
                 }
             }
 
@@ -141,7 +141,7 @@ class MemberSearchPage extends React.Component {
                                         layout="elementOnly"
                                     />
                                 </div>
-                                <div class="col-md-2">
+                                <div className="col-md-2">
                                   <a href="/members/add">
                                     <button type="button" className="btn btn-success">{__("Nouvel adhérent")}</button>
                                   </a>
