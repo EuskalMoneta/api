@@ -127,17 +127,26 @@ class MemberSearchPage extends React.Component {
                     <MemberSearchForm
                         ref="membersearch">
                         <fieldset>
-                            <Input
-                                name="searchValue"
-                                data-eusko="membersearch-login"
-                                value=""
-                                type="text"
-                                placeholder={__("Recherche d'un adhérent")}
-                                help={__("Saisir Nom, Prénom ou N°adhérent (Format E12345)")}
-                                labelClassName={[{'col-sm-3': false}, 'col-sm-1']}
-                                elementWrapperClassName={[{'col-sm-9': false}, 'col-sm-6']}
-                                onChange={this.onSearchChange}
-                            />
+                            <div className="form-group row">
+                                <label className="control-label col-md-1"></label>
+                                <div className="col-md-5">
+                                    <Input
+                                        name="searchValue"
+                                        data-eusko="membersearch-login"
+                                        value=""
+                                        type="text"
+                                        placeholder={__("Recherche d'un adhérent")}
+                                        help={__("Saisir Nom, Prénom ou N°adhérent (Format E12345)")}
+                                        onChange={this.onSearchChange}
+                                        layout="elementOnly"
+                                    />
+                                </div>
+                                <div class="col-md-2">
+                                  <a href="/members/add">
+                                    <button type="button" className="btn btn-success">{__("Nouvel adhérent")}</button>
+                                  </a>
+                                </div>
+                            </div>
                         </fieldset>
                     </MemberSearchForm>
                 </div>
