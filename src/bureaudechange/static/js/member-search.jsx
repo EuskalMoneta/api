@@ -10,8 +10,11 @@ import {
 
 const { Input } = FRC
 
-import {BootstrapTable, TableHeaderColumn} from 'react-bootstrap-table'
-import 'react-bootstrap-table/css/react-bootstrap-table.min.css'
+import {
+    BootstrapTable,
+    TableHeaderColumn
+} from 'react-bootstrap-table'
+import 'node_modules/react-bootstrap-table/dist/react-bootstrap-table.min.css'
 
 
 const MemberSearchForm = React.createClass({
