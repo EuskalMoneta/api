@@ -1,6 +1,6 @@
 version: '2'
-services:
 
+services:
   bureaudechange:
     build: src/bureaudechange
     volumes:
@@ -23,29 +23,47 @@ services:
       - dolibarr-app
 
   dolibarr-app:
-    build: src/dolibarr
+    image: euskalmoneta/dolibarr:develop
     ports:
       - 8080:80
     volumes:
-      # - ./src/dolibarr/htdocs:/var/www/html
       - ./data/documents:/var/www/documents
+      - ./etc/dolibarr/conf.php:/var/www/html/conf/conf.php
     links:
-      - dolibarr-db
-    depends_on:
       - dolibarr-db
 
   dolibarr-db:
-    build: src/dolibarr/db
-    ports:
-      - 3306:3306
+    image: mariadb:10.1
     volumes:
-      - ./log/mariadb:/var/log/mysql
+      - ./etc/dolibarr/dump:/docker-entrypoint-initdb.d
       - ./data/mariadb:/var/lib/mysql
     environment:
       - MYSQL_ROOT_PASSWORD=pass
       - MYSQL_DATABASE=pass
       - MYSQL_USER=pass
       - MYSQL_PASSWORD=pass
+
+  # cyclos-app:
+  #   image: cyclos/cyclos
+  #   ports:
+  #     - 8081:8080
+  #   links:
+  #     - cyclos-db
+  #   environment:
+  #     - DB_HOST=cyclos-db
+  #     - DB_NAME=
+  #     - DB_USER=
+  #     - DB_PASSWORD=
+
+  # cyclos-db:
+  #   image: cyclos/db
+  #   volumes:
+  #     - ./etc/cyclos/dump:/docker-entrypoint-initdb.d
+  #     - ./data/cyclos/postgresql:/var/lib/postgresql/data
+  #   environment:
+  #     - POSTGRES_DB=
+  #     - POSTGRES_USER=
+  #     - POSTGRES_PASSWORD=
 
   sentry-redis:
     image: redis
