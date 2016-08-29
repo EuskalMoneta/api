@@ -1,6 +1,20 @@
-FROM django:onbuild
+FROM python:3.4
 
-# INFO: django:onbuild image is based on python:3.4 image, which is based on a Debian Jessie
+RUN mkdir -p /usr/src/app
+WORKDIR /usr/src/app
+
+COPY requirements.txt /usr/src/app/
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY ./bureaudechange/ /usr/src/app
+
+RUN apt-get update && apt-get install -y \
+		gcc \
+		gettext \
+		mysql-client libmysqlclient-dev \
+		postgresql-client libpq-dev \
+		sqlite3 \
+	--no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 # Installing node / npm in Debian (following official nodejs Dockerfile https://github.com/nodejs/docker-node):
 
@@ -30,6 +44,7 @@ RUN curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-
   && rm "node-v$NODE_VERSION-linux-x64.tar.xz" SHASUMS256.txt.asc SHASUMS256.txt
 
 # Install of nodejs / npm is ok now, we can install our dependencies
-WORKDIR /usr/src/app
-
 RUN npm install && npm run build
+
+EXPOSE 8000
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
