@@ -2,8 +2,11 @@
 // We can load our Sass stylesheets which will be included in the bundle using Webpack,
 // thus we can also setup JavaScript things ... all of those will be used everywhere in our app
 
-import { checkStatus, getCSRFToken, getCurrentLang,
-         Flags, NavbarTitle, SidebarNav } from 'Utils'
+import {
+    Flags,
+    NavbarTitle,
+    SidebarNav
+} from 'Utils'
 
 // Load the CSS stylesheets for our dependencies
 import '../css/bootstrap.min.css'
@@ -19,7 +22,7 @@ moment.locale('fr')
 moment().utcOffset("+01:00")
 
 // Setup raven (Sentry client)
-Raven.config('http://02c622eee5004e9fa9b661395e6ca409@localhost:8081/3').install()
+Raven.config('http://02c622eee5004e9fa9b661395e6ca409@localhost:9000/3').install()
 
 
 ReactDOM.render(
