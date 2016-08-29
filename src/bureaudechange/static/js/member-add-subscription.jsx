@@ -58,9 +58,30 @@ class MemberSubscriptionPage extends React.Component {
                          {value: '10', label: '10 (cotisation classique)'},
                          {value: '20', label: '20 (cotisation de soutien)'},
                          {value: '21 ou +', label: 'ou +'}],
+            memberID: document.getElementById("member_id").value,
+            member: undefined,
             paymentMode: '',
             paymentModeList: undefined
         }
+
+        // Get member data
+        fetch(getAPIBaseURL + "members/" + this.state.memberID + '/',
+        {
+            method: 'get',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(checkStatus)
+        .then(parseJSON)
+        .then(json => {
+            this.setState({member: json})
+        })
+        .catch(err => {
+            // Error during request, or parsing NOK :(
+            console.log(this.props.url, err)
+        })
 
         // Get payment_modes
         fetch(getAPIBaseURL + "payment-modes/",
@@ -134,7 +155,7 @@ class MemberSubscriptionPage extends React.Component {
         })
     }
 
-    validateFormOnBlur = () => {
+    validateForm = () => {
         if (this.state.amount && this.state.paymentMode && !this.state.amountInvalid)
             this.enableButton()
         else
@@ -152,7 +173,6 @@ class MemberSubscriptionPage extends React.Component {
     }
 
     amountOnSearchChange = (search) => {
-        // Search for towns for this amountcode for France only
         this.setState({amountSearch: search})
     }
 
@@ -196,6 +216,8 @@ class MemberSubscriptionPage extends React.Component {
         else {
             this.setState({amount: undefined, amountInvalid: false})
         }
+
+        this.validateForm()
     }
 
     // paymentMode
@@ -222,6 +244,8 @@ class MemberSubscriptionPage extends React.Component {
             this.setState({paymentMode: item})
         else
             this.setState({paymentMode: undefined})
+
+        this.validateForm()
     }
 
     render = () => {
@@ -242,6 +266,13 @@ class MemberSubscriptionPage extends React.Component {
         else
             var spanInvalidAmount = null
 
+        if (this.state.member) {
+            var memberName = this.state.member.firstname + " " + this.state.member.lastname
+        }
+        else {
+            var memberName = null
+        }
+
         return (
             <div className="row">
                 <MemberSubscriptionForm
@@ -250,6 +281,18 @@ class MemberSubscriptionPage extends React.Component {
                     onValid={this.enableButton}
                     ref="memberaddsubscription">
                     <fieldset>
+                        <div className="form-group row">
+                            <label
+                                className="control-label col-sm-3"
+                                htmlFor="memberaddsubscription-fullname">
+                                {__("Nom complet")}
+                            </label>
+                            <div className="col-sm-6 memberaddsubscription control-label text-align-left"
+                                 data-eusko="memberaddsubscription-fullname">
+                                {memberName}
+                            </div>
+                            <div className="col-sm-3"></div>
+                        </div>
                         <div className={divAmountClass}>
                             <label
                                 className="control-label col-sm-3"
@@ -272,7 +315,7 @@ class MemberSubscriptionPage extends React.Component {
                                     onValueChange={this.amountOnValueChange}
                                     renderOption={this.amountRenderOption}
                                     renderValue={this.amountRenderValue}
-                                    onBlur={this.validateFormOnBlur}
+                                    onBlur={this.validateForm}
                                     required
                                 />
                                 { spanInvalidAmount }
@@ -298,7 +341,7 @@ class MemberSubscriptionPage extends React.Component {
                                     onValueChange={this.paymentModeOnValueChange}
                                     renderOption={this.paymentModeRenderOption}
                                     renderValue={this.paymentModeRenderValue}
-                                    onBlur={this.validateFormOnBlur}
+                                    onBlur={this.validateForm}
                                     renderNoResultsFound={SelectizeUtils.selectizeNoResultsFound}
                                     required
                                 />
