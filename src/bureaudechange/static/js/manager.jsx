@@ -53,7 +53,7 @@ class StockBillets extends React.Component {
 class CaisseEuro extends React.Component {
     render() {
         return (
-            <div className="panel panel-warning">
+            <div className="panel panel-info">
                 <div className="panel-heading">
                     <h3 className="panel-title">{__("Caisse euros")}</h3>
                 </div>
@@ -81,10 +81,10 @@ class CaisseEuro extends React.Component {
                     </div>
                     <div className="row margin-top">
                         <div className="col-md-offset-2 col-md-2 col-sm-4">
-                            <a className="btn btn-warning">{__("Dépôt en banque")}</a>
+                            <a className="btn btn-info">{__("Dépôt en banque")}</a>
                         </div>
                         <div className="col-md-offset-2 col-md-2 col-sm-4">
-                            <a className="btn btn-danger btn-danger-inverse">{__("Remise d'espèces")}</a>
+                            <a className="btn btn-default">{__("Remise d'espèces")}</a>
                         </div>
                     </div>
                 </div>
@@ -96,7 +96,7 @@ class CaisseEuro extends React.Component {
 class CaisseEusko extends React.Component {
     render() {
         return (
-            <div className="panel panel-success">
+            <div className="panel panel-info">
                 <div className="panel-heading">
                     <h3 className="panel-title">{__("Caisse eusko")}</h3>
                 </div>
@@ -112,7 +112,7 @@ class CaisseEusko extends React.Component {
                     </div>
                     <div className="row margin-top">
                         <div className="col-md-offset-2 col-md-2 col-sm-4">
-                            <a className="btn btn-success">{__("Sortie")}</a>
+                            <a className="btn btn-info">{__("Sortie")}</a>
                         </div>
                     </div>
                 </div>
@@ -124,7 +124,7 @@ class CaisseEusko extends React.Component {
 class RetourEusko extends React.Component {
     render() {
         return (
-            <div className="panel panel-primary">
+            <div className="panel panel-info">
                 <div className="panel-heading">
                     <h3 className="panel-title">{__("Retour eusko")}</h3>
                 </div>
@@ -140,7 +140,7 @@ class RetourEusko extends React.Component {
                     </div>
                     <div className="row margin-top">
                         <div className="col-md-offset-2 col-md-2 col-sm-4">
-                            <a className="btn btn-primary">{__("Sortie")}</a>
+                            <a className="btn btn-info">{__("Sortie")}</a>
                         </div>
                     </div>
                 </div>

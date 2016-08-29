@@ -33,7 +33,7 @@ ReactDOM.render(
 )
 
 const sidebarObjects = [{href: '/members/search', label: __("Adhérents"), id: 0},
-                        {href: '/gestion', label: __("Gestion"), id: 1}]
+                        {href: '/manager', label: __("Gestion"), id: 1}]
 
 ReactDOM.render(
     <SidebarNav objects={sidebarObjects} />,

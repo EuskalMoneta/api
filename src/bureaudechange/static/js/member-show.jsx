@@ -37,11 +37,10 @@ const MemberShow = React.createClass({
 
     render: function() {
         if (this.state.member) {
-            console.log(this.state.member)
-
-            if (moment.unix(this.state.member.datefin) < moment())
+            if (moment.unix(this.state.member.datefin) > moment())
                 var memberStatus = (
-                    <a className="btn btn-success member-show-statut" data-eusko="member-show-statut">
+                    <a href={"/members/subscription/add/" + this.state.member.id}
+                       className="btn btn-success member-show-statut" data-eusko="member-show-statut">
                         {__("À jour")}
                     </a>
                 )
