@@ -31,5 +31,5 @@ RUN curl -SLO "https://nodejs.org/dist/v$NODE_VERSION/node-v$NODE_VERSION-linux-
 
 # Install of nodejs / npm is ok now, we can install our dependencies
 WORKDIR /usr/src/app
-RUN npm install \
-   && npm run build
+
+RUN npm install && npm run watch && npm run build

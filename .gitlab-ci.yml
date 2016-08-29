@@ -9,20 +9,23 @@ before_script:
   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN sources.meta-it.fr:4567
 
 stages:
-  - build
-  - test
+  - build-api
+  - build-bdc
 
-build:
-  stage: build
+build-api:
+  stage: build-api
   script:
-    - docker build -t $CONTAINER_TEST_IMAGE .
-    - docker push $CONTAINER_TEST_IMAGE
+    - docker build -t $CONTAINER_IMAGE src/api
+    - docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE:api-latest
+    - docker push $CONTAINER_IMAGE:api-latest
   tags:
     - dind
 
-test:
+build-bdc:
+  stage: build-bdc
   script:
-    - bash test.sh
-  stage: test
+    - docker build -t $CONTAINER_IMAGE src/bureaudechange
+    - docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE:bdc-latest
+    - docker push $CONTAINER_IMAGE:bdc-latest
   tags:
     - dind
