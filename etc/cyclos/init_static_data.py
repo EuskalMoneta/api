@@ -26,7 +26,7 @@ parser.add_argument('--debug',
 args = parser.parse_args()
 
 if not args.url.endswith('/'):
-    args.url = args.url + '/'
+    args.url = '{}/'.format(args.url)
 if args.debug:
     logger.setLevel(logging.DEBUG)
 else:
@@ -36,17 +36,18 @@ for k, v in vars(args).items():
     logger.debug('args.%s = %s', k, v)
 
 # URLs des web services
-global_web_services = args.url + 'global/web-rpc/'
-eusko_web_services = args.url + 'eusko/web-rpc/'
+
+global_web_services = '{}global/web-rpc/'.format(args.url)
+eusko_web_services = '{}eusko/web-rpc/'.format(args.url)
 
 # En-têtes pour toutes les requêtes (il n'y a qu'un en-tête, pour
 # l'authentification).
-headers = {'Authorization': 'Basic ' + args.authorization}
+headers = {'Authorization': 'Basic {}'.format(args.authorization)}
 
 # On fait une 1ère requête en lecture seule uniquement pour vérifier
 # si les paramètres fournis sont corrects.
 logger.info('Vérification des paramètres fournis...')
-r = requests.post(global_web_services + 'network/search',
+r = requests.post('{}network/search'.format(global_web_services),
                   headers=headers, json={})
 check_request_status(r)
 
@@ -56,9 +57,9 @@ check_request_status(r)
 # dédiés.
 #
 def create_user(group, name, login=None, password=None, custom_values=None):
-    logger.info('Création de l\'utilisateur "%s" (groupe "%s")...', name, group)
+    logger.info("Création de l'utilisateur '{}' (groupe '{}')...".format(name, group))
     # FIXME code à déplacer pour ne pas l'exécuter à chaque fois
-    r = requests.post(eusko_web_services + 'group/search',
+    r = requests.post('{}group/search'.format(eusko_web_services),
                       headers=headers, json={})
     check_request_status(r)
     logger.critical(r.text)
@@ -73,7 +74,7 @@ def create_user(group, name, login=None, password=None, custom_values=None):
     }
     if login and password:
         # FIXME code à déplacer pour ne pas l'exécuter à chaque fois
-        r = requests.get(eusko_web_services + 'passwordType/list',
+        r = requests.get('{}passwordType/list'.format(eusko_web_services),
                          headers=headers)
         check_request_status(r)
         password_types = r.json()['result']
@@ -93,7 +94,7 @@ def create_user(group, name, login=None, password=None, custom_values=None):
     if custom_values:
         user_registration['customValues'] = []
         for field_id, value in custom_values.items():
-            r = requests.get(eusko_web_services + 'userCustomField/load/' + field_id, headers=headers)
+            r = requests.get('{}userCustomField/load/{}'.format(eusko_web_services, field_id), headers=headers)
             check_request_status(r)
             custom_field_type = r.json()['result']['type']
             if custom_field_type == 'LINKED_ENTITY':
@@ -103,7 +104,7 @@ def create_user(group, name, login=None, password=None, custom_values=None):
                 value_key: value,
             })
     logger.debug('create_user : json = %s', user_registration)
-    r = requests.post(eusko_web_services + 'user/register',
+    r = requests.post('{}user/register'.format(eusko_web_services),
                       headers=headers,
                       json=user_registration)
     check_request_status(r)
@@ -113,20 +114,20 @@ def create_user(group, name, login=None, password=None, custom_values=None):
     return user_id
 
 create_user(
-    group='Banques de dépôt',
-    name='Crédit Agricole',
+    group=str('Banques de dépôt'),
+    name=str('Crédit Agricole'),
 )
 create_user(
-    group='Banques de dépôt',
+    group=str('Banques de dépôt'),
     name='La Banque Postale',
 )
 create_user(
-    group='Comptes dédiés',
-    name='Compte dédié eusko billet',
+    group=str('Comptes dédiés'),
+    name=str('Compte dédié eusko billet'),
 )
 create_user(
-    group='Comptes dédiés',
-    name='Compte dédié eusko numérique',
+    group=str('Comptes dédiés'),
+    name=str('Compte dédié eusko numérique'),
 )
 
 
@@ -135,7 +136,7 @@ create_user(
 # FIXME Séparer ce code du code qui crée les données statiques.
 
 # On récupère l'id du champ perso 'BDC'.
-r = requests.get(eusko_web_services + 'userCustomField/list', headers=headers)
+r = requests.get('{}userCustomField/list'.format(eusko_web_services), headers=headers)
 check_request_status(r)
 user_custom_fields = r.json()['result']
 for field in user_custom_fields:
@@ -152,16 +153,16 @@ create_user(
 bureaux_de_change = {
     'B001': 'Euskal Moneta',
     'B002': 'Le Fandango',
-    'B003': 'Café des Pyrénées',
+    'B003': str('Café des Pyrénées'),
 }
 for login, name in bureaux_de_change.items():
     id_bdc = create_user(
         group='Bureaux de change',
-        name=name + ' (BDC)',
+        name='{} (BDC)'.format(name),
     )
     create_user(
-        group='Opérateurs BDC',
-        name=name + ' (opérateur BDC)',
+        group=str('Opérateurs BDC'),
+        name=str('{} (opérateur BDC)'.format(name)),
         login=login,
         password=login,
         custom_values={
