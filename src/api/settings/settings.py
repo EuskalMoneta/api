@@ -12,9 +12,9 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 
 import os
 
+
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
@@ -23,8 +23,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'kci-=2)4_qh#a3+k#xt!0)_t838t9zjcjpl#&09(&2&kftskr('
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEBUG = os.environ.get('DJANGO_DEBUG')
+
+if DEBUG:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 ALLOWED_HOSTS = ['*']
 
@@ -132,18 +136,22 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Public URLs
-DOLIBARR_PUBLIC_URL = 'http://localhost:8080'
+DOLIBARR_PUBLIC_URL = os.environ.get('DOLIBARR_PUBLIC_URL')
+BDC_PUBLIC_URL = os.environ.get('BDC_PUBLIC_URL')
 
 # APIs URLs
 DOLIBARR_URL = 'http://dolibarr-app/api/index.php'
-CYCLOS_URL = 'http://cyclos-app:7000/toto'
+CYCLOS_URL = 'http://cyclos-app:8080/eusko/web-rpc'
 
 # Euskal Moneta internal settings
 DATE_COTISATION_ANTICIPEE = '01/11'  # 1er Novembre
-MINIMUM_PARRAINAGES_3_POURCENTS = 3  # En production, ce sera bien 30 parrainages et non PAS 3 !
+if DEBUG:
+    MINIMUM_PARRAINAGES_3_POURCENTS = 3  # En production, ce sera bien 30 parrainages et non PAS 3 !
+else:
+    MINIMUM_PARRAINAGES_3_POURCENTS = 30  # En production, ce sera bien 30 parrainages et non PAS 3 !
 
 CORS_ORIGIN_WHITELIST = [
-    'localhost:8001',
+    BDC_PUBLIC_URL,
 ]
 
 CORS_ALLOW_HEADERS = (
@@ -158,10 +166,8 @@ CORS_ALLOW_HEADERS = (
 
 # Raven + Logging
 RAVEN_CONFIG = {
-    'dsn': 'http://82140549232e4c3c8d4ee865630ff9c2:a118efe0af754f9487a6639e91591d6e@sentry:9000/2',
-    # If you are using git, you can also automatically configure the
-    # release based on the git info.
-    'release': 'dev',
+    'dsn': os.environ.get('RAVEN_CONFIG_DSN'),
+    'release': 'dev' if DEBUG else 'production',
 }
 
 LOGGING = {
