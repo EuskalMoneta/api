@@ -1,5 +1,0 @@
-django
-pytest
-raven
-selenium
-django-csp
