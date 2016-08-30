@@ -22,6 +22,7 @@ class MembersAPIView(BaseAPIView):
 
     def create(self, request):
         data = request.data
+        dolibarr_token = request.user.profile.dolibarr_token
         serializer = MemberSerializer(data=data)
         if serializer.is_valid():
             data = Member.validate_data(data)
@@ -31,7 +32,7 @@ class MembersAPIView(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         log.info('posted data: {}'.format(data))
-        response_obj = self.dolibarr.post(model=self.model, data=data)
+        response_obj = self.dolibarr.post(model=self.model, data=data, api_key=dolibarr_token)
         log.info(response_obj)
         try:
             sendmail_euskalmoneta(subject="subject", body="body", to_email=data['email'])
@@ -43,11 +44,12 @@ class MembersAPIView(BaseAPIView):
         login = request.GET.get('login', '')
         name = request.GET.get('name', '')
         valid_login = Member.validate_num_adherent(login)
+        dolibarr_token = request.user.profile.dolibarr_token
 
         if login and valid_login:
             # We want to search in members by login (N° Adhérent)
             try:
-                response = self.dolibarr.get(model='members', login=login)
+                response = self.dolibarr.get(model='members', login=login, api_key=dolibarr_token)
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(response)
@@ -59,7 +61,7 @@ class MembersAPIView(BaseAPIView):
         elif name and len(name) >= 4:
             # We want to search in members by name (Firstname and Lastname)
             try:
-                response = self.dolibarr.get(model='members', name=name)
+                response = self.dolibarr.get(model='members', name=name, api_key=dolibarr_token)
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(response)
@@ -69,7 +71,7 @@ class MembersAPIView(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         else:
-            objects = self.dolibarr.get(model=self.model)
+            objects = self.dolibarr.get(model=self.model, api_key=dolibarr_token)
             paginator = CustomPagination()
             result_page = paginator.paginate_queryset(objects, request)
 
@@ -77,11 +79,11 @@ class MembersAPIView(BaseAPIView):
             return paginator.get_paginated_response(serializer.data)
 
     def update(self, request, pk=None):
-        # return Response(self.dolibarr.patch(model=self.model))
+        # return Response(self.dolibarr.patch(model=self.model, api_key=dolibarr_token))
         pass
 
     def partial_update(self, request, pk=None):
-        # return Response(self.dolibarr.patch(model=self.model))
+        # return Response(self.dolibarr.patch(model=self.model, api_key=dolibarr_token))
         pass
 
 
@@ -92,6 +94,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
     def create(self, request):
         data = request.data
+        dolibarr_token = request.user.profile.dolibarr_token
         log.info("data: {}".format(data))
         serializer = MembersSubscriptionsSerializer(data=data)
         if not serializer.is_valid():
@@ -105,7 +108,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             return Response({'error': 'A member_id must be provided!'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            member = self.dolibarr.get(model='members', id=member_id)
+            member = self.dolibarr.get(model='members', id=member_id, api_key=dolibarr_token)
         except DolibarrAPIException as e:
             log.critical("member_id: {}".format(member_id))
             log.critical(e)
@@ -124,7 +127,9 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                                  'amount': data['amount'], 'label': data['label']}
         self.model = self.model.replace('%_%', member_id)
         try:
-            res_id_subscription = self.dolibarr.post(model=self.model, data=data_res_subscription)
+            res_id_subscription = self.dolibarr.post(
+                model=self.model, data=data_res_subscription, api_key=dolibarr_token)
+
             log.info("res_id_subscription: {}".format(res_id_subscription))
         except DolibarrAPIException as e:
             log.critical("model: {}".format(self.model))
@@ -142,7 +147,9 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                             'label': data['label'], 'amount': data['amount']}
         model_res_payment = 'accounts/{}/lines'.format(payment_account)
         try:
-            res_id_payment = self.dolibarr.post(model=model_res_payment, data=data_res_payment)
+            res_id_payment = self.dolibarr.post(
+                model=model_res_payment, data=data_res_payment, api_key=dolibarr_token)
+
             log.info("res_id_payment: {}".format(res_id_payment))
         except DolibarrAPIException as e:
             log.critical("model: {}".format(model_res_payment))
@@ -154,7 +161,9 @@ class MembersSubscriptionsAPIView(BaseAPIView):
         data_link_sub_payment = {'fk_bank': res_id_payment}
         model_link_sub_payment = 'subscriptions/{}'.format(res_id_subscription)
         try:
-            res_id_link_sub_payment = self.dolibarr.patch(model=model_link_sub_payment, data=data_link_sub_payment)
+            res_id_link_sub_payment = self.dolibarr.patch(
+                model=model_link_sub_payment, data=data_link_sub_payment, api_key=dolibarr_token)
+
             log.info("res_id_link_sub_payment: {}".format(res_id_link_sub_payment))
         except DolibarrAPIException as e:
             log.critical("model: {}".format(model_link_sub_payment))
@@ -169,8 +178,10 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                                         settings.DOLIBARR_PUBLIC_URL, member_id)}
         model_link_payment_member = 'accounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
         try:
-            res_id_link_payment_member = self.dolibarr.post(model=model_link_payment_member,
-                                                            data=data_link_payment_member)
+            res_id_link_payment_member = self.dolibarr.post(
+                model=model_link_payment_member, data=data_link_payment_member,
+                api_key=dolibarr_token)
+
             log.info("res_id_link_payment_member: {}".format(res_id_link_payment_member))
         except DolibarrAPIException as e:
             log.critical("model: {}".format(model_link_payment_member))
@@ -178,7 +189,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             log.critical(e)
             return Response({'error': e}, status=status.HTTP_400_BAD_REQUEST)
 
-        current_member = self.dolibarr.get(model='members', id=member_id)
+        current_member = self.dolibarr.get(model='members', id=member_id, api_key=dolibarr_token)
         res = {'id_subscription': res_id_subscription,
                'id_payment': res_id_payment,
                'link_sub_payment': res_id_link_sub_payment,

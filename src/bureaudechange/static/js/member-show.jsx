@@ -1,6 +1,5 @@
 import {
-    checkStatus,
-    parseJSON,
+    fetchAuth,
     titleCase,
     getAPIBaseURL,
     NavbarTitle
@@ -16,23 +15,10 @@ const MemberShow = React.createClass({
         }
 
         // Get member data
-        fetch(this.props.url + this.state.memberID + '/',
-        {
-            method: this.props.method,
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(checkStatus)
-        .then(parseJSON)
-        .then(json => {
-            this.setState({member: json})
-        })
-        .catch(err => {
-            // Error during request, or parsing NOK :(
-            console.log(this.props.url, err)
-        })
+        var computeMemberData = (member) => {
+            this.setState({member: member})
+        }
+        fetchAuth(this.props.url + this.state.memberID + '/', 'get', computeMemberData)
     },
 
     render: function() {

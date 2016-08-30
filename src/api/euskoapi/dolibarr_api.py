@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import logging
 
 from django.conf import settings
@@ -23,15 +21,10 @@ class DolibarrAPI(object):
         except AttributeError:
             self.url = settings.DOLIBARR_URL
 
-        login_data = self._login()
-        try:
-            self.api_key = login_data['success']['token']
-        except KeyError:
-            try:
-                message = 'Dolibarr API Exception: {}'.format(login_data['errors']['message'])
-            except KeyError:
-                message = 'Dolibarr API Exception'
-                raise DolibarrAPIException(detail=message)
+    def _handle_api_key(self, api_key):
+        log.critical(api_key)
+        self.api_key = api_key
+        return api_key
 
     def _handle_api_response(self, api_response):
         """ In some cases, we have to deal with errors in the response from the dolibarr api !
@@ -48,18 +41,31 @@ class DolibarrAPI(object):
         log.info("response_data for {} - {}: {}".format(api_response.request.method, api_response.url, response_data))
         return response_data
 
-    def _login(self, login=None, password=None):
+    def login(self, login=None, password=None):
         """ Login function for Dolibarr API users. """
-        if not login or not password:
-            login = 'admin'
-            password = 'admin'
+        # if not login or not password:
+        #     login = 'admin'
+        #     password = 'admin'
 
         r = requests.get('{}/login?login={}&password={}'.format(self.url, login, password),
                          headers={'content-type': 'application/json'})
+        json_response = r.json()
 
-        return self._handle_api_response(r)
+        try:
+            api_key = json_response['success']['token']
+        except KeyError:
+            try:
+                message = 'Dolibarr API Exception: {}'.format(json_response['errors']['message'])
+            except KeyError:
+                message = 'Dolibarr API Exception'
+                raise DolibarrAPIException(detail=message)
 
-    def get(self, model, id=None, **kwargs):
+        return self._handle_api_key(api_key)
+
+    def get(self, model, id=None, api_key=None, **kwargs):
+        if api_key:
+            self._handle_api_key(api_key)
+
         if id:
             query = '{}/{}/{}?api_key={}'.format(self.url, model, id, self.api_key)
         else:
@@ -72,7 +78,10 @@ class DolibarrAPI(object):
 
         return self._handle_api_response(r)
 
-    def post(self, model, data, id=None):
+    def post(self, model, data, id=None, api_key=None):
+        if api_key:
+            self._handle_api_key(api_key)
+
         if id:
             query = '{}/{}/{}?api_key={}'.format(self.url, model, id, self.api_key)
         else:
@@ -82,7 +91,10 @@ class DolibarrAPI(object):
 
         return self._handle_api_response(r)
 
-    def patch(self, model, data, id=None):
+    def patch(self, model, data, id=None, api_key=None):
+        if api_key:
+            self._handle_api_key(api_key)
+
         if id:
             query = '{}/{}/{}?api_key={}'.format(self.url, model, id, self.api_key)
         else:
@@ -92,7 +104,10 @@ class DolibarrAPI(object):
 
         return self._handle_api_response(r)
 
-    def delete(self, model, id=None):
+    def delete(self, model, id=None, api_key=None):
+        if api_key:
+            self._handle_api_key(api_key)
+
         if id:
             query = '{}/{}/{}?api_key={}'.format(self.url, model, id, self.api_key)
         else:

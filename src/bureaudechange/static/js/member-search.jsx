@@ -1,6 +1,5 @@
 import {
-    checkStatus,
-    parseJSON,
+    fetchAuth,
     isMemberIdEusko,
     getAPIBaseURL,
     NavbarTitle,
@@ -66,18 +65,8 @@ class MemberSearchPage extends React.Component {
                 var searchString = '?name=' + search
 
             // We use fetch API to ... fetch members for this login / name
-            fetch(this.props.search_url + searchString,
-            {
-                method: this.props.method,
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(checkStatus)
-            .then(parseJSON)
-            .then(json => {
-                var searchResults = _.chain(json)
+            var computeSearch = (search) => {
+                var searchResults = _.chain(search)
                     .map(function(item){
                         if (item.login.startsWith("E", 0))
                             return {name: item.firstname + " " + item.lastname,
@@ -90,11 +79,8 @@ class MemberSearchPage extends React.Component {
                     .value()
 
                 this.setState({searchResults: searchResults})
-            })
-            .catch(err => {
-                // Error during request, or parsing NOK :(
-                console.log(this.props.search_url + searchString, err)
-            })
+            }
+            fetchAuth(this.props.search_url + searchString, this.props.method, computeSearch)
         }
     }
 

@@ -1,6 +1,5 @@
 import {
-    checkStatus,
-    parseJSON,
+    fetchAuth,
     getAPIBaseURL,
     NavbarTitle,
     SelectizeUtils
@@ -84,23 +83,10 @@ class MemberSubscriptionPage extends React.Component {
         })
 
         // Get payment_modes
-        fetch(getAPIBaseURL + "payment-modes/",
-        {
-            method: 'get',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(checkStatus)
-        .then(parseJSON)
-        .then(json => {
-            this.setState({paymentModeList: json})
-        })
-        .catch(err => {
-            // Error during request, or parsing NOK :(
-            console.log(this.props.url, err)
-        })
+        var computePaymentModes = (paymentModes) => {
+            this.setState({paymentModeList: paymentModes})
+        }
+        fetchAuth(getAPIBaseURL + "payment-modes/", 'get', computePaymentModes)
     }
 
     enableButton = () => {
@@ -116,22 +102,11 @@ class MemberSubscriptionPage extends React.Component {
                 payment_mode: this.state.paymentMode.value,
                 member_id: document.getElementById("member_id").value}
 
-        fetch(this.props.url,
-        {
-            body: JSON.stringify(data),
-            method: this.props.method,
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(checkStatus)
-        .then(parseJSON)
-        .then(json => {
-            console.log(json)
-            this.setState({data: json})
+        var computeForm = (data) => {
+            console.log(data)
+            this.setState({data: data})
             this.refs.container.success(
-                "L'enregistrement de la cotisation s'est déroulée correctement.",
+                __("L'enregistrement de la cotisation s'est déroulée correctement."),
                 "",
                 {
                     timeOut: 5000,
@@ -139,12 +114,13 @@ class MemberSubscriptionPage extends React.Component {
                     closeButton:true
                 }
             )
-        })
-        .catch(err => {
+        }
+
+        var promiseError = (err) => {
             // Error during request, or parsing NOK :(
             console.log(this.props.url, err)
             this.refs.container.error(
-                "Une erreur s'est produite lors de l'enregistrement de la cotisation !",
+                __("Une erreur s'est produite lors de l'enregistrement de la cotisation !"),
                 "",
                 {
                     timeOut: 5000,
@@ -152,7 +128,8 @@ class MemberSubscriptionPage extends React.Component {
                     closeButton:true
                 }
             )
-        })
+        }
+        fetchAuth(this.props.url, this.props.method, computeForm, data, promiseError)
     }
 
     validateForm = () => {

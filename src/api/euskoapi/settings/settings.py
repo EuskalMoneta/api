@@ -32,11 +32,13 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    'auth_token',
     'members',
     'dolibarr_data',
 
     'corsheaders',
     'raven.contrib.django.raven_compat',
+    'rest_framework.authtoken',
     'rest_framework',
 
     'django.contrib.auth',
@@ -144,6 +146,16 @@ CORS_ORIGIN_WHITELIST = [
     'localhost:8001',
 ]
 
+CORS_ALLOW_HEADERS = (
+    'x-requested-with',
+    'content-type',
+    'accept',
+    'origin',
+    'authorization',
+    'x-csrftoken',
+    'WWW-Authenticate'
+)
+
 # Raven + Logging
 RAVEN_CONFIG = {
     'dsn': 'http://82140549232e4c3c8d4ee865630ff9c2:a118efe0af754f9487a6639e91591d6e@sentry:9000/2',
@@ -154,7 +166,7 @@ RAVEN_CONFIG = {
 
 LOGGING = {
     'version': 1,
-    'disable_existing_loggers': True,
+    'disable_existing_loggers': False,
     'root': {
         'level': 'DEBUG',
         'handlers': ['console', 'sentry'],
@@ -181,19 +193,14 @@ LOGGING = {
         }
     },
     'loggers': {
-        'all': {
-            'level': 'DEBUG' if DEBUG else 'INFO',
-            'handlers': ['sentry', 'console'],
-            'propagate': True,
-        },
         'sentry': {
             'level': 'DEBUG' if DEBUG else 'INFO',
             'handlers': ['sentry'],
             'propagate': True,
         },
-        'console': {
+        'all': {
             'level': 'DEBUG' if DEBUG else 'INFO',
-            'handlers': ['console'],
+            'handlers': ['console', 'sentry'],
             'propagate': True,
         },
     },
@@ -204,8 +211,11 @@ REST_FRAMEWORK = {
         'rest_framework.renderers.JSONRenderer',
         'rest_framework.renderers.BrowsableAPIRenderer',
     ),
-    'DEFAULT_AUTHENTICATION_CLASSES': [],
-    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication'
+    ],
+    'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.IsAuthenticated'],
     'DEFAULT_PAGINATION_CLASS': 'pagination.CustomPagination',
     'PAGE_SIZE': 100,
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',

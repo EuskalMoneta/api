@@ -12,6 +12,77 @@ var parseJSON = (response) => {
     return response.json()
 }
 
+var storeToken = (data) => {
+    // Save data to sessionStorage
+    sessionStorage.setItem('api-token-auth', data.token)
+    return data.token
+}
+
+var getToken = () => {
+    // Get saved data from sessionStorage
+    return sessionStorage.getItem('api-token-auth')
+}
+
+var fetchCustom = (url, method, promise, token, data, promiseError) => {
+    var payload = {
+        method: method,
+        headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': 'Token ' + token
+        }
+    }
+
+    if (method.toLowerCase() == 'post') {
+        payload.body = JSON.stringify(data)
+    }
+
+    if (!promiseError) {
+        var promiseError = (err) => {
+            // Error during request, or parsing NOK :(
+            console.log(url, method, promise, token, data, promiseError, err)
+        }
+    }
+
+    fetch(url, payload)
+    .then(checkStatus)
+    .then(parseJSON)
+    .then(promise)
+    .catch(promiseError)
+}
+
+var fetchAuth = (url, method, promise, data=null, promiseError=null) => {
+    var token = getToken()
+    if (token) {
+        console.log("We have a token")
+        // Cas 2: On a le token
+        fetchCustom(url, method, promise, token, data, promiseError)
+    }
+    else {
+        console.log("We need a token")
+        // Cas 1: On a pas le token
+        fetch(getAPIBaseURL + 'api-token-auth/',
+        {
+            method: 'post',
+            body: JSON.stringify({'username': 'admin', 'password': 'admin'}),
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(checkStatus)
+        .then(parseJSON)
+        .then(storeToken)
+        .then((token) => {
+            fetchCustom(url, method, promise, token, data, promiseError)
+        })
+        .catch(err => {
+            // Error during request, or parsing NOK :(
+            console.log(url, method, promise, data, promiseError, err)
+        })
+    }
+}
+
 var isMemberIdEusko = (values, value) =>
 {
     if (!value) {
@@ -156,6 +227,7 @@ class SelectizeUtils {
 module.exports = {
     checkStatus: checkStatus,
     parseJSON: parseJSON,
+    fetchAuth: fetchAuth,
     isMemberIdEusko: isMemberIdEusko,
     titleCase: titleCase,
     getCurrentLang: getCurrentLang,

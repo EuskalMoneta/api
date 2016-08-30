@@ -7,7 +7,7 @@ from dolibarr_api import DolibarrAPI
 from members.serializers import MemberSerializer
 from pagination import CustomPagination
 
-log = logging.getLogger(__name__)
+log = logging.getLogger()
 
 
 class BaseAPIView(viewsets.ViewSet):
@@ -17,7 +17,7 @@ class BaseAPIView(viewsets.ViewSet):
         self.dolibarr = DolibarrAPI(model=self.model)
 
     def list(self, request, *args, **kwargs):
-        objects = self.dolibarr.get(model=self.model)
+        objects = self.dolibarr.get(model=self.model, api_key=request.user.profile.dolibarr_token)
         paginator = CustomPagination()
         result_page = paginator.paginate_queryset(objects, request)
 
@@ -25,7 +25,7 @@ class BaseAPIView(viewsets.ViewSet):
         return paginator.get_paginated_response(serializer.data)
 
     def retrieve(self, request, pk=None):
-        return Response(self.dolibarr.get(model=self.model, id=pk))
+        return Response(self.dolibarr.get(model=self.model, id=pk, api_key=request.user.profile.dolibarr_token))
 
     def create(self, request):
         pass
@@ -37,4 +37,4 @@ class BaseAPIView(viewsets.ViewSet):
         pass
 
     def destroy(self, request, pk):
-        return Response(self.dolibarr.delete(model=self.model, id=pk))
+        return Response(self.dolibarr.delete(model=self.model, id=pk, api_key=request.user.profile.dolibarr_token))

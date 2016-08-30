@@ -1,6 +1,5 @@
 import {
-    checkStatus,
-    parseJSON,
+    fetchAuth,
     isMemberIdEusko,
     getAPIBaseURL,
     NavbarTitle,
@@ -25,7 +24,7 @@ const {
 const ToastMessageFactory = React.createFactory(ReactToastr.ToastMessage.animation)
 
 
-Formsy.addValidationRule('isMemberIdEusko', isMemberIdEusko);
+Formsy.addValidationRule('isMemberIdEusko', isMemberIdEusko)
 
 Formsy.addValidationRule('isValidPhoneNumber', (values, value) =>
 {
@@ -39,7 +38,7 @@ Formsy.addValidationRule('isValidPhoneNumber', (values, value) =>
     else {
         return false;
     }
-});
+})
 
 const MemberAddForm = React.createClass({
 
@@ -87,21 +86,13 @@ class MemberAddPage extends React.Component {
         }
 
         // Get countries for the country selector
-        fetch(getAPIBaseURL + "countries/",
-        {
-            method: 'get',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(checkStatus)
-        .then(parseJSON)
-        .then(json => {
-            var france = _.findWhere(json, {label: "France"})
+        var computeCountries = (countries) => {
+            console.log(countries)
+
+            var france = _.findWhere(countries, {label: "France"})
             var france = {label: "France", value: france.id}
 
-            var res = _.chain(json)
+            var res = _.chain(countries)
                 .filter(function(item){ return item.active == 1 && item.code != "" &&  item.label != "France" })
                 .map(function(item){ return {label: item.label, value: item.id} })
                 .sortBy(function(item){ return item.label })
@@ -110,59 +101,30 @@ class MemberAddPage extends React.Component {
             // We add France at first position of the Array, and we set it as the default value
             res.unshift(france)
             this.setState({countries: res, country: france})
-        })
-        .catch(err => {
-            // Error during request, or parsing NOK :(
-            console.log(this.props.url, err)
-        })
+        }
+        fetchAuth(getAPIBaseURL + "countries/", 'get', computeCountries)
 
         // Get all associations (no filter): fkAssoAllList
-        fetch(getAPIBaseURL + "associations/",
-        {
-            method: 'get',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(checkStatus)
-        .then(parseJSON)
-        .then(json => {
-            var res = _.chain(json)
+        var computeAllAssociations = (associations) => {
+            var res = _.chain(associations)
                 .map(function(item){ return {label: item.nom, value: item.id} })
                 .sortBy(function(item){ return item.label })
                 .value()
 
             this.setState({fkAssoAllList: res})
-        })
-        .catch(err => {
-            // Error during request, or parsing NOK :(
-            console.log(this.props.url, err)
-        })
+        }
+        fetchAuth(getAPIBaseURL + "associations/", 'get', computeAllAssociations)
 
         // Get only approved associations: fkAssoApprovedList
-        fetch(getAPIBaseURL + "associations/?approved=yes",
-        {
-            method: 'get',
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(checkStatus)
-        .then(parseJSON)
-        .then(json => {
-            var res = _.chain(json)
+        var computeApprovedAssociations = (associations) => {
+            var res = _.chain(associations)
                 .map(function(item){ return {label: item.nom, value: item.id} })
                 .sortBy(function(item){ return item.label })
                 .value()
 
             this.setState({fkAssoApprovedList: res})
-        })
-        .catch(err => {
-            // Error during request, or parsing NOK :(
-            console.log(this.props.url, err)
-        })
+        }
+        fetchAuth(getAPIBaseURL + "associations/?approved=yes", 'get', computeApprovedAssociations)
     }
 
     handleBirthChange = (date) => {
@@ -175,33 +137,20 @@ class MemberAddPage extends React.Component {
         // Search for towns for this zipcode for France only
         if (search.length >= 4 && this.state.country.label == "France") {
             // We use fetch API to ... fetch towns for this zipcode
-            fetch(getAPIBaseURL + "towns/?zipcode=" + search,
-            {
-                method: 'get',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            })
-            .then(checkStatus)
-            .then(parseJSON)
-            .then(json => {
-                var zipList = _.chain(json)
+            var computeTowns = (towns) => {
+                var zipList = _.chain(towns)
                     .map(function(item){ return {label: item.zip + " - " + item.town, value: item.zip, town: item.town} })
                     .sortBy(function(item){ return item.label })
                     .value()
 
-                var townList = _.chain(json)
+                var townList = _.chain(towns)
                     .map(function(item){ return {label: item.town, value: item.town} })
                     .sortBy(function(item){ return item.label })
                     .value()
 
                 this.setState({zipList: zipList, townList: townList})
-            })
-            .catch(err => {
-                // Error during request, or parsing NOK :(
-                console.log(getAPIBaseURL + "towns/?zipcode=" + search, err)
-            })
+            }
+            fetchAuth(getAPIBaseURL + "towns/?zipcode=" + search, 'get', computeTowns)
         }
     }
 
@@ -308,36 +257,24 @@ class MemberAddPage extends React.Component {
 
     submitForm = (data) => {
         // We push custom fields (like DatePickers, Selectize, ...) into the data passed to the server
-        data['birth'] = this.state.birth.format('DD/MM/YYYY')
-        data['country_id'] = this.state.country.value
-        data['zip'] = this.state.zip.value
-        data['town'] = this.state.town.value
+        data.birth = this.state.birth.format('DD/MM/YYYY')
+        data.country_id = this.state.country.value
+        data.zip = this.state.zip.value
+        data.town = this.state.town.value
 
         // We need to verify whether we are in "saisie libre" or not
         if (this.state.fkAsso) {
             if (this.state.assoSaisieLibre)
-                data['options_asso_saisie_libre'] = this.state.fkAsso.value
+                data.options_asso_saisie_libre = this.state.fkAsso.value
             else
-                data['fk_asso'] = this.state.fkAsso.value
+                data.fk_asso = this.state.fkAsso.value
         }
 
         if (this.state.fkAsso2)
-            data['fk_asso2'] = this.state.fkAsso2.value
+            data.fk_asso2 = this.state.fkAsso2.value
 
-        console.log(data)
-        fetch(this.props.url,
-        {
-            body: JSON.stringify(data),
-            method: this.props.method,
-            headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(checkStatus)
-        .then(parseJSON)
-        .then(json => {
-            console.log(json)
+        var computeForm = (data) => {
+            console.log(data)
             this.refs.container.success(
                 __("La création de l'adhérent s'est déroulée correctement."),
                 "",
@@ -348,9 +285,10 @@ class MemberAddPage extends React.Component {
                 }
             )
             // redirect to create subscription page in 3 seconds
-            setTimeout(() => window.location.assign("/members/subscription/add/" + json), 3000)
-        })
-        .catch(err => {
+            setTimeout(() => window.location.assign("/members/subscription/add/" + data), 3000)
+        }
+
+        var promiseError = (err) => {
             // Error during request, or parsing NOK :(
             console.log(this.props.url, err)
             this.refs.container.error(
@@ -362,7 +300,8 @@ class MemberAddPage extends React.Component {
                     closeButton:true
                 }
             )
-        })
+        }
+        fetchAuth(this.props.url, this.props.method, computeForm, data, promiseError)
     }
 
     render = () => {
@@ -598,6 +537,7 @@ class MemberAddPage extends React.Component {
                                     renderValue={SelectizeUtils.selectizeRenderValue}
                                     renderOption={SelectizeUtils.selectizeNewRenderOption}
                                     onBlur={this.validateFormOnBlur}
+                                    renderNoResultsFound={SelectizeUtils.selectizeNoResultsFound}
                                 />
                             </div>
                         </div>
