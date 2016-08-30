@@ -10,6 +10,8 @@ services:
       - 8001:8000
     environment:
       - DJANGO_DEBUG=True
+      - API_PUBLIC_URL=http://localhost:8000
+      - RAVEN_CONFIG_DSN=http://02c622eee5004e9fa9b661395e6ca409:f5b69a7e169f4bd7a716d8d8f476b3c6@sentry:9000/3
     links:
       - api
 
@@ -22,6 +24,9 @@ services:
       - 8000:8000
     environment:
       - DJANGO_DEBUG=True
+      - DOLIBARR_PUBLIC_URL=http://localhost:8080
+      - BDC_PUBLIC_URL=http://localhost:8001
+      - RAVEN_CONFIG_DSN=http://82140549232e4c3c8d4ee865630ff9c2:a118efe0af754f9487a6639e91591d6e@sentry:9000/2
     links:
       - dolibarr-app
       - cyclos-app
@@ -33,6 +38,7 @@ services:
     volumes:
       - ./data/documents:/var/www/documents
       - ./etc/dolibarr/conf.php:/var/www/html/conf/conf.php
+      - ./etc/dolibarr/date-timezone.ini:/usr/local/etc/php/conf.d/date-timezone.ini
     links:
       - dolibarr-db
       - cyclos-app

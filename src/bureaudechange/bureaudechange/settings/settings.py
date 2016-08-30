@@ -15,7 +15,6 @@ import os
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/1.9/howto/deployment/checklist/
 
@@ -23,7 +22,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = '&4q^u=5-d_k4xvgj6jz^ou8=8rh21r=*$w8dh3bnqttonmrg2k'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG')
 
 ALLOWED_HOSTS = ['*']
 
@@ -58,14 +57,6 @@ MIDDLEWARE_CLASSES = [
     'django.middleware.locale.LocaleMiddleware',
 ]
 
-# CSP headers
-CSP_DEFAULT_SRC = ["'self'"]
-CSP_FONT_SRC = ["'self'", "http://fonts.gstatic.com"]
-CSP_SCRIPT_SRC = ["'self'"]
-CSP_IMG_SRC = ["'self'", "data: image:"]
-CSP_STYLE_SRC = ["'self'", "'unsafe-inline'", "http://fonts.googleapis.com", "data: blob:"]
-CSP_CONNECT_SRC = ["'self'", "http://localhost:8000", "http://localhost:8001", "http://localhost:8081"]
-
 ROOT_URLCONF = 'bureaudechange.urls'
 
 APPEND_SLASH = False
@@ -73,7 +64,14 @@ LOGIN_REDIRECT_URL = '/'
 LOGIN_URL = '/login'
 LOGOUT_URL = '/logout'
 
-API_URL = 'http://localhost:8000/'
+API_PUBLIC_URL = os.environ.get('API_PUBLIC_URL')
+# CSP headers
+CSP_DEFAULT_SRC = ["'self'"]
+CSP_FONT_SRC = ["'self'", "http://fonts.gstatic.com"]
+CSP_SCRIPT_SRC = ["'self'"]
+CSP_IMG_SRC = ["'self'", "data: image:"]
+CSP_STYLE_SRC = ["'self'", "'unsafe-inline'", "http://fonts.googleapis.com", "data: blob:"]
+CSP_CONNECT_SRC = ["'self'", API_PUBLIC_URL]
 
 TEMPLATES = [
     {
@@ -161,10 +159,8 @@ STATICFILES_DIRS = (
 
 # Raven + Logging
 RAVEN_CONFIG = {
-    'dsn': 'http://02c622eee5004e9fa9b661395e6ca409:f5b69a7e169f4bd7a716d8d8f476b3c6@sentry:9000/3',
-    # If you are using git, you can also automatically configure the
-    # release based on the git info.
-    'release': 'dev',
+    'dsn': os.environ.get('RAVEN_CONFIG_DSN'),
+    'release': 'dev' if DEBUG else 'production',
 }
 
 LOGGING = {
