@@ -6,5 +6,6 @@ django-filter  # Filtering support
 markdown       # Markdown support for the browsable API.
 pytest
 pytest-django
+python-slugify
 raven
 requests
