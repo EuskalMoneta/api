@@ -8,6 +8,11 @@ from slugify import slugify
 logging.basicConfig()
 logger = logging.getLogger(__name__)
 
+try:
+    stringType = basestring
+except NameError:  # Python 3, basestring causes NameError
+    stringType = str
+
 
 def check_request_status(r):
     if r.status_code == requests.codes.ok:
@@ -1104,7 +1109,7 @@ def set_product_properties(
     # désactiver si on n'en veut pas.
     for profile_field in product['myProfileFields']:
         field = profile_field['profileField']
-        if isinstance(field, basestring):
+        if isinstance(field, stringType):
             enable = field in my_profile_fields
         elif isinstance(field, dict):
             enable = field['id'] in my_profile_fields
@@ -1134,7 +1139,7 @@ def set_product_properties(
         product['accessibleAdminGroups'] = accessible_administrator_groups
     for profile_field in product['userProfileFields']:
         field = profile_field['profileField']
-        if isinstance(field, basestring):
+        if isinstance(field, stringType):
             enable = field in user_profile_fields
         elif isinstance(field, dict):
             enable = field['id'] in user_profile_fields
