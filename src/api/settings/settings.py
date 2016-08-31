@@ -12,6 +12,15 @@ https://docs.djangoproject.com/en/1.9/ref/settings/
 
 import os
 
+import yaml  # PyYAML
+
+CYCLOS_CONSTANTS = None
+with open("/cyclos/cyclos_constants.yml", 'r') as stream:
+    try:
+        CYCLOS_CONSTANTS = yaml.load(stream)
+    except yaml.YAMLError as exc:
+        assert False, exc
+
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -38,7 +47,9 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'auth_token',
     'members',
+    'cyclos_data',
     'dolibarr_data',
+    'euskalmoneta_data',
 
     'corsheaders',
     'raven.contrib.django.raven_compat',

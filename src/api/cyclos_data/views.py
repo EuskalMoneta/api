@@ -13,9 +13,17 @@ log = logging.getLogger()
 def accounts_summaries(request):
     """
     List all accounts_summaries.
-    TODO
     """
     cyclos = CyclosAPI()
-    data = {settings.CYCLOS_URL}
-    results = cyclos.post(model='account/getAccountsSummary', data=data)
+    # TODO steps:
+    # getCurrentUser => get ID
+    #  - user/load for this ID
+    #   - get BDC ID
+    #      - account/getAccountsSummary
+    #        results
+
+    settings.CYCLOS_CONSTANTS['cyclos_constants']['user_custom_fields']['bdc']
+    bdc_id = ''
+    query_data = [bdc_id, None]
+    results = cyclos.post(model='account/getAccountsSummary', data=query_data)
     return Response(results)

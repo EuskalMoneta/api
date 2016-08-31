@@ -22,7 +22,7 @@ class CyclosAPI(object):
             self.url = settings.CYCLOS_URL
 
     def _handle_auth_headers(self, headers):
-        headers.update({'Authorization': 'Basic YWRtaW46R2lPZm1va0phdjg='})
+        headers.update({'Authorization': 'Basic YWRtaW46YWRtaW4='})
         return headers
 
     def _handle_api_response(self, api_response):
