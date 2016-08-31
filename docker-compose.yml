@@ -1,35 +1,24 @@
 version: '2'
 
 services:
-  bureaudechange:
-    build: src/bureaudechange
-    volumes:
-      - ./src/bureaudechange:/usr/src/app
-      - /usr/src/app/node_modules
-    ports:
-      - 8001:8000
-    environment:
-      - DJANGO_DEBUG=True
-      - API_PUBLIC_URL=http://localhost:8000
-      - RAVEN_CONFIG_DSN=http://02c622eee5004e9fa9b661395e6ca409:f5b69a7e169f4bd7a716d8d8f476b3c6@sentry:9000/3
-    links:
-      - api
-
   api:
     build: src/api
     volumes:
-      - ./src/api/euskoapi:/usr/src/app
+      - ./src/api:/usr/src/app
       - ./etc/cyclos:/cyclos
     ports:
       - 8000:8000
     environment:
       - DJANGO_DEBUG=True
+      - API_PUBLIC_URL=http://localhost:8000
       - DOLIBARR_PUBLIC_URL=http://localhost:8080
       - BDC_PUBLIC_URL=http://localhost:8001
       - RAVEN_CONFIG_DSN=http://82140549232e4c3c8d4ee865630ff9c2:a118efe0af754f9487a6639e91591d6e@sentry:9000/2
     links:
       - dolibarr-app
       - cyclos-app
+    networks:
+      - eusko
 
   dolibarr-app:
     image: euskalmoneta/dolibarr:develop
@@ -42,6 +31,8 @@ services:
     links:
       - dolibarr-db
       - cyclos-app
+    networks:
+      - eusko
 
   dolibarr-db:
     image: mariadb:10.1
@@ -53,6 +44,8 @@ services:
       - MYSQL_DATABASE=pass
       - MYSQL_USER=pass
       - MYSQL_PASSWORD=pass
+    networks:
+      - eusko
 
   cyclos-app:
     image: cyclos/cyclos:4.5.4
@@ -65,6 +58,8 @@ services:
       - DB_PASSWORD=cyclos
     links:
       - cyclos-db
+    networks:
+      - eusko
 
   cyclos-db:
     image: cyclos/db
@@ -75,6 +70,8 @@ services:
       - POSTGRES_DB=cyclos
       - POSTGRES_USER=cyclos
       - POSTGRES_PASSWORD=cyclos
+    networks:
+      - eusko
 
   sentry-redis:
     image: redis
@@ -86,6 +83,8 @@ services:
       - POSTGRES_USER=sentry
     volumes:
       - ./data/postgresql:/var/lib/postgresql/data
+    networks:
+      - eusko
 
   sentry:
     image: sentry
@@ -100,6 +99,8 @@ services:
     links:
       - sentry-redis:redis
       - sentry-postgres:postgres
+    networks:
+      - eusko
 
   sentry-cron:
     image: sentry
@@ -112,6 +113,8 @@ services:
     links:
       - sentry-redis:redis
       - sentry-postgres:postgres
+    networks:
+      - eusko
     command: sentry run cron
 
   sentry-worker:
@@ -125,4 +128,10 @@ services:
     links:
       - sentry-redis:redis
       - sentry-postgres:postgres
+    networks:
+      - eusko
     command: sentry run worker
+
+networks:
+  eusko:
+    driver: bridge

@@ -136,6 +136,7 @@ USE_TZ = True
 STATIC_URL = '/static/'
 
 # Public URLs
+API_PUBLIC_URL = os.environ.get('API_PUBLIC_URL')
 DOLIBARR_PUBLIC_URL = os.environ.get('DOLIBARR_PUBLIC_URL')
 BDC_PUBLIC_URL = os.environ.get('BDC_PUBLIC_URL')
 
@@ -150,25 +151,20 @@ if DEBUG:
 else:
     MINIMUM_PARRAINAGES_3_POURCENTS = 30  # En production, ce sera bien 30 parrainages et non PAS 3 !
 
-CORS_ORIGIN_WHITELIST = [
-    BDC_PUBLIC_URL,
-]
+if 'https' in BDC_PUBLIC_URL:
+    BDC_CORS_URL = BDC_PUBLIC_URL.replace('https://', '')
+else:
+    BDC_CORS_URL = BDC_PUBLIC_URL.replace('http://', '')
 
-CORS_ALLOW_HEADERS = (
-    'x-requested-with',
-    'content-type',
-    'accept',
-    'origin',
-    'authorization',
-    'x-csrftoken',
-    'WWW-Authenticate'
+CORS_ORIGIN_WHITELIST = (
+    BDC_CORS_URL,
 )
 
 # Raven + Logging
-RAVEN_CONFIG = {
-    'dsn': os.environ.get('RAVEN_CONFIG_DSN'),
-    'release': 'dev' if DEBUG else 'production',
-}
+# RAVEN_CONFIG = {
+#     'dsn': os.environ.get('RAVEN_CONFIG_DSN'),
+#     'release': 'dev' if DEBUG else 'production',
+# }
 
 LOGGING = {
     'version': 1,
