@@ -49,16 +49,23 @@ class DolibarrAPI(object):
 
         r = requests.get('{}/login?login={}&password={}'.format(self.url, login, password),
                          headers={'content-type': 'application/json'})
-        json_response = r.json()
 
-        try:
-            api_key = json_response['success']['token']
-        except KeyError:
+        json_response = r.json()
+        if r.status_code == requests.codes.ok:
+            try:
+                api_key = json_response['success']['token']
+            except KeyError:
+                try:
+                    message = 'Dolibarr API Exception: {}'.format(json_response['errors']['message'])
+                    raise DolibarrAPIException(status_code=json_response['errors']['code'], detail=message)
+                except KeyError:
+                    raise DolibarrAPIException()
+        else:
             try:
                 message = 'Dolibarr API Exception: {}'.format(json_response['errors']['message'])
+                raise DolibarrAPIException(status_code=json_response['errors']['code'], detail=message)
             except KeyError:
-                message = 'Dolibarr API Exception'
-                raise DolibarrAPIException(detail=message)
+                raise DolibarrAPIException()
 
         return self._handle_api_key(api_key)
 

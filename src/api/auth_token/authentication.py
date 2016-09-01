@@ -1,4 +1,5 @@
 from django.contrib.auth.models import User
+from rest_framework.exceptions import AuthenticationFailed
 
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 
@@ -11,14 +12,9 @@ def authenticate(username, password):
     user = None
     try:
         dolibarr = DolibarrAPI()
-        log.critical(dolibarr)
         token = dolibarr.login(login=username, password=password)
-        log.critical(token)
     except DolibarrAPIException:
-        # TODO: Do something
-        log.critical(dolibarr)
-        log.critical(token)
-        pass
+        raise AuthenticationFailed()
 
     if token:
         user, created = User.objects.get_or_create(username=username, password=password)
