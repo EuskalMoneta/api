@@ -14,8 +14,10 @@ stages:
 build:
   stage: build
   script:
+    - bash test.sh
     - docker build -t $CONTAINER_IMAGE src/api
     - docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE:latest
     - docker push $CONTAINER_IMAGE:latest
+  stage: build
   tags:
     - dind
