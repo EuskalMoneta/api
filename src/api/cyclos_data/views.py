@@ -14,7 +14,7 @@ def accounts_summaries(request):
     """
     List all accounts_summaries.
     """
-    cyclos = CyclosAPI()
+    cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
     # TODO steps:
     # getCurrentUser => get ID
     #  - user/load for this ID

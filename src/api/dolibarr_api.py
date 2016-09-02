@@ -22,7 +22,7 @@ class DolibarrAPI(object):
             self.url = settings.DOLIBARR_URL
 
     def _handle_api_key(self, api_key):
-        log.critical(api_key)
+        log.debug(api_key)
         self.api_key = api_key
         return api_key
 

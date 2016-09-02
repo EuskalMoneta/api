@@ -10,6 +10,7 @@ log = logging.getLogger()
 class UserProfile(models.Model):
     user = models.OneToOneField(User, related_name="profile")
     dolibarr_token = models.CharField(max_length=100)
+    cyclos_auth_string = models.CharField(max_length=100)
 
 
 def create_user_profile(sender, instance, created, **kwargs):
