@@ -2,12 +2,30 @@ import logging
 
 from django.conf import settings
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from dolibarr_api import DolibarrAPI
 
 log = logging.getLogger()
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def login(request):
+    """
+    User login from dolibarr
+    """
+    username = request.data.get('username', '')
+    password = request.data.get('password', '')
+    if not username:
+        Response({'error': 'Username must not be empty'}, status=status.HTTP_400_BAD_REQUEST)
+    if not password:
+        Response({'error': 'Password must not be empty'}, status=status.HTTP_400_BAD_REQUEST)
+
+    dolibarr = DolibarrAPI()
+    return Response({'auth_token': dolibarr.login(login=username, password=password)})
 
 
 @api_view(['GET'])

@@ -21,8 +21,13 @@ class CyclosAPI(object):
         except AttributeError:
             self.url = settings.CYCLOS_URL
 
+    def _handle_auth_string(self, auth_string):
+        log.debug(auth_string)
+        self.auth_string = auth_string
+        return auth_string
+
     def _handle_auth_headers(self, headers):
-        headers.update({'Authorization': 'Basic YWRtaW46YWRtaW4='})
+        headers.update({'Authorization': 'Basic {}'.format(self.auth_string)})
         return headers
 
     def _handle_api_response(self, api_response):
@@ -40,7 +45,10 @@ class CyclosAPI(object):
         log.info("response_data for {} - {}: {}".format(api_response.request.method, api_response.url, response_data))
         return response_data
 
-    def get(self, model, id=None, **kwargs):
+    def get(self, model, id=None, auth_string=None, **kwargs):
+        if auth_string:
+            self._handle_auth_string(auth_string)
+
         if id:
             query = '{}/{}/{}'.format(self.url, model, id)
         else:
@@ -53,7 +61,10 @@ class CyclosAPI(object):
 
         return self._handle_api_response(r)
 
-    def post(self, model, data, id=None):
+    def post(self, model, data, id=None, auth_string=None):
+        if auth_string:
+            self._handle_auth_string(auth_string)
+
         if id:
             query = '{}/{}/{}'.format(self.url, model, id)
         else:
@@ -63,7 +74,10 @@ class CyclosAPI(object):
 
         return self._handle_api_response(r)
 
-    def patch(self, model, data, id=None):
+    def patch(self, model, data, id=None, auth_string=None):
+        if auth_string:
+            self._handle_auth_string(auth_string)
+
         if id:
             query = '{}/{}/{}'.format(self.url, model, id)
         else:
@@ -73,7 +87,10 @@ class CyclosAPI(object):
 
         return self._handle_api_response(r)
 
-    def delete(self, model, id=None):
+    def delete(self, model, id=None, auth_string=None):
+        if auth_string:
+            self._handle_auth_string(auth_string)
+
         if id:
             query = '{}/{}/{}'.format(self.url, model, id)
         else:

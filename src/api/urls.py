@@ -18,6 +18,7 @@ urlpatterns = [
     url(r'^api-token-auth/', auth_token_views.obtain_auth_token),
 
     # Dolibarr data, data we fetch from its API
+    url(r'^login/$', dolibarr_data_views.login),
     url(r'^associations/$', dolibarr_data_views.associations),
     url(r'^countries/$', dolibarr_data_views.countries),
     url(r'^countries/(?P<id>[^/.]+)/$', dolibarr_data_views.country_by_id),

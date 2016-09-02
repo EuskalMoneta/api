@@ -22,7 +22,7 @@ class DolibarrAPI(object):
             self.url = settings.DOLIBARR_URL
 
     def _handle_api_key(self, api_key):
-        log.critical(api_key)
+        log.debug(api_key)
         self.api_key = api_key
         return api_key
 
@@ -43,22 +43,25 @@ class DolibarrAPI(object):
 
     def login(self, login=None, password=None):
         """ Login function for Dolibarr API users. """
-        # if not login or not password:
-        #     login = 'admin'
-        #     password = 'admin'
-
         r = requests.get('{}/login?login={}&password={}'.format(self.url, login, password),
                          headers={'content-type': 'application/json'})
-        json_response = r.json()
 
-        try:
-            api_key = json_response['success']['token']
-        except KeyError:
+        json_response = r.json()
+        if r.status_code == requests.codes.ok:
+            try:
+                api_key = json_response['success']['token']
+            except KeyError:
+                try:
+                    message = 'Dolibarr API Exception: {}'.format(json_response['errors']['message'])
+                    raise DolibarrAPIException(status_code=json_response['errors']['code'], detail=message)
+                except KeyError:
+                    raise DolibarrAPIException()
+        else:
             try:
                 message = 'Dolibarr API Exception: {}'.format(json_response['errors']['message'])
+                raise DolibarrAPIException(status_code=json_response['errors']['code'], detail=message)
             except KeyError:
-                message = 'Dolibarr API Exception'
-                raise DolibarrAPIException(detail=message)
+                raise DolibarrAPIException()
 
         return self._handle_api_key(api_key)
 
