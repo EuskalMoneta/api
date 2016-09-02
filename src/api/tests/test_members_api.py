@@ -4,15 +4,25 @@ import pytest
 from rest_framework import status
 import requests
 
-log = logging.getLogger('sentry')
+log = logging.getLogger()
 
 
 @pytest.fixture(scope="module")
 def api():
-    return {"url": "http://localhost:8000",
+    data = {"url": "http://localhost:8000",
             "model": "members",
-            "headers": {"Accept": "application/json", "Content-Type": "application/json"},
+            "headers": {"Accept": "application/json",
+                        "Content-Type": "application/json",
+                        "Authorization": ""},
+            "api_token": "",
             "member_created_id": str()}
+
+    query = '{}/{}/'.format(data['url'], 'api-token-auth')
+    r = requests.post(query, headers=data['headers'],
+                      json={'username': 'admin', 'password': 'admin'})
+    data['api_token'] = r.json()['token']
+    data['headers']['Authorization'] = 'Token {}'.format(data['api_token'])
+    return data
 
 
 class TestMembersAPI:
