@@ -45,5 +45,29 @@ def accounts_summaries(request):
 
     # account/getAccountsSummary
     query_data = [user_bdc_id, None]
-    results = cyclos.post(model='account/getAccountsSummary', data=query_data)
-    return Response(results)
+    accounts_summaries_data = cyclos.post(model='account/getAccountsSummary', data=query_data)
+    res = {}
+
+    # Stock de billets: stock_de_billets_bdc
+    # Caisse euros: caisse_euro_bdc
+    # Caisse eusko: caisse_eusko_bdc
+    # Retour eusko: retours_d_eusko_bdc
+    filter_keys = ['stock_de_billets_bdc',
+                   'caisse_euro_bdc',
+                   'caisse_eusko_bdc',
+                   'retours_d_eusko_bdc']
+
+    for filter_key in filter_keys:
+        data = [item
+                for item in accounts_summaries_data['result']
+                if item['type']['id'] ==
+                str(settings.CYCLOS_CONSTANTS['cyclos_constants']['account_types'][filter_key])][0]
+
+        res[filter_key] = {}
+        res[filter_key]['currency'] = data['id']
+        res[filter_key]['balance'] = float(data['status']['balance'])
+        res[filter_key]['currency'] = data['currency']['symbol']
+        res[filter_key]['type'] = {'name': data['type']['name'],
+                                   'id': filter_key}
+
+    return Response(res)
