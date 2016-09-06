@@ -4,7 +4,7 @@ from django.conf.urls import url
 from rest_framework import routers
 
 from auth_token import views as auth_token_views
-import cyclos_data.views as cyclos_data_views
+import bdc_cyclos.views as bdc_cyclos_views
 import dolibarr_data.views as dolibarr_data_views
 import euskalmoneta_data.views as euskalmoneta_data_views
 from members.views import MembersAPIView, MembersSubscriptionsAPIView
@@ -28,7 +28,8 @@ urlpatterns = [
     url(r'^payment-modes/$', euskalmoneta_data_views.payment_modes),
 
     # Cyclos data, data we fetch from its API
-    url(r'^accounts-summaries/$', cyclos_data_views.accounts_summaries),
+    url(r'^accounts-summaries/$', bdc_cyclos_views.accounts_summaries),
+    url(r'^entree-stock/$', bdc_cyclos_views.entree_stock),
 ]
 
 urlpatterns += router.urls

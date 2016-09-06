@@ -47,7 +47,9 @@ ALLOWED_HOSTS = ['*']
 INSTALLED_APPS = [
     'auth_token',
     'members',
-    'cyclos_data',
+
+    'bdc_cyclos',
+
     'dolibarr_data',
     'euskalmoneta_data',
 
