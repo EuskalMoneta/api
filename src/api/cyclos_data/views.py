@@ -36,7 +36,7 @@ def accounts_summaries(request):
         user_bdc_id = [item['linkedEntityValue']['id']
                        for item in user_data['result']['customValues']
                        if item['field']['id'] ==
-                       str(settings.CYCLOS_CONSTANTS['cyclos_constants']['user_custom_fields']['bdc'])][0]
+                       str(settings.CYCLOS_CONSTANTS['user_custom_fields']['bdc'])][0]
     except CyclosAPIException:
         Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
     except (KeyError, IndexError):
@@ -61,7 +61,7 @@ def accounts_summaries(request):
         data = [item
                 for item in accounts_summaries_data['result']
                 if item['type']['id'] ==
-                str(settings.CYCLOS_CONSTANTS['cyclos_constants']['account_types'][filter_key])][0]
+                str(settings.CYCLOS_CONSTANTS['account_types'][filter_key])][0]
 
         res[filter_key] = {}
         res[filter_key]['currency'] = data['id']

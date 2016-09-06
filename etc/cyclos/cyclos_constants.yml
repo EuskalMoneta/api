@@ -1,83 +1,76 @@
-cyclos_constants:
-
-  account_types:
-    banque_de_depot: -7371965162945593557
-    caisse_euro_bdc: -7371965184420430037
-    caisse_euro_em: -7371965175830495445
-    caisse_eusko_bdc: -7371965188715397333
-    caisse_eusko_em: -7371965197305331925
-    compte_d_adherent: -7371965278909710549
-    compte_de_debit_euro: -7371965201600299221
-    compte_de_debit_eusko_billet: -7371965214485201109
-    compte_de_debit_eusko_numerique: -7371965171535528149
-    compte_de_gestion: -7371965205895266517
-    compte_de_transit: -7371965223075135701
-    compte_dedie: -7371965167240560853
-    compte_des_billets_en_circulation: -7371965193010364629
-    retours_d_eusko_bdc: -7371965158650626261
-    stock_de_billets: -7371965218780168405
-    stock_de_billets_bdc: -7371965180125462741
-
-  currencies:
-    euro: -7371965218780168405
-    eusko: -7371965214485201109
-
-  groups:
-    adherents_prestataires: -7371965175830495445
-    adherents_utilisateurs: -7371965180125462741
-    administrateurs_de_comptes: -7371965223075135701
-    banques_de_depot: -7371965201600299221
-    bureaux_de_change: -7371965197305331925
-    comptes_dedies: -7371965205895266517
-    operateurs_bdc: -7371965193010364629
-    porteurs: -7371965184420430037
-
-  payment_types:
-    change_billets_versement_des_euro: -7371965188715397333
-    change_numerique_en_bdc_versement_des_euro: -7371965248844939477
-    change_numerique_en_ligne_versement_des_eusko: -7371965244549972181
-    cotisation_en_euro: -7371965162945593557
-    cotisation_en_eusko: -7371965167240560853
-    credit_du_compte: -7371965227370102997
-    depot_de_billets: -7371965257434874069
-    depot_en_banque: -7371965283204677845
-    entree_caisse_eusko_em: -7371965193010364629
-    entree_coffre: -7371965223075135701
-    entree_stock_bdc: -7371965197305331925
-    gain_de_billets: -7371965184420430037
-    impression_de_billets_d_eusko: -7371965214485201109
-    perte_de_billets: -7371965180125462741
-    reconversion_billets_versement_des_eusko: -7371965158650626261
-    reconversion_numerique: -7371965253139906773
-    remise_d_euro_en_caisse: -7371965287499645141
-    retrait_de_billets: -7371965231665070293
-    retrait_du_compte: -7371965235960037589
-    sortie_caisse_eusko_bdc: -7371965205895266517
-    sortie_coffre: -7371965218780168405
-    sortie_retours_eusko_bdc: -7371965175830495445
-    sortie_stock_bdc: -7371965201600299221
-    vente_en_euro: -7371965171535528149
-    vente_en_eusko: -7371965278909710549
-    virement_de_banque_de_depot_vers_compte_dedie: -7371965261729841365
-    virement_de_banque_de_depot_vers_le_compte_de_gestion: -7371965291794612437
-    virement_de_compte_dedie_vers_le_compte_de_debit_en_euro: -7371965266024808661
-    virement_de_compte_dedie_vers_le_compte_de_gestion: -7371965270319775957
-    virement_entre_comptes_dedies: -7371965274614743253
-    virement_inter_adherent: -7371965240255004885
-
-  transaction_custom_fields:
-    adherent: -7371965223075135701
-    adherent_facultatif: -7371965193010364629
-    bdc: -7371965214485201109
-    mode_de_paiement: -7371965197305331925
-    montant_changes_billet: -7371965184420430037
-    montant_changes_numerique: -7371965188715397333
-    montant_cotisations: -7371965175830495445
-    montant_ventes: -7371965180125462741
-    numero_de_bordereau: -7371965205895266517
-    numero_de_transaction_banque: -7371965158650626261
-    porteur: -7371965218780168405
-    produit: -7371965201600299221
-
-  user_custom_fields:
-    bdc: -7371965214485201109
+account_types:
+  banque_de_depot: -7371965162945593557
+  caisse_euro_bdc: -7371965184420430037
+  caisse_euro_em: -7371965175830495445
+  caisse_eusko_bdc: -7371965188715397333
+  caisse_eusko_em: -7371965197305331925
+  compte_d_adherent: -7371965278909710549
+  compte_de_debit_euro: -7371965201600299221
+  compte_de_debit_eusko_billet: -7371965214485201109
+  compte_de_debit_eusko_numerique: -7371965171535528149
+  compte_de_gestion: -7371965205895266517
+  compte_de_transit: -7371965223075135701
+  compte_dedie: -7371965167240560853
+  compte_des_billets_en_circulation: -7371965193010364629
+  retours_d_eusko_bdc: -7371965158650626261
+  stock_de_billets: -7371965218780168405
+  stock_de_billets_bdc: -7371965180125462741
+currencies:
+  euro: -7371965218780168405
+  eusko: -7371965214485201109
+groups:
+  adherents_prestataires: -7371965175830495445
+  adherents_utilisateurs: -7371965180125462741
+  administrateurs_de_comptes: -7371965223075135701
+  banques_de_depot: -7371965201600299221
+  bureaux_de_change: -7371965197305331925
+  comptes_dedies: -7371965205895266517
+  operateurs_bdc: -7371965193010364629
+  porteurs: -7371965184420430037
+payment_types:
+  change_billets_versement_des_euro: -7371965188715397333
+  change_numerique_en_bdc_versement_des_euro: -7371965253139906773
+  change_numerique_en_ligne_versement_des_eusko: -7371965248844939477
+  cotisation_en_euro: -7371965167240560853
+  cotisation_en_eusko: -7371965171535528149
+  credit_du_compte: -7371965231665070293
+  depot_de_billets: -7371965227370102997
+  depot_en_banque: -7371965287499645141
+  entree_caisse_eusko_em: -7371965193010364629
+  entree_coffre: -7371965223075135701
+  entree_stock_bdc: -7371965197305331925
+  gain_de_billets: -7371965184420430037
+  impression_de_billets_d_eusko: -7371965214485201109
+  perte_de_billets: -7371965180125462741
+  reconversion_billets_versement_des_eusko: -7371965162945593557
+  reconversion_numerique: -7371965257434874069
+  remise_d_euro_en_caisse: -7371965291794612437
+  retrait_de_billets: -7371965235960037589
+  retrait_du_compte: -7371965240255004885
+  sortie_caisse_eusko_bdc: -7371965205895266517
+  sortie_coffre: -7371965218780168405
+  sortie_retours_eusko_bdc: -7371965175830495445
+  sortie_stock_bdc: -7371965201600299221
+  vente_en_euro: -7371965278909710549
+  vente_en_eusko: -7371965283204677845
+  virement_de_banque_de_depot_vers_compte_dedie: -7371965266024808661
+  virement_de_banque_de_depot_vers_le_compte_de_gestion: -7371965261729841365
+  virement_de_compte_dedie_vers_le_compte_de_debit_en_euro: -7371965270319775957
+  virement_de_compte_dedie_vers_le_compte_de_gestion: -7371965274614743253
+  virement_entre_comptes_dedies: -7371965244549972181
+  virement_inter_adherent: -7371965347629187285
+transaction_custom_fields:
+  adherent: -7371965223075135701
+  adherent_facultatif: -7371965193010364629
+  bdc: -7371965214485201109
+  mode_de_paiement: -7371965197305331925
+  montant_changes_billet: -7371965184420430037
+  montant_changes_numerique: -7371965188715397333
+  montant_cotisations: -7371965175830495445
+  montant_ventes: -7371965180125462741
+  numero_de_bordereau: -7371965205895266517
+  numero_de_transaction_banque: -7371965158650626261
+  porteur: -7371965218780168405
+  produit: -7371965201600299221
+user_custom_fields:
+  bdc: -7371965214485201109

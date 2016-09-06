@@ -102,10 +102,9 @@ def create_user(group, name, login=None, password=None, custom_values=None):
                 value_key: value,
             })
     logger.debug('create_user : json = %s', user_registration)
-    r = requests.post(
-            eusko_web_services + 'user/register',
-            headers=headers,
-            json=user_registration)
+    r = requests.post(eusko_web_services + 'user/register',
+                      headers=headers,
+                      json=user_registration)
     check_request_status(r)
     logger.debug('result = %s', r.json()['result'])
     user_id = r.json()['result']['user']['id']
@@ -157,11 +156,11 @@ bureaux_de_change = {
 for login, name in bureaux_de_change.items():
     id_bdc = create_user(
         group='Bureaux de change',
-        name=name+' (BDC)',
+        name=name + ' (BDC)',
     )
     create_user(
         group='Opérateurs BDC',
-        name=name+' (opérateur BDC)',
+        name=name + ' (opérateur BDC)',
         login=login,
         password=login,
         custom_values={
@@ -239,4 +238,3 @@ for login, name in adherents.items():
         group=group,
         name=name,
     )
-
