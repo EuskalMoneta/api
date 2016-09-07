@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from bdc_cyclos.serializers import EntreeStockBDCSerializer
+from bdc_cyclos.serializers import ChangeEuroEuskoSerializer, EntreeStockBDCSerializer
 from cyclos_api import CyclosAPI, CyclosAPIException
 
 log = logging.getLogger()
@@ -24,13 +24,12 @@ def accounts_summaries(request):
     # account/getAccountsSummary
     query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
-    return Response(accounts_summaries_data)
-    res = {}
 
     # Stock de billets: stock_de_billets_bdc
     # Caisse euros: caisse_euro_bdc
     # Caisse eusko: caisse_eusko_bdc
     # Retour eusko: retours_d_eusko_bdc
+    res = {}
     filter_keys = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
 
     for filter_key in filter_keys:
@@ -59,6 +58,7 @@ def entree_stock(request):
 
     serializer = EntreeStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+    # request.data['porteur']
 
     # payment/perform
     query_data = {
@@ -69,8 +69,45 @@ def entree_stock(request):
         'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'customValues': [
             {
-                'field': request.data['porteur'],
-                'linkedEntityValue': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur'])
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
+                'linkedEntityValue': ''  # ID du porteur ? Faire une recherche ?
+            },
+        ],
+    }
+
+    return Response(cyclos.post(method='payment/perform', data=query_data))
+
+
+@api_view(['POST'])
+def change_euro_eusko(request):
+    """
+    Change d'€ en eusko pour un adhérent via un BDC.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = ChangeEuroEuskoSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+    # request.data['amount']
+    # request.data['payment_mode']
+
+    # payment/perform
+    query_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_billets_versement_des_euro']),
+        'amount': request.data['amount'],
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'from': 'SYSTEM',
+        'to': cyclos.user_bdc_id,         # ID de l'utilisateur Bureau de change
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
+                'linkedEntityValue': -7371965162945593557  # ID de l'adhérent
+            },
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
+                'enumeratedValues': -7371965218780168405   # ID du mode de paiement (chèque ou espèces)
             },
         ],
     }
