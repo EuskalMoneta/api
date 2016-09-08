@@ -1,10 +1,11 @@
 from rest_framework import serializers
 
 
-class EntreeStockBDCSerializer(serializers.Serializer):
+class IOStockBDCSerializer(serializers.Serializer):
 
     amount = serializers.CharField()
     porteur = serializers.CharField()
+    description = serializers.CharField()
 
 
 class ChangeEuroEuskoSerializer(serializers.Serializer):

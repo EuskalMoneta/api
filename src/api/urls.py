@@ -31,6 +31,7 @@ urlpatterns = [
     # Cyclos data, data we fetch from/push to its API
     url(r'^accounts-summaries/$', bdc_cyclos_views.accounts_summaries),
     url(r'^entree-stock/$', bdc_cyclos_views.entree_stock),
+    url(r'^sortie-stock/$', bdc_cyclos_views.sortie_stock),
     url(r'^change-euro-eusko/$', bdc_cyclos_views.change_euro_eusko),
 ]
 

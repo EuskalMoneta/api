@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from bdc_cyclos.serializers import ChangeEuroEuskoSerializer, EntreeStockBDCSerializer
+from bdc_cyclos.serializers import ChangeEuroEuskoSerializer, IOStockBDCSerializer
 from cyclos_api import CyclosAPI, CyclosAPIException
 
 log = logging.getLogger()
@@ -56,9 +56,8 @@ def entree_stock(request):
     except CyclosAPIException:
         return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = EntreeStockBDCSerializer(data=request.data)
+    serializer = IOStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
-    # request.data['porteur']
 
     # payment/perform
     query_data = {
@@ -70,9 +69,42 @@ def entree_stock(request):
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                'linkedEntityValue': ''  # ID du porteur ? Faire une recherche ?
+                'linkedEntityValue': request.data['porteur']  # ID du porteur
             },
         ],
+        'description': request.data['description'],
+    }
+
+    return Response(cyclos.post(method='payment/perform', data=query_data))
+
+
+@api_view(['POST'])
+def sortie_stock(request):
+    """
+    Enregistre une sortie dans le stock billets d'un BDC.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = IOStockBDCSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # payment/perform
+    query_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_stock_bdc']),
+        'amount': request.data['amount'],
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+        'to': 'SYSTEM',
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
+                'linkedEntityValue': request.data['porteur']  # ID du porteur
+            },
+        ],
+        'description': request.data['description'],
     }
 
     return Response(cyclos.post(method='payment/perform', data=query_data))
