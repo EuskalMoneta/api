@@ -12,3 +12,4 @@ class ChangeEuroEuskoSerializer(serializers.Serializer):
 
     amount = serializers.CharField()
     payment_mode = serializers.CharField()
+    member_login = serializers.CharField()

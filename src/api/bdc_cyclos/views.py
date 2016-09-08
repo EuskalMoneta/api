@@ -122,8 +122,15 @@ def change_euro_eusko(request):
 
     serializer = ChangeEuroEuskoSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
-    # request.data['amount']
-    # request.data['payment_mode']
+
+    query_data = {'keywords': request.data['member_login']}
+    try:
+        member_login_data = cyclos.post(method='user/search', data=query_data)
+        member_cyclos_id = member_login_data['result']['pageItems'][0]['id']
+    except CyclosAPIException:
+        raise CyclosAPIException(detail='Unable to connect to Cyclos!')
+    except (KeyError, IndexError):
+        raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
     # payment/perform
     query_data = {
@@ -135,11 +142,11 @@ def change_euro_eusko(request):
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
-                'linkedEntityValue': -7371965162945593557  # ID de l'adhérent
+                'linkedEntityValue': member_cyclos_id  # ID de l'adhérent
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
-                'enumeratedValues': -7371965218780168405   # ID du mode de paiement (chèque ou espèces)
+                'enumeratedValues': request.data['payment_mode']   # ID du mode de paiement (chèque ou espèces)
             },
         ],
     }
