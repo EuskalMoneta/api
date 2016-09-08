@@ -123,15 +123,7 @@ def change_euro_eusko(request):
     serializer = ChangeEuroEuskoSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    query_data = {'keywords': request.data['member_login']}
-    try:
-        member_login_data = cyclos.post(method='user/search', data=query_data)
-        member_cyclos_id = member_login_data['result']['pageItems'][0]['id']
-    except CyclosAPIException:
-        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-    except (KeyError, IndexError):
-        return Response({'Unable to fetch Cyclos data! Maybe your credentials are invalid!?'},
-                        status=status.HTTP_400_BAD_REQUEST)
+    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
     # payment/perform
     query_data = {

@@ -203,15 +203,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
         except CyclosAPIException:
             return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-        member_query_data = {'keywords': current_member['login']}
-        try:
-            member_login_data = cyclos.post(method='user/search', data=member_query_data)
-            member_cyclos_id = member_login_data['result']['pageItems'][0]['id']
-        except CyclosAPIException:
-            return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-        except (KeyError, IndexError):
-            return Response({'Unable to fetch Cyclos data! Maybe your credentials are invalid!?'},
-                            status=status.HTTP_400_BAD_REQUEST)
+        member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
         query_data = {}
         log.critical(data)

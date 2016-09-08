@@ -49,6 +49,17 @@ class CyclosAPI(object):
         except (KeyError, IndexError):
             raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
+    def get_member_id_from_login(self, member_login):
+        try:
+            member_login_data = self.post(method='user/search', data={'keywords': member_login})
+            member_cyclos_id = member_login_data['result']['pageItems'][0]['id']
+        except CyclosAPIException:
+            raise CyclosAPIException(detail='Unable to connect to Cyclos!')
+        except (KeyError, IndexError):
+            raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
+
+        return member_cyclos_id
+
     def _handle_auth_string(self, auth_string):
         log.debug(auth_string)
         self.auth_string = auth_string
