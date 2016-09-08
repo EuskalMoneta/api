@@ -128,9 +128,10 @@ def change_euro_eusko(request):
         member_login_data = cyclos.post(method='user/search', data=query_data)
         member_cyclos_id = member_login_data['result']['pageItems'][0]['id']
     except CyclosAPIException:
-        raise CyclosAPIException(detail='Unable to connect to Cyclos!')
+        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
     except (KeyError, IndexError):
-        raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
+        return Response({'Unable to fetch Cyclos data! Maybe your credentials are invalid!?'},
+                        status=status.HTTP_400_BAD_REQUEST)
 
     # payment/perform
     query_data = {
