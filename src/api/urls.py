@@ -33,6 +33,7 @@ urlpatterns = [
     url(r'^entree-stock/$', bdc_cyclos_views.entree_stock),
     url(r'^sortie-stock/$', bdc_cyclos_views.sortie_stock),
     url(r'^change-euro-eusko/$', bdc_cyclos_views.change_euro_eusko),
+    url(r'^reconversion/$', bdc_cyclos_views.reconversion),
 ]
 
 urlpatterns += router.urls

@@ -5,8 +5,9 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from bdc_cyclos.serializers import ChangeEuroEuskoSerializer, IOStockBDCSerializer
+from bdc_cyclos.serializers import ChangeEuroEuskoSerializer, IOStockBDCSerializer, ReconversionSerializer
 from cyclos_api import CyclosAPI, CyclosAPIException
+from dolibarr_api import DolibarrAPI, DolibarrAPIException
 
 log = logging.getLogger()
 
@@ -123,6 +124,19 @@ def change_euro_eusko(request):
     serializer = ChangeEuroEuskoSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        dolibarr_member = dolibarr.get(model='members', login=request.data['member_login'])[0]
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    except IndexError:
+        return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    if dolibarr_member['type'].lower() == 'entreprise':
+        return Response({'error': 'Forbidden, reconversion operation if not available for business members!'},
+                        status=status.HTTP_403_FORBIDDEN)
+
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
     # payment/perform
@@ -143,6 +157,57 @@ def change_euro_eusko(request):
             },
         ],
         'description': 'Change - {}'.format(request.data['member_login']),
+    }
+
+    return Response(cyclos.post(method='payment/perform', data=query_data))
+
+
+@api_view(['POST'])
+def reconversion(request):
+    """
+    Reconversion eusko en euros pour un adhérent (prestataire) via un BDC.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = ReconversionSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        dolibarr_member = dolibarr.get(model='members', login=request.data['member_login'])[0]
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    except IndexError:
+        return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    if dolibarr_member['type'].lower() == 'entreprise':
+        return Response({'error': 'Forbidden, reconversion operation if not available for business members!'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
+
+    # payment/perform
+    query_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko']),
+        'amount': request.data['amount'],
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': 'SYSTEM',
+        'to': cyclos.user_bdc_id,         # ID de l'utilisateur Bureau de change
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
+                'linkedEntityValue': member_cyclos_id  # ID de l'adhérent
+            },
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_facture']),
+                'enumeratedValues': request.data['facture']  # ID du mode de paiement (chèque ou espèces)
+            },
+        ],
+        'description': 'Reconversion - {}'.format(request.data['member_login']),
     }
 
     return Response(cyclos.post(method='payment/perform', data=query_data))
