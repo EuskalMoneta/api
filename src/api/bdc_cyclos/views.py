@@ -5,7 +5,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from bdc_cyclos.serializers import ChangeEuroEuskoSerializer, IOStockBDCSerializer, ReconversionSerializer
+from bdc_cyclos.serializers import (AccountsHistorySerializer, ChangeEuroEuskoSerializer,
+                                    IOStockBDCSerializer, ReconversionSerializer)
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 
@@ -39,7 +40,7 @@ def accounts_summaries(request):
                 if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types'][filter_key])][0]
 
         res[filter_key] = {}
-        res[filter_key]['currency'] = data['id']
+        res[filter_key]['id'] = data['id']
         res[filter_key]['balance'] = float(data['status']['balance'])
         res[filter_key]['currency'] = data['currency']['symbol']
         res[filter_key]['type'] = {'name': data['type']['name'], 'id': filter_key}
@@ -196,14 +197,14 @@ def reconversion(request):
         'amount': request.data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
         'from': 'SYSTEM',
-        'to': cyclos.user_bdc_id,         # ID de l'utilisateur Bureau de change
+        'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
                 'linkedEntityValue': member_cyclos_id  # ID de l'adhérent
             },
             {
-                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_facture']),
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_facture']),
                 'enumeratedValues': request.data['facture']  # ID du mode de paiement (chèque ou espèces)
             },
         ],
@@ -211,3 +212,44 @@ def reconversion(request):
     }
 
     return Response(cyclos.post(method='payment/perform', data=query_data))
+
+
+@api_view(['GET'])
+def accounts_history(request):
+    """
+    Reconversion eusko en euros pour un adhérent (prestataire) via un BDC.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = AccountsHistorySerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # account/getAccountsSummary
+    query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+
+    # FYI available account types are:
+    account_types = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
+
+    if request.query_params['account_type'] not in account_types:
+        return Response({'error': 'The account_type you provided: {}, is not available for this query!'
+                         .format(request.query_params['account_type'])},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    data = [item
+            for item in accounts_summaries_data['result']
+            if item['type']['id'] ==
+            str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
+
+    # account/searchAccountHistory
+    search_history_data = {
+        'account': data['id'],  # ID du compte
+        'orderBy': 'DATE_DESC',
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+
+    return Response(cyclos.post(method='account/searchAccountHistory', data=search_history_data))

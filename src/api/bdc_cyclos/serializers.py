@@ -20,3 +20,8 @@ class ReconversionSerializer(serializers.Serializer):
     amount = serializers.CharField()
     facture = serializers.CharField()
     member_login = serializers.CharField()
+
+
+class AccountsHistorySerializer(serializers.Serializer):
+
+    account_type = serializers.CharField()

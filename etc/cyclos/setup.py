@@ -24,7 +24,6 @@ def check_request_status(r):
 # Ensemble des constantes nécessaires à l'API.
 constants_by_category = {}
 
-
 def add_constant(category, name, value):
     if category not in constants_by_category.keys():
         constants_by_category[category] = {}
@@ -382,6 +381,7 @@ def create_transaction_custom_field_linked_user(name, internal_name,
 
 
 def create_transaction_custom_field_single_selection(name, internal_name,
+                                                     possible_values_name,
                                                      possible_values,
                                                      required=True):
     logger.info('Création du champ personnalisé "%s"...', name)
@@ -409,6 +409,8 @@ def create_transaction_custom_field_single_selection(name, internal_name,
                     'value': value
                 })
         check_request_status(r)
+        possible_value_id = r.json()['result']
+        add_constant(possible_values_name, value, possible_value_id)
     return custom_field_id
 
 
@@ -480,6 +482,7 @@ ID_CHAMP_PERSO_PAIEMENT_ADHERENT_FACULTATIF = create_transaction_custom_field_li
 ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT = create_transaction_custom_field_single_selection(
     name='Mode de paiement',
     internal_name='mode_de_paiement',
+    possible_values_name='payment_modes',
     possible_values=[
         'Chèque',
         'Espèces',
@@ -491,6 +494,7 @@ ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT = create_transaction_custom_field_singl
 ID_CHAMP_PERSO_PAIEMENT_PRODUIT = create_transaction_custom_field_single_selection(
     name='Produit',
     internal_name='produit',
+    possible_values_name='products',
     possible_values=[
         'Foulard',
     ],
@@ -519,6 +523,10 @@ ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE = create_transaction_custom_fi
     name='Numéro de transaction banque',
     internal_name='numero_transaction_banque',
 )
+ID_CHAMP_PERSO_PAIEMENT_NUMERO_FACTURE = create_transaction_custom_field_text(
+    name='Numéro de facture',
+    internal_name='numero_facture',
+)
 
 all_transaction_fields = [
     ID_CHAMP_PERSO_PAIEMENT_BDC,
@@ -533,6 +541,7 @@ all_transaction_fields = [
     ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_BILLET,
     ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_NUMERIQUE,
     ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
+    ID_CHAMP_PERSO_PAIEMENT_NUMERO_FACTURE,
 ]
 
 
@@ -824,6 +833,7 @@ ID_TYPE_PAIEMENT_RECONVERSION_BILLETS = create_payment_transfer_type(
     to_account_type_id=ID_RETOURS_EUSKO_BDC,
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
+        ID_CHAMP_PERSO_PAIEMENT_NUMERO_FACTURE,
     ],
 )
 ID_TYPE_PAIEMENT_COTISATION_EN_EURO = create_payment_transfer_type(
@@ -1134,44 +1144,49 @@ ID_CHAMP_PERSO_UTILISATEUR_BDC = create_user_custom_field_linked_user(
 # encore, c'est via les produits que les permissions et les règles
 # d'accès sont définies. Si plusieurs produits sont associés à un
 # groupe, les permissions se cumulent.
-# Un produit de nature Membre contient un et un seul compte utilisateur.
-# Chaque utilisateur appartenant à un groupe associé à ce produit aura
-# un compte de ce type.
+# Un produit de nature Membre ne peut être lié qu'à un seul type de
+# compte utilisateur. Chaque utilisateur appartenant à un groupe associé
+# à ce produit aura un compte de ce type.
 # Si on veut attribuer plusieurs comptes à des utilisateurs (c'est notre
 # cas pour les bureaux de change), il faut créer un produit pour chaque
 # type de compte utilisateur et associer tous ces produits au groupe des
 # utilisateurs.
 #
-def create_member_product(name, user_account_type_id):
+# Note: Tous les utilisateurs ont un nom et un login, même ceux qui ne
+# peuvent pas se connecter à Cyclos (par exemple les utilisateurs des
+# groupes "Bureaux de change", "Banques de dépôt" ou "Porteurs"). Comme
+# Cyclos vérifie l'unicité du login, cela rend impossible la création de
+# doublons (c'est donc une mesure de protection).
+def create_member_product(name, user_account_type_id=None):
     logger.info('Création du produit "%s"...', name)
+    product = {
+        'class': 'org.cyclos.model.users.products.MemberProductDTO',
+        'name': name,
+        'myProfileFields': [
+            {
+                'profileField': 'FULL_NAME',
+                'enabled': True,
+                'editableAtRegistration': True,
+                'visible': True,
+                'editable': True,
+                'managePrivacy': False,
+            },
+            {
+                'profileField': 'LOGIN_NAME',
+                'enabled': True,
+                'editableAtRegistration': True,
+                'visible': True,
+                'editable': True,
+                'managePrivacy': False,
+            },
+        ]
+    }
+    if user_account_type_id:
+        product['userAccount'] = user_account_type_id
     r = requests.post(
             eusko_web_services + 'product/save',
             headers=headers,
-            json={
-                'class': 'org.cyclos.model.users.products.MemberProductDTO',
-                'name': name,
-                'userAccount': user_account_type_id,
-                # TODO rendre paramétrable la liste des champs de
-                # profil utilisateur
-                'myProfileFields': [
-                    {
-                        'profileField': 'FULL_NAME',
-                        'enabled': True,
-                        'editableAtRegistration': True,
-                        'visible': True,
-                        'editable': True,
-                        'managePrivacy': False,
-                    },
-#                    {
-#                        'profileField': 'LOGIN_NAME',
-#                        'enabled': True,
-#                        'editableAtRegistration': True,
-#                        'visible': True,
-#                        'editable': True,
-#                        'managePrivacy': False,
-#                    },
-                ]
-            })
+            json=product)
     check_request_status(r)
     product_id = r.json()['result']
     logger.debug('product_id = %s', product_id)
@@ -1399,8 +1414,14 @@ ID_GROUPE_ADHERENTS_UTILISATEURS = create_member_group(
 )
 
 # Porteurs.
+ID_PRODUIT_PORTEUR = create_member_product(
+    name='Porteur',
+)
 ID_GROUPE_PORTEURS = create_member_group(
     name='Porteurs',
+    products=[
+        ID_PRODUIT_PORTEUR,
+    ]
 )
 
 all_user_groups = [
@@ -1478,6 +1499,10 @@ set_product_properties(
         ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE,
     ],
     accessible_user_groups=all_user_groups,
+    user_profile_fields = [
+        'FULL_NAME',
+        'LOGIN_NAME',
+    ],
     user_registration=True,
     access_user_accounts=[
         ID_STOCK_DE_BILLETS_BDC,

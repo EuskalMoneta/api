@@ -55,7 +55,7 @@ check_request_status(r)
 # Création des utilisateurs pour les banques de dépôt et les comptes
 # dédiés.
 #
-def create_user(group, name, login=None, password=None, custom_values=None):
+def create_user(group, name, login, password=None, custom_values=None):
     logger.info('Création de l\'utilisateur "%s" (groupe "%s")...', name, group)
     # FIXME code à déplacer pour ne pas l'exécuter à chaque fois
     r = requests.post(eusko_web_services + 'group/search',
@@ -68,9 +68,10 @@ def create_user(group, name, login=None, password=None, custom_values=None):
     user_registration = {
         'group': group_id,
         'name': name,
+        'username': login,
         'skipActivationEmail': True,
     }
-    if login and password:
+    if password:
         # FIXME code à déplacer pour ne pas l'exécuter à chaque fois
         r = requests.get(eusko_web_services + 'passwordType/list',
                          headers=headers)
@@ -79,7 +80,6 @@ def create_user(group, name, login=None, password=None, custom_values=None):
         for password_type in password_types:
             if password_type['internalName'] == 'login':
                 login_password = password_type
-        user_registration['username'] = login
         user_registration['passwords'] = [
             {
                 'type': login_password,
@@ -102,9 +102,10 @@ def create_user(group, name, login=None, password=None, custom_values=None):
                 value_key: value,
             })
     logger.debug('create_user : json = %s', user_registration)
-    r = requests.post(eusko_web_services + 'user/register',
-                      headers=headers,
-                      json=user_registration)
+    r = requests.post(
+            eusko_web_services + 'user/register',
+            headers=headers,
+            json=user_registration)
     check_request_status(r)
     logger.debug('result = %s', r.json()['result'])
     user_id = r.json()['result']['user']['id']
@@ -114,18 +115,22 @@ def create_user(group, name, login=None, password=None, custom_values=None):
 create_user(
     group='Banques de dépôt',
     name='Crédit Agricole',
+    login='CAMPG',
 )
 create_user(
     group='Banques de dépôt',
     name='La Banque Postale',
+    login='LBPO',
 )
 create_user(
     group='Comptes dédiés',
     name='Compte dédié eusko billet',
+    login='CD_BILLET',
 )
 create_user(
     group='Comptes dédiés',
     name='Compte dédié eusko numérique',
+    login='CD_NUMERIQUE',
 )
 
 
@@ -156,11 +161,12 @@ bureaux_de_change = {
 for login, name in bureaux_de_change.items():
     id_bdc = create_user(
         group='Bureaux de change',
-        name=name + ' (BDC)',
+        name=name+' (BDC)',
+        login='BDC_'+login,
     )
     create_user(
         group='Opérateurs BDC',
-        name=name + ' (opérateur BDC)',
+        name=name+' (opérateur BDC)',
         login=login,
         password=login,
         custom_values={
@@ -237,4 +243,18 @@ for login, name in adherents.items():
     create_user(
         group=group,
         name=name,
+        login=login,
+    )
+
+porteurs = {
+    'P001': 'Porteur 1',
+    'P002': 'Porteur 2',
+    'P003': 'Porteur 3',
+    'P004': 'Porteur 4',
+}
+for login, name in porteurs.items():
+    create_user(
+        group='Porteurs',
+        name=name,
+        login=login,
     )

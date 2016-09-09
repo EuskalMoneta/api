@@ -27,6 +27,12 @@ groups:
   comptes_dedies: -7371965205895266517
   operateurs_bdc: -7371965193010364629
   porteurs: -7371965184420430037
+payment_modes:
+  cheque: -7371965214485201109
+  especes: -7371965218780168405
+  paiement_en_ligne: -7371965223075135701
+  prelevement: -7371965193010364629
+  virement: -7371965197305331925
 payment_types:
   change_billets_versement_des_euro: -7371965188715397333
   change_numerique_en_bdc_versement_des_euro: -7371965253139906773
@@ -59,6 +65,8 @@ payment_types:
   virement_de_compte_dedie_vers_le_compte_de_gestion: -7371965274614743253
   virement_entre_comptes_dedies: -7371965244549972181
   virement_inter_adherent: -7371965347629187285
+products:
+  foulard: -7371965201600299221
 transaction_custom_fields:
   adherent: -7371965223075135701
   adherent_facultatif: -7371965193010364629
@@ -69,6 +77,7 @@ transaction_custom_fields:
   montant_cotisations: -7371965175830495445
   montant_ventes: -7371965180125462741
   numero_de_bordereau: -7371965205895266517
+  numero_de_facture: -7371965162945593557
   numero_de_transaction_banque: -7371965158650626261
   porteur: -7371965218780168405
   produit: -7371965201600299221
