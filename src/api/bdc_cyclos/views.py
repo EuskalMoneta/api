@@ -217,7 +217,9 @@ def reconversion(request):
 @api_view(['GET'])
 def accounts_history(request):
     """
-    Reconversion eusko en euros pour un adhérent (prestataire) via un BDC.
+    Accounts history for BDC:
+    Available account types are:
+    ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
     """
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
@@ -231,11 +233,11 @@ def accounts_history(request):
     query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
 
-    # FYI available account types are:
+    # Available account types verification
     account_types = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
 
     if request.query_params['account_type'] not in account_types:
-        return Response({'error': 'The account_type you provided: {}, is not available for this query!'
+        return Response({'error': 'The account type you provided: {}, is not available for this query!'
                          .format(request.query_params['account_type'])},
                         status=status.HTTP_400_BAD_REQUEST)
 
