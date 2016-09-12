@@ -203,7 +203,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
         except CyclosAPIException:
             return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-        member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
+        member_cyclos_id = cyclos.get_member_id_from_login(current_member['login'])
 
         query_data = {}
         log.critical(data)
