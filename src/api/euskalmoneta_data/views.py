@@ -23,7 +23,7 @@ def payment_modes(request):
 @api_view(['GET'])
 def porteurs_eusko(request):
     """
-    List all porteurs d'euskos.
+    List porteurs d'euskos.
     """
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
@@ -35,5 +35,24 @@ def porteurs_eusko(request):
                                 data={'groups': [settings.CYCLOS_CONSTANTS['groups']['porteurs']]})
     res = [{'label': item['display'], 'value': item['id']}
            for item in porteurs_data['result']['pageItems']]
+
+    return Response(res)
+
+
+@api_view(['GET'])
+def deposit_banks(request):
+    """
+    List available banks.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # user/search for group = 'Porteurs'
+    banks_data = cyclos.post(method='user/search',
+                             data={'groups': [settings.CYCLOS_CONSTANTS['groups']['banques_de_depot']]})
+    res = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
+           for item in banks_data['result']['pageItems']]
 
     return Response(res)

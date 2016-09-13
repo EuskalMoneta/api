@@ -255,3 +255,36 @@ def accounts_history(request):
     }
 
     return Response(cyclos.post(method='account/searchAccountHistory', data=search_history_data))
+
+
+@api_view(['GET'])
+def payments_available_for_deposit(request):
+    """
+    payments_available_for_deposit
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # account/getAccountsSummary
+    query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+
+    data = [item
+            for item in accounts_summaries_data['result']
+            if item['type']['id'] ==
+            str(settings.CYCLOS_CONSTANTS['account_types']['caisse_euro_bdc'])][0]
+
+    # account/searchAccountHistory
+    search_history_data = {
+        'account': data['id'],  # ID du compte
+        'orderBy': 'DATE_DESC',
+        'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_remettre_a_euskal_moneta'])
+        ],
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+
+    return Response(cyclos.post(method='account/searchAccountHistory', data=search_history_data))

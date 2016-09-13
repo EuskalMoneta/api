@@ -27,6 +27,7 @@ urlpatterns = [
     # Euskal moneta data (hardcoded data we dont fetch from APIs)
     url(r'^payment-modes/$', euskalmoneta_data_views.payment_modes),
     url(r'^porteurs-eusko/$', euskalmoneta_data_views.porteurs_eusko),
+    url(r'^deposit-banks/$', euskalmoneta_data_views.deposit_banks),
 
     # Cyclos data, data we fetch from/push to its API
     url(r'^accounts-summaries/$', bdc_cyclos_views.accounts_summaries),
@@ -35,6 +36,7 @@ urlpatterns = [
     url(r'^sortie-stock/$', bdc_cyclos_views.sortie_stock),
     url(r'^change-euro-eusko/$', bdc_cyclos_views.change_euro_eusko),
     url(r'^reconversion/$', bdc_cyclos_views.reconversion),
+    url(r'^payments-available-deposit/$', bdc_cyclos_views.payments_available_for_deposit),
 ]
 
 urlpatterns += router.urls
