@@ -502,6 +502,7 @@ ID_CHAMP_PERSO_PAIEMENT_PRODUIT = create_transaction_custom_field_single_selecti
 ID_CHAMP_PERSO_PAIEMENT_NUMERO_BORDEREAU = create_transaction_custom_field_text(
     name='Numéro de bordereau',
     internal_name='numero_bordereau',
+    required=False,
 )
 ID_CHAMP_PERSO_PAIEMENT_MONTANT_COTISATIONS = create_transaction_custom_field_decimal(
     name='Montant Cotisations',
@@ -542,6 +543,78 @@ all_transaction_fields = [
     ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_NUMERIQUE,
     ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
     ID_CHAMP_PERSO_PAIEMENT_NUMERO_FACTURE,
+]
+
+
+########################################################################
+# Création des "status flow" pour les paiements.
+#
+def create_transfer_status_flow(name):
+    logger.info('Création du "status flow" "%s"...', name)
+    r = requests.post(
+            eusko_web_services + 'transferStatusFlow/save',
+            headers=headers,
+            json={
+                'name': name,
+            })
+    check_request_status(r)
+    status_flow_id = r.json()['result']
+    logger.debug('status_flow_id = %s', status_flow_id)
+    add_constant('transfer_status_flows', name, status_flow_id)
+    return status_flow_id
+
+def create_transfer_status(name, status_flow, possible_next=None):
+    logger.info('Création du statut "%s"...', name)
+    status = {
+        'name': name,
+        'flow': status_flow,
+    }
+    if possible_next:
+        status['possibleNext'] = possible_next
+    r = requests.post(
+            eusko_web_services + 'transferStatus/save',
+            headers=headers,
+            json=status)
+    check_request_status(r)
+    status_id = r.json()['result']
+    logger.debug('status_id = %s', status_id)
+    add_constant('transfer_statuses', name, status_id)
+    return status_id
+
+# Remise à Euskal Moneta : pour tous les paiements qui créditent les
+# caisses €, eusko et retours d'eusko des bureaux de change.
+ID_STATUS_FLOW_REMISE_A_EM = create_transfer_status_flow(
+    name='Remise à Euskal Moneta',
+)
+ID_STATUS_REMIS = create_transfer_status(
+    name='Remis à Euskal Moneta',
+    status_flow=ID_STATUS_FLOW_REMISE_A_EM,
+)
+ID_STATUS_A_REMETTRE = create_transfer_status(
+    name='A remettre à Euskal Moneta',
+    status_flow=ID_STATUS_FLOW_REMISE_A_EM,
+    possible_next=ID_STATUS_REMIS,
+)
+
+# Virement(s) : pour les reconversions d'eusko en € (virement à faire au
+# prestataire qui a reconverti) et pour les dépôts en banque (virements
+# à faire vers les comptes dédiés).
+ID_STATUS_FLOW_VIREMENTS = create_transfer_status_flow(
+    name='Virements',
+)
+ID_STATUS_VIREMENTS_FAITS = create_transfer_status(
+    name='Virements faits',
+    status_flow=ID_STATUS_FLOW_VIREMENTS,
+)
+ID_STATUS_VIREMENTS_A_FAIRE = create_transfer_status(
+    name='Virements à faire',
+    status_flow=ID_STATUS_FLOW_VIREMENTS,
+    possible_next=ID_STATUS_VIREMENTS_FAITS,
+)
+
+all_status_flows = [
+    ID_STATUS_FLOW_REMISE_A_EM,
+    ID_STATUS_FLOW_VIREMENTS,
 ]
 
 
@@ -614,7 +687,8 @@ ID_ROLE_AUTORISATION_ADMIN_COMPTES = create_authorization_role(
 #
 def create_payment_transfer_type(name, direction, from_account_type_id,
                                  to_account_type_id, custom_fields=[],
-                                 requires_authorization=False):
+                                 requires_authorization=False,
+                                 status_flows=[], initial_statuses=[]):
     logger.info('Création du type de paiement "%s"...', name)
     r = requests.post(
             eusko_web_services + 'transferType/save',
@@ -627,6 +701,8 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
                 'to': to_account_type_id,
                 'enabled': True,
                 'requiresAuthorization': requires_authorization,
+                'statusFlows': status_flows,
+                'initialStatuses': initial_statuses,
                 'maxChargebackTime': {'amount': '2', 'field': 'MONTHS'},
                 'channels': [ID_CANAL_MAIN_WEB, ID_CANAL_WEB_SERVICES]
             })
@@ -799,6 +875,12 @@ ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_EUROS = create_payment_transfer_ty
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
         ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
 )
 ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_EUSKO = create_generated_transfer_type(
     name='Change billets - Versement des eusko',
@@ -817,15 +899,6 @@ create_transfer_fee(
     amount=1.00,
 )
 
-# TODO frais : versement des eusko
-
-# TODO ajouter un commentaire pour expliquer que pour l'opération
-# correspondante, l'API Eusko doit générer 3 paiements : celui
-# ci-dessous + 2 virements du compte dédié billet vers le compte de
-# gestion € (5%) et le compte de débit € (95%); ces 2 derniers virements
-# ne peuvent pas être des frais car ils sont soumis à autorisation et
-# cela n'est pas possible pour des frais (enfin, je crois, à vérifier,
-# d'autant que c'était avec Cyclos 3.7.3, qu'en est-il avec Cyclos 4 ?)
 ID_TYPE_PAIEMENT_RECONVERSION_BILLETS = create_payment_transfer_type(
     name='Reconversion billets - Versement des eusko',
     direction='SYSTEM_TO_USER',
@@ -834,6 +907,14 @@ ID_TYPE_PAIEMENT_RECONVERSION_BILLETS = create_payment_transfer_type(
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
         ID_CHAMP_PERSO_PAIEMENT_NUMERO_FACTURE,
+    ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+        ID_STATUS_FLOW_VIREMENTS,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+        ID_STATUS_VIREMENTS_A_FAIRE,
     ],
 )
 ID_TYPE_PAIEMENT_COTISATION_EN_EURO = create_payment_transfer_type(
@@ -845,6 +926,12 @@ ID_TYPE_PAIEMENT_COTISATION_EN_EURO = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
         ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
 )
 ID_TYPE_PAIEMENT_COTISATION_EN_EUSKO = create_payment_transfer_type(
     name='Cotisation en eusko',
@@ -853,6 +940,12 @@ ID_TYPE_PAIEMENT_COTISATION_EN_EUSKO = create_payment_transfer_type(
     to_account_type_id=ID_CAISSE_EUSKO_BDC,
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
+    ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
     ],
 )
 ID_TYPE_PAIEMENT_VENTE_EN_EURO = create_payment_transfer_type(
@@ -864,6 +957,12 @@ ID_TYPE_PAIEMENT_VENTE_EN_EURO = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_PRODUIT,
         ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
 )
 ID_TYPE_PAIEMENT_VENTE_EN_EUSKO = create_payment_transfer_type(
     name='Vente en eusko',
@@ -873,7 +972,20 @@ ID_TYPE_PAIEMENT_VENTE_EN_EUSKO = create_payment_transfer_type(
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_PRODUIT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
 )
+
+# Dépôt en banque :
+# 1 type de paiement pour le dépôt proprement dit + 4 types de paiements
+# pour régulariser les dépôts dont le montant ne correspond pas au
+# montant calculé.
+#
+# Le dépôt proprement dit :
 ID_TYPE_PAIEMENT_DEPOT_EN_BANQUE = create_payment_transfer_type(
     name='Dépôt en banque',
     direction='USER_TO_USER',
@@ -886,6 +998,48 @@ ID_TYPE_PAIEMENT_DEPOT_EN_BANQUE = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_MONTANT_VENTES,
         ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_BILLET,
         ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_NUMERIQUE,
+    ],
+    status_flows=[
+        ID_STATUS_FLOW_VIREMENTS,
+    ],
+    initial_statuses=[
+        ID_STATUS_VIREMENTS_A_FAIRE,
+    ],
+)
+ID_TYPE_PAIEMENT_REGUL_COMPTE_DE_GESTION_VERS_BANQUE = create_payment_transfer_type(
+    direction='SYSTEM_TO_USER',
+    name='Régularisation Compte de gestion vers Banque de dépôt',
+    from_account_type_id=ID_COMPTE_DE_GESTION,
+    to_account_type_id=ID_BANQUE_DE_DEPOT,
+    custom_fields=[
+        ID_CHAMP_PERSO_PAIEMENT_BDC,
+    ],
+)
+ID_TYPE_PAIEMENT_BANQUE_VERS_CAISSE_EURO_BDC = create_payment_transfer_type(
+    name='Paiement de Banque de dépôt vers Caisse € BDC',
+    direction='USER_TO_USER',
+    from_account_type_id=ID_BANQUE_DE_DEPOT,
+    to_account_type_id=ID_CAISSE_EURO_BDC,
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
+)
+ID_TYPE_PAIEMENT_CAISSE_EURO_BDC_VERS_BANQUE = create_payment_transfer_type(
+    name='Paiement de Caisse € BDC vers Banque de dépôt',
+    direction='USER_TO_USER',
+    from_account_type_id=ID_CAISSE_EURO_BDC,
+    to_account_type_id=ID_BANQUE_DE_DEPOT,
+)
+ID_TYPE_PAIEMENT_REGUL_BANQUE_VERS_COMPTE_DE_GESTION = create_payment_transfer_type(
+    name='Régularisation Banque de dépôt vers Compte de gestion',
+    direction='USER_TO_SYSTEM',
+    from_account_type_id=ID_BANQUE_DE_DEPOT,
+    to_account_type_id=ID_COMPTE_DE_GESTION,
+    custom_fields=[
+        ID_CHAMP_PERSO_PAIEMENT_BDC,
     ],
 )
 
@@ -967,6 +1121,12 @@ ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_BDC = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
         ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
 )
 
 # Même fonctionnement que pour la reconversion billets, sauf que les
@@ -995,6 +1155,12 @@ ID_TYPE_PAIEMENT_DEPOT_DE_BILLETS = create_payment_transfer_type(
     to_account_type_id=ID_RETOURS_EUSKO_BDC,
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
+    ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
     ],
 )
 ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE = create_payment_transfer_type(
@@ -1066,6 +1232,7 @@ all_system_to_user_payments = [
     ID_TYPE_PAIEMENT_COTISATION_EN_EUSKO,
     ID_TYPE_PAIEMENT_VENTE_EN_EURO,
     ID_TYPE_PAIEMENT_VENTE_EN_EUSKO,
+    ID_TYPE_PAIEMENT_REGUL_COMPTE_DE_GESTION_VERS_BANQUE,
     ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE,
     ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_BDC,
     ID_TYPE_PAIEMENT_DEPOT_DE_BILLETS,
@@ -1076,6 +1243,7 @@ all_user_to_system_payments = [
     ID_TYPE_PAIEMENT_SORTIE_CAISSE_EUSKO_BDC,
     ID_TYPE_PAIEMENT_SORTIE_RETOURS_EUSKO_BDC,
     ID_TYPE_PAIEMENT_PERTE_DE_BILLETS,
+    ID_TYPE_PAIEMENT_REGUL_BANQUE_VERS_COMPTE_DE_GESTION,
     ID_TYPE_PAIEMENT_REMISE_EUROS_EN_CAISSE,
     ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_GESTION,
     ID_TYPE_PAIEMENT_COMPTE_DEDIE_VERS_COMPTE_DE_DEBIT,
@@ -1086,6 +1254,8 @@ all_user_to_system_payments = [
 ]
 all_user_to_user_payments = [
     ID_TYPE_PAIEMENT_DEPOT_EN_BANQUE,
+    ID_TYPE_PAIEMENT_BANQUE_VERS_CAISSE_EURO_BDC,
+    ID_TYPE_PAIEMENT_CAISSE_EURO_BDC_VERS_BANQUE,
     ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DEDIE,
     ID_TYPE_PAIEMENT_VIREMENT_ENTRE_COMPTES_DEDIES,
     ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
@@ -1252,7 +1422,11 @@ def set_product_properties(
             password_action['change'] = True
             password_action['atRegistration'] = True
     product['visibleTransactionFields'] = visible_transaction_fields
-    product['transferStatusFlows'] = transfer_status_flows
+    # Status flows.
+    for product_transfer_status_flow in product['transferStatusFlows']:
+        if product_transfer_status_flow['flow']['id'] in transfer_status_flows:
+            product_transfer_status_flow['visible'] = True
+            product_transfer_status_flow['editable'] = True
     product['systemAccounts'] = system_accounts
     product['systemToSystemPayments'] = system_to_system_payments
     product['systemToUserPayments'] = system_to_user_payments
@@ -1446,7 +1620,7 @@ set_product_properties(
         'login',
     ],
     visible_transaction_fields=all_transaction_fields,
-    transfer_status_flows=[],
+    transfer_status_flows=all_status_flows,
     system_accounts=all_system_accounts,
     system_to_system_payments=all_system_to_system_payments,
     system_to_user_payments=all_system_to_user_payments,
@@ -1479,6 +1653,7 @@ set_product_properties(
     ],
     visible_transaction_fields=all_transaction_fields,
     transfer_status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
     ],
     system_accounts=[
         ID_COMPTE_DE_TRANSIT,
@@ -1494,6 +1669,7 @@ set_product_properties(
         ID_TYPE_PAIEMENT_COTISATION_EN_EUSKO,
         ID_TYPE_PAIEMENT_VENTE_EN_EURO,
         ID_TYPE_PAIEMENT_VENTE_EN_EUSKO,
+        ID_TYPE_PAIEMENT_REGUL_COMPTE_DE_GESTION_VERS_BANQUE,
         ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_BDC,
         ID_TYPE_PAIEMENT_DEPOT_DE_BILLETS,
         ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE,
@@ -1512,11 +1688,14 @@ set_product_properties(
     ],
     payments_as_user_to_user=[
         ID_TYPE_PAIEMENT_DEPOT_EN_BANQUE,
+        ID_TYPE_PAIEMENT_BANQUE_VERS_CAISSE_EURO_BDC,
+        ID_TYPE_PAIEMENT_CAISSE_EURO_BDC_VERS_BANQUE,
     ],
     payments_as_user_to_system=[
         ID_TYPE_PAIEMENT_SORTIE_STOCK_BDC,
         ID_TYPE_PAIEMENT_SORTIE_CAISSE_EUSKO_BDC,
         ID_TYPE_PAIEMENT_SORTIE_RETOURS_EUSKO_BDC,
+        ID_TYPE_PAIEMENT_REGUL_BANQUE_VERS_COMPTE_DE_GESTION,
         ID_TYPE_PAIEMENT_REMISE_EUROS_EN_CAISSE,
         ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_GESTION,
         ID_TYPE_PAIEMENT_RETRAIT_DE_BILLETS,
