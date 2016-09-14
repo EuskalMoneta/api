@@ -19,7 +19,7 @@ def api():
 
     query = '{}/{}/'.format(data['url'], 'api-token-auth')
     r = requests.post(query, headers=data['headers'],
-                      json={'username': 'admin', 'password': 'admin'})
+                      json={'username': 'B003', 'password': 'B003'})
     data['api_token'] = r.json()['token']
     data['headers']['Authorization'] = 'Token {}'.format(data['api_token'])
     return data
@@ -94,8 +94,21 @@ class TestMembersSubscriptionsAPI:
         res_member = r_member.json()
         log.info("res_member: {}".format(res_member))
 
-        data = {'amount': '10', 'payment_mode': 'Euro-LIQ', 'member_id': '910'}
+        # I need to fetch different payment_modes from Cyclos to provide the cyclos_id_payment_mode parameter
+        query_payment_modes = '{}/{}/'.format(api['url'], 'payment-modes')
+        log.info("query_payment_modes: {}".format(query_payment_modes))
+
+        r_payment_modes = requests.get(query_payment_modes, headers=api['headers'])
+        res_payment_modes = r_payment_modes.json()
+        log.info("res_payment_modes: {}".format(res_payment_modes))
+
+        cyclos_id_payment_mode = [item for item in res_payment_modes
+                                  if item['value'] == 'Euro-LIQ'][0]
+
+        data = {'amount': '10', 'member_id': '910',
+                'payment_mode': 'Euro-LIQ', 'cyclos_id_payment_mode': cyclos_id_payment_mode['cyclos_id']}
         query = '{}/{}/'.format(api['url'], 'members-subscriptions')
+        log.info("data: {}".format(data))
         log.info("query: {}".format(query))
 
         r = requests.post(query, json=data, headers=api['headers'])
