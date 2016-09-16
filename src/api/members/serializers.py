@@ -51,3 +51,4 @@ class MembersSubscriptionsSerializer(serializers.Serializer):
     amount = serializers.IntegerField()
     payment_mode = serializers.CharField(write_only=True)
     label = serializers.CharField(read_only=True)
+    cyclos_id_payment_mode = serializers.CharField(write_only=True)
