@@ -18,7 +18,7 @@ services:
       - dolibarr-app
       - cyclos-app
     networks:
-      - eusko
+      - eusko_net
 
   dolibarr-app:
     image: euskalmoneta/dolibarr:develop
@@ -32,7 +32,7 @@ services:
       - dolibarr-db
       - cyclos-app
     networks:
-      - eusko
+      - eusko_net
 
   dolibarr-db:
     image: mariadb:10.1
@@ -45,7 +45,7 @@ services:
       - MYSQL_USER=pass
       - MYSQL_PASSWORD=pass
     networks:
-      - eusko
+      - eusko_net
 
   cyclos-app:
     image: cyclos/cyclos:4.5.4
@@ -59,7 +59,7 @@ services:
     links:
       - cyclos-db
     networks:
-      - eusko
+      - eusko_net
 
   cyclos-db:
     image: cyclos/db
@@ -71,7 +71,7 @@ services:
       - POSTGRES_USER=cyclos
       - POSTGRES_PASSWORD=cyclos
     networks:
-      - eusko
+      - eusko_net
 
   sentry-redis:
     image: redis
@@ -84,7 +84,7 @@ services:
     volumes:
       - ./data/postgresql:/var/lib/postgresql/data
     networks:
-      - eusko
+      - eusko_net
 
   sentry:
     image: sentry
@@ -100,7 +100,7 @@ services:
       - sentry-redis:redis
       - sentry-postgres:postgres
     networks:
-      - eusko
+      - eusko_net
 
   sentry-cron:
     image: sentry
@@ -114,7 +114,7 @@ services:
       - sentry-redis:redis
       - sentry-postgres:postgres
     networks:
-      - eusko
+      - eusko_net
     command: sentry run cron
 
   sentry-worker:
@@ -129,9 +129,9 @@ services:
       - sentry-redis:redis
       - sentry-postgres:postgres
     networks:
-      - eusko
+      - eusko_net
     command: sentry run worker
 
 networks:
-  eusko:
+  eusko_net:
     driver: bridge
