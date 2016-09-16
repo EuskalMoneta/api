@@ -10,11 +10,11 @@ services:
       - 8000:8000
     environment:
       - DJANGO_DEBUG=True
-      - API_PUBLIC_URL=http://localhost:8000
-      - DOLIBARR_PUBLIC_URL=http://localhost:8080
-      - BDC_PUBLIC_URL=http://localhost:8001
+      - API_PUBLIC_URL=http://api
+      - DOLIBARR_PUBLIC_URL=http://dolibarr-app
+      - BDC_PUBLIC_URL=http://bureaudechange
       - RAVEN_CONFIG_DSN=http://82140549232e4c3c8d4ee865630ff9c2:a118efe0af754f9487a6639e91591d6e@sentry:9000/2
-    links:
+    depends_on:
       - dolibarr-app
       - cyclos-app
     networks:
@@ -28,7 +28,7 @@ services:
       - ./data/documents:/var/www/documents
       - ./etc/dolibarr/conf.php:/var/www/html/conf/conf.php
       - ./etc/dolibarr/date-timezone.ini:/usr/local/etc/php/conf.d/date-timezone.ini
-    links:
+    depends_on:
       - dolibarr-db
       - cyclos-app
     networks:
@@ -131,7 +131,3 @@ services:
     networks:
       - eusko
     command: sentry run worker
-
-networks:
-  eusko:
-    driver: bridge
