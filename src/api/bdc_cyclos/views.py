@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from bdc_cyclos.serializers import (AccountsHistorySerializer, ChangeEuroEuskoSerializer,
+from bdc_cyclos.serializers import (AccountsHistorySerializer, BankDepositSerializer, ChangeEuroEuskoSerializer,
                                     IOStockBDCSerializer, ReconversionSerializer)
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
@@ -288,3 +288,128 @@ def payments_available_for_deposit(request):
     }
 
     return Response(cyclos.post(method='account/searchAccountHistory', data=search_history_data))
+
+
+@api_view(['POST'])
+def bank_deposit(request):
+    """
+    bank_deposit
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = BankDepositSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # Enregistrer le dépôt en banque sur le compte approprié
+
+    bank_deposit_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque']),
+        'amount': request.data['deposit_calculated_amount'],  # montant total calculé
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+        'to': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
+                'enumeratedValues': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
+            },
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_bordereau']),
+                'stringValue': request.data['bordereau']  # saisi par l'utilisateur
+            },
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['montant_cotisations']),
+                'decimalValue': 10             # calculé
+            },
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['montant_ventes']),
+                'decimalValue': 0              # calculé
+            },
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['montant_changes_billet']),
+                'decimalValue': 120            # calculé
+            },
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['montant_changes_numerique']),
+                'decimalValue': 0              # calculé
+            },
+        ],
+        'description': 'Dépôt en banque - {}'.format(request.data['login_bdc'])
+    }
+
+    bank_deposit_res = cyclos.post(method='payment/perform', data=bank_deposit_data)  # noqa
+
+    if (request.data['amount_minus_difference'] and
+       request.data['deposit_amount'] < request.data['deposit_calculated_amount']):
+
+        regulatisation = request.data['deposit_calculated_amount'] - request.data['deposit_amount']
+
+        # Enregistrer un paiement du Compte de gestion vers la Banque de dépôt
+        payment_gestion_to_deposit_data = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_compte_de_gestion_vers_banque_de_depot']),  # noqa
+            'amount': regulatisation,  # Montant de la régulatisation
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': 'SYSTEM',
+            'to': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
+            'customValues': [
+                {
+                    'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['bdc']),
+                    'linkedEntityValue': cyclos.user_bdc_id  # ID de l'utilisateur Bureau de change
+                },
+            ],
+        }
+        cyclos.post(method='payment/perform', data=payment_gestion_to_deposit_data)
+
+        # Enregistrer un paiement de la Banque de dépôt vers la Caisse € du BDC
+        payment_deposit_to_caisse_bdc_data = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['paiement_de_banque_de_depot_vers_caisse_euro_bdc']),  # noqa
+            'amount': regulatisation,  # Montant de la régulatisation
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
+            'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+        }
+        cyclos.post(method='payment/perform', data=payment_deposit_to_caisse_bdc_data)
+
+    elif (request.data['amount_plus_difference'] and
+          request.data['deposit_amount'] > request.data['deposit_calculated_amount']):
+
+        regulatisation = request.data['deposit_amount'] - request.data['deposit_calculated_amount']
+
+        # Enregistrer un paiement de la Caisse € du BDC vers la Banque de dépôt
+        payment_caisse_bdc_to_deposit_data = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_compte_de_gestion_vers_banque_de_depot']),  # noqa
+            'amount': regulatisation,  # Montant de la régulatisation
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': 'SYSTEM',
+            'to': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
+            'customValues': [
+                {
+                    'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['bdc']),
+                    'linkedEntityValue': cyclos.user_bdc_id  # ID de l'utilisateur Bureau de change
+                },
+            ],
+        }
+        cyclos.post(method='payment/perform', data=payment_caisse_bdc_to_deposit_data)
+
+        # Enregistrer un paiement de la Banque de dépôt vers le Compte de gestion
+        payment_deposit_to_gestion_data = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['paiement_de_banque_de_depot_vers_caisse_euro_bdc']), # noqa
+            'amount': regulatisation,  # Montant de la régulatisation
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': request.data['deposit_bank'],     # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
+            'to': cyclos.user_bdc_id,          # ID de l'utilisateur Bureau de change
+        }
+        cyclos.post(method='payment/perform', data=payment_deposit_to_gestion_data)
+
+    # Passer tous les paiements à l'origine du dépôt à l'état "Remis à Euskal Moneta"
+    for payment in request.data['selected_payments']:
+        transfer_change_status_data = {
+            'transfer': payment['id'],  # ID du paiement (récupéré dans l'historique)
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['remis_a_euskal_moneta'])
+        }
+        cyclos.post(method='transferStatus/changeStatus', data=transfer_change_status_data)
+
+    return Response(bank_deposit_data)

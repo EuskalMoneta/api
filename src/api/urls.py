@@ -37,6 +37,7 @@ urlpatterns = [
     url(r'^change-euro-eusko/$', bdc_cyclos_views.change_euro_eusko),
     url(r'^reconversion/$', bdc_cyclos_views.reconversion),
     url(r'^payments-available-deposit/$', bdc_cyclos_views.payments_available_for_deposit),
+    url(r'^bank-deposit/$', bdc_cyclos_views.bank_deposit),
 ]
 
 urlpatterns += router.urls
