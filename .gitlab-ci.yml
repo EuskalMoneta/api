@@ -2,30 +2,22 @@ image: gitlab/dind
 
 
 variables:
-  CONTAINER_IMAGE: sources.meta-it.fr:4567/euskal-moneta/eusko
-  CONTAINER_TEST_IMAGE: sources.meta-it.fr:4567/euskal-moneta/eusko:$CI_BUILD_REF
+  CONTAINER_IMAGE: sources.meta-it.fr:4567/euskal-moneta/api
+  CONTAINER_TEST_IMAGE: sources.meta-it.fr:4567/euskal-moneta/api:$CI_BUILD_REF
 
 before_script:
   - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN sources.meta-it.fr:4567
 
 stages:
-  - build-api
-  - build-bdc
+  - build
 
-build-api:
-  stage: build-api
+build:
+  stage: build
   script:
+    - bash test.sh
     - docker build -t $CONTAINER_IMAGE src/api
-    - docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE:api-latest
-    - docker push $CONTAINER_IMAGE:api-latest
-  tags:
-    - dind
-
-build-bdc:
-  stage: build-bdc
-  script:
-    - docker build -t $CONTAINER_IMAGE src/bureaudechange
-    - docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE:bdc-latest
-    - docker push $CONTAINER_IMAGE:bdc-latest
+    - docker tag $CONTAINER_IMAGE $CONTAINER_IMAGE:latest
+    - docker push $CONTAINER_IMAGE:latest
+  stage: build
   tags:
     - dind

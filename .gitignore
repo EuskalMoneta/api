@@ -13,6 +13,9 @@ CR.md
 eusko.sublime-project
 eusko.sublime-workspace
 
+# Cyclos Constants YML
+cyclos_constants.yml
+
 # NodeJS / npm
 npm-debug.log
 
