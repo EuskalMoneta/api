@@ -5,8 +5,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from bdc_cyclos.serializers import (AccountsHistorySerializer, BankDepositSerializer, ChangeEuroEuskoSerializer,
-                                    IOStockBDCSerializer, ReconversionSerializer)
+from bdc_cyclos.serializers import (AccountsHistorySerializer, BankDepositSerializer, CashDepositSerializer,
+                                    ChangeEuroEuskoSerializer, IOStockBDCSerializer, ReconversionSerializer)
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 
@@ -293,7 +293,7 @@ def payments_available_for_deposit(request):
 @api_view(['POST'])
 def bank_deposit(request):
     """
-    bank_deposit
+    bank_deposit: bank deposit
     """
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
@@ -304,6 +304,10 @@ def bank_deposit(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # Enregistrer le dépôt en banque sur le compte approprié
+    try:
+        bordereau = request.data['bordereau']
+    except KeyError:
+        bordereau = 'N/A'
 
     bank_deposit_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque']),
@@ -318,7 +322,7 @@ def bank_deposit(request):
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_bordereau']),
-                'stringValue': request.data['bordereau']  # saisi par l'utilisateur
+                'stringValue': bordereau  # saisi par l'utilisateur
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['montant_cotisations']),
@@ -413,3 +417,38 @@ def bank_deposit(request):
         cyclos.post(method='transferStatus/changeStatus', data=transfer_change_status_data)
 
     return Response(bank_deposit_data)
+
+
+@api_view(['POST'])
+def cash_deposit(request):
+    """
+    cash_deposit: cash deposit
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = CashDepositSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # Enregistrer la remise d'espèces
+    cash_deposit_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['remise_d_euro_en_caisse']),
+        'amount': request.data['deposit_amount'],  # montant total calculé
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+        'to': 'SYSTEM',  # System account
+        'description': "Remise d'espèces - {}".format(request.data['login_bdc'])
+    }
+    cyclos.post(method='payment/perform', data=cash_deposit_data)
+
+    # Passer tous les paiements à l'origine du dépôt à l'état "Remis à Euskal Moneta"
+    for payment in request.data['selected_payments']:
+        transfer_change_status_data = {
+            'transfer': payment['id'],  # ID du paiement (récupéré dans l'historique)
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['remis_a_euskal_moneta'])
+        }
+        cyclos.post(method='transferStatus/changeStatus', data=transfer_change_status_data)
+
+    return Response(cash_deposit_data)

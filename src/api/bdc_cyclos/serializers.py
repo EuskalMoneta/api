@@ -39,3 +39,9 @@ class BankDepositSerializer(serializers.Serializer):
     login_bdc = serializers.CharField()
     payment_mode = serializers.CharField()
     selected_payments = serializers.ListField()
+
+
+class CashDepositSerializer(serializers.Serializer):
+    deposit_amount = serializers.CharField()
+    login_bdc = serializers.CharField()
+    selected_payments = serializers.ListField()
