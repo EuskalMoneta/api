@@ -432,14 +432,25 @@ def cash_deposit(request):
     serializer = CashDepositSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
+    if request.data['mode'] == 'cash-deposit':
+        payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['remise_d_euro_en_caisse'])
+        currency = str(settings.CYCLOS_CONSTANTS['currencies']['euro'])
+        description = "Remise d'espèces"
+    elif request.data['mode'] == 'sortie-caisse-eusko':
+        payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
+        currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
+        description = 'Sortie caisse'
+    else:
+        return Response({'error': 'Mode parameter is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
+
     # Enregistrer la remise d'espèces
     cash_deposit_data = {
-        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['remise_d_euro_en_caisse']),
+        'type': payment_type,
         'amount': request.data['deposit_amount'],  # montant total calculé
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'currency': currency,
         'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'to': 'SYSTEM',  # System account
-        'description': "Remise d'espèces - {}".format(request.data['login_bdc'])
+        'description': description
     }
     cyclos.post(method='payment/perform', data=cash_deposit_data)
 
