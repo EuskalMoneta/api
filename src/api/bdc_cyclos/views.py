@@ -134,10 +134,6 @@ def change_euro_eusko(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'entreprise':
-        return Response({'error': 'Forbidden, reconversion operation if not available for business members!'},
-                        status=status.HTTP_403_FORBIDDEN)
-
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
     # payment/perform
@@ -185,8 +181,8 @@ def reconversion(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'entreprise':
-        return Response({'error': 'Forbidden, reconversion operation if not available for business members!'},
+    if dolibarr_member['type'].lower() != 'entreprise':
+        return Response({'error': 'Forbidden, reconversion is not available for non-business members!'},
                         status=status.HTTP_403_FORBIDDEN)
 
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
