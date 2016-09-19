@@ -1,6 +1,6 @@
 arrow
 django
-django-cors-headers
+django-cors-middleware
 djangorestframework
 django-filter  # Filtering support
 markdown       # Markdown support for the browsable API.
