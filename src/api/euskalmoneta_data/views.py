@@ -28,7 +28,7 @@ def porteurs_eusko(request):
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
     except CyclosAPIException:
-        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     # user/search for group = 'Porteurs'
     porteurs_data = cyclos.post(method='user/search',
@@ -47,7 +47,7 @@ def deposit_banks(request):
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
     except CyclosAPIException:
-        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     # user/search for group = 'Porteurs'
     banks_data = cyclos.post(method='user/search',

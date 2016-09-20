@@ -201,7 +201,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
         try:
             cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
         except CyclosAPIException:
-            return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
         member_cyclos_id = cyclos.get_member_id_from_login(current_member['login'])
 

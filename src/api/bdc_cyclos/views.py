@@ -21,7 +21,7 @@ def accounts_summaries(request):
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
     except CyclosAPIException:
-        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     # account/getAccountsSummary
     query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
@@ -56,7 +56,7 @@ def entree_stock(request):
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
     except CyclosAPIException:
-        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     serializer = IOStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
@@ -88,7 +88,7 @@ def sortie_stock(request):
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
     except CyclosAPIException:
-        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     serializer = IOStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
@@ -120,7 +120,7 @@ def change_euro_eusko(request):
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
     except CyclosAPIException:
-        return Response({'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     serializer = ChangeEuroEuskoSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
