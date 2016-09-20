@@ -125,15 +125,6 @@ def change_euro_eusko(request):
     serializer = ChangeEuroEuskoSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    try:
-        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        dolibarr_member = dolibarr.get(model='members', login=request.data['member_login'])[0]
-    except DolibarrAPIException:
-        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
-    except IndexError:
-        return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
-                        status=status.HTTP_400_BAD_REQUEST)
-
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
     # payment/perform
@@ -142,7 +133,7 @@ def change_euro_eusko(request):
         'amount': request.data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': 'SYSTEM',
-        'to': cyclos.user_bdc_id,         # ID de l'utilisateur Bureau de change
+        'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
@@ -150,7 +141,7 @@ def change_euro_eusko(request):
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
-                'enumeratedValues': request.data['payment_mode']   # ID du mode de paiement (chèque ou espèces)
+                'enumeratedValues': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
             },
         ],
         'description': 'Change - {}'.format(request.data['member_login']),
