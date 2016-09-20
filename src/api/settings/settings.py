@@ -174,10 +174,10 @@ CORS_ORIGIN_WHITELIST = (
 )
 
 # Raven + Logging
-# RAVEN_CONFIG = {
-#     'dsn': os.environ.get('RAVEN_CONFIG_DSN'),
-#     'release': 'dev' if DEBUG else 'production',
-# }
+RAVEN_CONFIG = {
+    'dsn': os.environ.get('RAVEN_CONFIG_DSN'),
+    'release': 'dev' if DEBUG else 'production',
+}
 
 LOGGING = {
     'version': 1,

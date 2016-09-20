@@ -13,7 +13,7 @@ services:
       - API_PUBLIC_URL=http://localhost:8000
       - DOLIBARR_PUBLIC_URL=http://localhost:8080
       - BDC_PUBLIC_URL=http://localhost:8001
-      - RAVEN_CONFIG_DSN=http://82140549232e4c3c8d4ee865630ff9c2:a118efe0af754f9487a6639e91591d6e@sentry:9000/2
+      - RAVEN_CONFIG_DSN=http://46498c24303d4b27828e5e47ce927818:6177efcf6d1d47508f1c22332c8dddaf@sentry:9000/2
     depends_on:
       - dolibarr-app
       - cyclos-app
@@ -75,6 +75,8 @@ services:
 
   sentry-redis:
     image: redis
+    networks:
+      - eusko_net
 
   sentry-postgres:
     image: postgres
