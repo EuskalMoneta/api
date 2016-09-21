@@ -192,7 +192,7 @@ def reconversion(request):
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_facture']),
-                'stringValue': request.data['facture']  # ID du mode de paiement (chèque ou espèces)
+                'stringValue': request.data['facture']  # ID Facture
             },
         ],
         'description': 'Reconversion - {}'.format(request.data['member_login']),
