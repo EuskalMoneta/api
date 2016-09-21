@@ -507,3 +507,36 @@ def cash_deposit(request):
         cyclos.post(method='transferStatus/changeStatus', data=transfer_change_status_data)
 
     return Response(cash_deposit_data)
+
+
+@api_view(['GET'])
+def payments_available_for_entree_stock(request):
+    """
+    payments_available_for_entree_stock
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # account/searchAccountHistory
+    search_history_data = {
+        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_transit']),
+        'orderBy': 'DATE_DESC',
+        'direction': 'CREDIT',
+        'fromNature': 'SYSTEM',
+        'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher'])
+        ],
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+    accounts_summaries_data = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+    # query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
+
+    # data = [item
+    #         for item in accounts_summaries_data['result']
+    #         if item['type']['id'] ==
+    #         str(settings.CYCLOS_CONSTANTS['account_types']['caisse_euro_bdc'])][0]
+
+    return Response(accounts_summaries_data['result'])
