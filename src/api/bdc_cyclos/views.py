@@ -6,7 +6,8 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from bdc_cyclos.serializers import (AccountsHistorySerializer, BankDepositSerializer, CashDepositSerializer,
-                                    ChangeEuroEuskoSerializer, IOStockBDCSerializer, ReconversionSerializer)
+                                    ChangeEuroEuskoSerializer, EntreeStockBDCSerializer,
+                                    ReconversionSerializer, SortieStockBDCSerializer)
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 
@@ -58,26 +59,30 @@ def entree_stock(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = IOStockBDCSerializer(data=request.data)
+    serializer = EntreeStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    # payment/perform
-    query_data = {
-        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_stock_bdc']),
-        'amount': request.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-        'from': 'SYSTEM',
-        'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
-        'customValues': [
-            {
-                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                'linkedEntityValue': request.data['porteur']  # ID du porteur
-            },
-        ],
-        'description': request.data['description'],
-    }
+    payments = []
+    for payment in request.data['selected_payments']:
+        payments.append(payment)
+        # payment/perform
+        query_data = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_stock_bdc']),
+            'amount': request.data['amount'],
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+            'from': 'SYSTEM',
+            'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+            'customValues': [
+                {
+                    'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
+                    'linkedEntityValue': request.data['porteur']  # ID du porteur
+                },
+            ],
+            'description': 'Entrée stock',
+        }
+        # cyclos.post(method='payment/perform', data=query_data)
 
-    return Response(cyclos.post(method='payment/perform', data=query_data))
+    return Response(request.data['selected_payments'])
 
 
 @api_view(['POST'])
@@ -90,7 +95,7 @@ def sortie_stock(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = IOStockBDCSerializer(data=request.data)
+    serializer = SortieStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # payment/perform
@@ -532,11 +537,5 @@ def payments_available_for_entree_stock(request):
         'currentpage': 0,
     }
     accounts_summaries_data = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
-    # query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
 
-    # data = [item
-    #         for item in accounts_summaries_data['result']
-    #         if item['type']['id'] ==
-    #         str(settings.CYCLOS_CONSTANTS['account_types']['caisse_euro_bdc'])][0]
-
-    return Response(accounts_summaries_data['result'])
+    return Response(accounts_summaries_data)
