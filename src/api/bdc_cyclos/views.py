@@ -290,6 +290,60 @@ def bank_deposit(request):
     serializer = BankDepositSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
+    # Récupére les détails de chaque paiement,
+    # nécessaire pour connaître le type de chaque paiement, ce qui va servir à calculer la ventilation
+    payments_data = {}
+    for payment in request.data['selected_payments']:
+        payment_res = cyclos.get(method='transfer/load/{}'.format(payment['id']))
+        payment_amount = float(payment_res['result']['currencyAmount']['amount'])
+        try:
+            payments_data[payment_res['result']['type']['id']] += payment_amount
+        except KeyError:
+            payments_data[payment_res['result']['type']['id']] = payment_amount
+
+    montant_changes_billet = float()
+    montant_changes_numerique = float()
+    montant_cotisations = float()
+    montant_ventes = float()
+
+    try:
+        montant_changes_billet += payments_data[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_billets_versement_des_euro'])]
+    except KeyError:
+        pass
+
+    try:
+        montant_changes_numerique += payments_data[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_bdc_versement_des_euro'])]
+    except KeyError:
+        pass
+
+    try:
+        montant_changes_numerique += payments_data[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko'])]
+    except KeyError:
+        pass
+
+    try:
+        montant_cotisations += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_euro'])]
+    except KeyError:
+        pass
+
+    try:
+        montant_cotisations += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_eusko'])]
+    except KeyError:
+        pass
+
+    try:
+        montant_ventes += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['vente_en_euro'])]
+    except KeyError:
+        pass
+
+    try:
+        montant_ventes += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['vente_en_eusko'])]
+    except KeyError:
+        pass
+
     # Enregistrer le dépôt en banque sur le compte approprié
     try:
         bordereau = request.data['bordereau']
@@ -313,25 +367,24 @@ def bank_deposit(request):
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['montant_cotisations']),
-                'decimalValue': 10             # calculé
+                'decimalValue': montant_cotisations  # calculé
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['montant_ventes']),
-                'decimalValue': 0              # calculé
+                'decimalValue': montant_ventes  # calculé
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['montant_changes_billet']),
-                'decimalValue': 120            # calculé
+                'decimalValue': montant_changes_billet  # calculé
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['montant_changes_numerique']),
-                'decimalValue': 0              # calculé
+                'decimalValue': montant_changes_numerique  # calculé
             },
         ],
         'description': 'Dépôt en banque - {}'.format(request.data['login_bdc'])
     }
-
-    bank_deposit_res = cyclos.post(method='payment/perform', data=bank_deposit_data)  # noqa
+    cyclos.post(method='payment/perform', data=bank_deposit_data)
 
     if (request.data['amount_minus_difference'] and
        request.data['deposit_amount'] < request.data['deposit_calculated_amount']):

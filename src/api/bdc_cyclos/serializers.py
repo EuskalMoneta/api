@@ -31,7 +31,7 @@ class BankDepositSerializer(serializers.Serializer):
 
     amount_minus_difference = serializers.BooleanField()
     amount_plus_difference = serializers.BooleanField()
-    bordereau = serializers.CharField()
+    bordereau = serializers.CharField(required=False)
     deposit_amount = serializers.CharField(allow_blank=True)
     deposit_bank = serializers.CharField()
     deposit_calculated_amount = serializers.CharField()
