@@ -53,3 +53,9 @@ class DepotEuskoNumeriqueSerializer(serializers.Serializer):
     amount = serializers.CharField()
     login_bdc = serializers.CharField()
     member_login = serializers.CharField()
+
+
+class RetraitEuskoNumeriqueSerializer(serializers.Serializer):
+    amount = serializers.CharField()
+    login_bdc = serializers.CharField()
+    member_login = serializers.CharField()

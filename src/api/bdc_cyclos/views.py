@@ -542,3 +542,59 @@ def depot_eusko_numerique(request):
     cyclos.post(method='payment/perform', data=depot_eusko_numerique_data)
 
     return Response(depot_eusko_numerique_data)
+
+
+@api_view(['POST'])
+def retrait_eusko_numerique(request):
+    """
+    retrait-eusko-numerique
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.RetraitEuskoNumeriqueSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    if not request.data['login_bdc'].lower() == 'b001':
+        return Response({'error': 'Forbidden, this operation is not publicly available!'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
+
+    # Débit du compte
+    debit_compte_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_du_compte']),
+        'amount': request.data['amount'],  # montant saisi
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': member_cyclos_id,  # ID de l'adhérent
+        'to': 'SYSTEM',
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['bdc']),
+                'linkedEntityValue': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+            },
+        ],
+        'description': 'Retrait',
+    }
+    cyclos.post(method='payment/perform', data=debit_compte_data)
+
+    # Retrait des billets
+    retrait_billets_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_de_billets']),
+        'amount': request.data['amount'],  # montant saisi
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+        'to': 'SYSTEM',
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
+                'linkedEntityValue': member_cyclos_id,  # ID de l'adhérent
+            },
+        ],
+        'description': 'Retrait - {}'.format(request.data['member_login']),
+    }
+    cyclos.post(method='payment/perform', data=retrait_billets_data)
+
+    return Response(retrait_billets_data)
