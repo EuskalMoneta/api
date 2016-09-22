@@ -25,6 +25,7 @@ class ReconversionSerializer(serializers.Serializer):
 class AccountsHistorySerializer(serializers.Serializer):
 
     account_type = serializers.CharField()
+    filter = serializers.CharField(required=False)
 
 
 class BankDepositSerializer(serializers.Serializer):

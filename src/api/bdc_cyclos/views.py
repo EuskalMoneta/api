@@ -5,8 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from bdc_cyclos.serializers import (AccountsHistorySerializer, BankDepositSerializer, CashDepositSerializer,
-                                    ChangeEuroEuskoSerializer, IOStockBDCSerializer, ReconversionSerializer)
+from bdc_cyclos import serializers
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 
@@ -58,7 +57,7 @@ def entree_stock(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = IOStockBDCSerializer(data=request.data)
+    serializer = serializers.IOStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # payment/perform
@@ -90,7 +89,7 @@ def sortie_stock(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = IOStockBDCSerializer(data=request.data)
+    serializer = serializers.IOStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # payment/perform
@@ -122,7 +121,7 @@ def change_euro_eusko(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = ChangeEuroEuskoSerializer(data=request.data)
+    serializer = serializers.ChangeEuroEuskoSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
@@ -160,7 +159,7 @@ def reconversion(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = ReconversionSerializer(data=request.data)
+    serializer = serializers.ReconversionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
@@ -204,16 +203,18 @@ def reconversion(request):
 @api_view(['GET'])
 def accounts_history(request):
     """
-    Accounts history for BDC:
+    Accounts history for BDC.
     Available account types are:
     ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
+
+    You can also filter out results with the 'filter' query param
     """
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = AccountsHistorySerializer(data=request.query_params)
+    serializer = serializers.AccountsHistorySerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # account/getAccountsSummary
@@ -228,51 +229,29 @@ def accounts_history(request):
                          .format(request.query_params['account_type'])},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    data = [item
-            for item in accounts_summaries_data['result']
-            if item['type']['id'] ==
-            str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
-
-    # account/searchAccountHistory
-    search_history_data = {
-        'account': data['id'],  # ID du compte
-        'orderBy': 'DATE_DESC',
-        'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
-    }
-
-    return Response(cyclos.post(method='account/searchAccountHistory', data=search_history_data))
-
-
-@api_view(['GET'])
-def payments_available_for_deposit(request):
-    """
-    payments_available_for_deposit
-    """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # account/getAccountsSummary
-    query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
-    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
-
-    data = [item
-            for item in accounts_summaries_data['result']
-            if item['type']['id'] ==
-            str(settings.CYCLOS_CONSTANTS['account_types']['caisse_euro_bdc'])][0]
+        data = [item
+                for item in accounts_summaries_data['result']
+                if item['type']['id'] ==
+                str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
+    except IndexError:
+        return Response({'result': {'pageItems': []}})
 
     # account/searchAccountHistory
     search_history_data = {
         'account': data['id'],  # ID du compte
         'orderBy': 'DATE_DESC',
-        'statuses': [
-            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_remettre_a_euskal_moneta'])
-        ],
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
     }
+
+    try:
+        if request.query_params['filter'] == 'a_remettre_a_euskal_moneta':
+            search_history_data['statuses'] = [
+                str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_remettre_a_euskal_moneta'])
+            ]
+    except KeyError:
+        pass
 
     return Response(cyclos.post(method='account/searchAccountHistory', data=search_history_data))
 
@@ -287,7 +266,7 @@ def bank_deposit(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = BankDepositSerializer(data=request.data)
+    serializer = serializers.BankDepositSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # Récupére les détails de chaque paiement,
@@ -469,7 +448,7 @@ def cash_deposit(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = CashDepositSerializer(data=request.data)
+    serializer = serializers.CashDepositSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     if request.data['mode'] == 'cash-deposit':

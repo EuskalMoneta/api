@@ -36,7 +36,6 @@ urlpatterns = [
     url(r'^sortie-stock/$', bdc_cyclos_views.sortie_stock),
     url(r'^change-euro-eusko/$', bdc_cyclos_views.change_euro_eusko),
     url(r'^reconversion/$', bdc_cyclos_views.reconversion),
-    url(r'^payments-available-deposit/$', bdc_cyclos_views.payments_available_for_deposit),
     url(r'^bank-deposit/$', bdc_cyclos_views.bank_deposit),
     url(r'^cash-deposit/$', bdc_cyclos_views.cash_deposit),
     url(r'^sortie-caisse-eusko/$', bdc_cyclos_views.cash_deposit),
