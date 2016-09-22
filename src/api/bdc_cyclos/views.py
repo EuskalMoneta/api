@@ -172,7 +172,7 @@ def reconversion(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() != 'entreprise':
+    if dolibarr_member['type'].lower() == 'particulier':
         return Response({'error': 'Forbidden, reconversion is not available for non-business members!'},
                         status=status.HTTP_403_FORBIDDEN)
 
