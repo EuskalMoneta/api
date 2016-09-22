@@ -63,12 +63,15 @@ def entree_stock(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     payments = []
+    payments_res = []
     for payment in request.data['selected_payments']:
         payments.append(payment)
+        payment_res = cyclos.get(method='transfer/load/{}'.format(payment['id']))
+        payments_res.append(payment_res)
         # payment/perform
         query_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_stock_bdc']),
-            'amount': request.data['amount'],
+            'amount': payment['amount'],
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
             'from': 'SYSTEM',
             'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
