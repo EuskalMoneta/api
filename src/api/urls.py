@@ -40,6 +40,7 @@ urlpatterns = [
     url(r'^cash-deposit/$', bdc_cyclos_views.cash_deposit),
     url(r'^sortie-caisse-eusko/$', bdc_cyclos_views.cash_deposit),
     url(r'^sortie-retour-eusko/$', bdc_cyclos_views.cash_deposit),
+    url(r'^depot-eusko-numerique/$', bdc_cyclos_views.depot_eusko_numerique),
 ]
 
 urlpatterns += router.urls
