@@ -143,7 +143,7 @@ def change_euro_eusko(request):
                 'enumeratedValues': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
             },
         ],
-        'description': 'Change - {}'.format(request.data['member_login']),
+        'description': 'Change - {} - {}'.format(request.data['member_login'], request.data['payment_mode']),
     }
 
     return Response(cyclos.post(method='payment/perform', data=query_data))
