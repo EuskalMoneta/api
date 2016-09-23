@@ -280,54 +280,33 @@ def bank_deposit(request):
         except KeyError:
             payments_data[payment_res['result']['type']['id']] = payment_amount
 
-    montant_changes_billet = float()
-    montant_changes_numerique = float()
-    montant_cotisations = float()
-    montant_ventes = float()
-
     try:
-        montant_changes_billet += payments_data[
+        montant_changes_billet = payments_data[
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_billets_versement_des_euro'])]
     except KeyError:
-        pass
+        montant_changes_billet = float()
 
     try:
-        montant_changes_numerique += payments_data[
+        montant_changes_numerique = payments_data[
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_bdc_versement_des_euro'])]
     except KeyError:
-        pass
+        montant_changes_numerique = float()
 
     try:
-        montant_changes_numerique += payments_data[
-            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko'])]
+        montant_cotisations = payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_euro'])]
     except KeyError:
-        pass
+        montant_cotisations = float()
 
     try:
-        montant_cotisations += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_euro'])]
+        montant_ventes = payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['vente_en_euro'])]
     except KeyError:
-        pass
-
-    try:
-        montant_cotisations += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_eusko'])]
-    except KeyError:
-        pass
-
-    try:
-        montant_ventes += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['vente_en_euro'])]
-    except KeyError:
-        pass
-
-    try:
-        montant_ventes += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['vente_en_eusko'])]
-    except KeyError:
-        pass
+        montant_ventes = float()
 
     # Enregistrer le dépôt en banque sur le compte approprié
     try:
         bordereau = request.data['bordereau']
     except KeyError:
-        bordereau = 'N/A'
+        bordereau = ''
 
     bank_deposit_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque']),
@@ -361,19 +340,19 @@ def bank_deposit(request):
                 'decimalValue': montant_changes_numerique  # calculé
             },
         ],
-        'description': 'Dépôt en banque - {}'.format(request.data['login_bdc'])
+        'description': 'Dépôt en banque - {} - {}'.format(
+            request.data['deposit_bank_name'], request.data['payment_mode_name'])
     }
     cyclos.post(method='payment/perform', data=bank_deposit_data)
 
-    if (request.data['amount_minus_difference'] and
-       request.data['deposit_amount'] < request.data['deposit_calculated_amount']):
+    if float(request.data['deposit_amount']) < float(request.data['deposit_calculated_amount']):
 
-        regulatisation = request.data['deposit_calculated_amount'] - request.data['deposit_amount']
+        regularisation = request.data['deposit_calculated_amount'] - request.data['deposit_amount']
 
         # Enregistrer un paiement du Compte de gestion vers la Banque de dépôt
         payment_gestion_to_deposit_data = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_compte_de_gestion_vers_banque_de_depot']),  # noqa
-            'amount': regulatisation,  # Montant de la régulatisation
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_depot_insuffisant']),
+            'amount': regularisation,  # Montant de la régularisation
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': 'SYSTEM',
             'to': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
@@ -389,22 +368,21 @@ def bank_deposit(request):
         # Enregistrer un paiement de la Banque de dépôt vers la Caisse € du BDC
         payment_deposit_to_caisse_bdc_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['paiement_de_banque_de_depot_vers_caisse_euro_bdc']),  # noqa
-            'amount': regulatisation,  # Montant de la régulatisation
+            'amount': regularisation,  # Montant de la régularisation
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
             'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         }
         cyclos.post(method='payment/perform', data=payment_deposit_to_caisse_bdc_data)
 
-    elif (request.data['amount_plus_difference'] and
-          request.data['deposit_amount'] > request.data['deposit_calculated_amount']):
+    elif float(request.data['deposit_amount']) > float(request.data['deposit_calculated_amount']):
 
-        regulatisation = request.data['deposit_amount'] - request.data['deposit_calculated_amount']
+        regularisation = request.data['deposit_amount'] - request.data['deposit_calculated_amount']
 
         # Enregistrer un paiement de la Caisse € du BDC vers la Banque de dépôt
         payment_caisse_bdc_to_deposit_data = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_compte_de_gestion_vers_banque_de_depot']),  # noqa
-            'amount': regulatisation,  # Montant de la régulatisation
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['paiement_de_caisse_euro_bdc_vers_banque_de_depot']),  # noqa
+            'amount': regularisation,  # Montant de la régularisation
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': 'SYSTEM',
             'to': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
@@ -419,8 +397,8 @@ def bank_deposit(request):
 
         # Enregistrer un paiement de la Banque de dépôt vers le Compte de gestion
         payment_deposit_to_gestion_data = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['paiement_de_banque_de_depot_vers_caisse_euro_bdc']), # noqa
-            'amount': regulatisation,  # Montant de la régulatisation
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_depot_excessif']),
+            'amount': regularisation,  # Montant de la régularisation
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': request.data['deposit_bank'],     # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
             'to': cyclos.user_bdc_id,          # ID de l'utilisateur Bureau de change
