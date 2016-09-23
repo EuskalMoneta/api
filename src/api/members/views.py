@@ -139,7 +139,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Register new payment
-        payment_account, payment_type = Subscription.account_and_type_from_payment_mode(data['payment_mode'])
+        payment_account, payment_type, payment_label = Subscription.account_and_type_from_payment_mode(data['payment_mode']) # noqa
         if not payment_account or not payment_type:
             log.critical('This payment_mode is invalid!')
             return Response({'error': 'This payment_mode is invalid!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -214,7 +214,8 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                  'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
                  'customValues': [
                     {'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
-                     'linkedEntityValue': member_cyclos_id}]
+                     'linkedEntityValue': member_cyclos_id}],
+                 'description': 'Cotisation - {}'.format(current_member['login']),  # ID de l'adhérent
                  })
         elif 'Euro' in data['payment_mode']:
             query_data.update(
@@ -225,6 +226,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                      'linkedEntityValue': member_cyclos_id},
                     {'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
                      'enumeratedValues': data['cyclos_id_payment_mode']}],
+                 'description': 'Cotisation - {} - {}'.format(current_member['login'], payment_label),
                  })
         else:
             return Response({'error': 'This payment_mode is invalid!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -233,7 +235,6 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             'amount': data['amount'],
             'from': 'SYSTEM',
             'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
-            'description': 'Cotisation - {}'.format(current_member['login']),  # ID de l'adhérent
         })
 
         cyclos.post(method='payment/perform', data=query_data)

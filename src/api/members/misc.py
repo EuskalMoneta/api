@@ -157,9 +157,10 @@ class Subscription:
     @staticmethod
     def account_and_type_from_payment_mode(payment_mode):
         """
-        Simply match account and type for this payment mode.
+        Simply match account, type and label for this payment mode.
         """
         accounts = {'Euro-LIQ': 2, 'Euro-CHQ': 2, 'Eusko-LIQ': 3}
         types = {'Euro-LIQ': 'LIQ', 'Euro-CHQ': 'CHQ', 'Eusko-LIQ': 'LIQ'}
+        label = {'Euro-LIQ': 'Espèces', 'Euro-CHQ': 'Chèque', 'Eusko-LIQ': 'Espèces'}
 
-        return accounts.get(payment_mode, ''), types.get(payment_mode, '')
+        return accounts.get(payment_mode, ''), types.get(payment_mode, ''), label.get(payment_mode, '')
