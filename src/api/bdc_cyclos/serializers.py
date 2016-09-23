@@ -59,3 +59,7 @@ class RetraitEuskoNumeriqueSerializer(serializers.Serializer):
     amount = serializers.CharField()
     login_bdc = serializers.CharField()
     member_login = serializers.CharField()
+
+
+class MemberAccountsSummariesSerializer(serializers.Serializer):
+    member_login = serializers.CharField()

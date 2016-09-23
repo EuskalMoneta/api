@@ -47,6 +47,26 @@ def accounts_summaries(request):
     return Response(res)
 
 
+@api_view(['GET'])
+def member_account_summary(request):
+    """
+    Account summary for this member.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.MemberAccountsSummariesSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
+
+    # account/getAccountsSummary
+    query_data = [member_cyclos_id, None]  # ID de l'adhérent
+    return Response(cyclos.post(method='account/getAccountsSummary', data=query_data))
+
+
 @api_view(['POST'])
 def entree_stock(request):
     """
@@ -540,6 +560,24 @@ def retrait_eusko_numerique(request):
                         status=status.HTTP_403_FORBIDDEN)
 
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
+
+    # Verify whether or not member account has enough money
+    member_account_summary_query = [member_cyclos_id, None]  # ID de l'adhérent
+    member_account_summary_res = cyclos.post(method='account/getAccountsSummary', data=member_account_summary_query)
+    # TODO: Why is this account_summary_res var empty ? => {result: []}
+
+    # Verify whether or not bdc cash stock has enough money
+    bdc_account_summary_query = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
+    bdc_account_summary_res = cyclos.post(method='account/getAccountsSummary', data=bdc_account_summary_query)
+
+    bdc_account_summary_data = [
+        item
+        for item in bdc_account_summary_res['result']
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types']['stock_de_billets_bdc'])][0]
+
+    if float(bdc_account_summary_data['status']['balance']) < float(request.data['amount']):
+        return Response({'error': "This Bureau de change doesn't have enough money to do this change."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     # Débit du compte
     debit_compte_data = {
