@@ -6,6 +6,7 @@ services:
     volumes:
       - ./src/api:/usr/src/app
       - ./etc/cyclos:/cyclos
+      - ./etc/dolibarr:/dolibarr
     ports:
       - 8000:8000
     environment:
