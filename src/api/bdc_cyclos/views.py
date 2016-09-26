@@ -5,9 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from bdc_cyclos.serializers import (AccountsHistorySerializer, BankDepositSerializer, CashDepositSerializer,
-                                    ChangeEuroEuskoSerializer, EntreeStockBDCSerializer,
-                                    ReconversionSerializer, SortieStockBDCSerializer)
+from bdc_cyclos import serializers
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 
@@ -49,6 +47,26 @@ def accounts_summaries(request):
     return Response(res)
 
 
+@api_view(['GET'])
+def member_account_summary(request):
+    """
+    Account summary for this member.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.MemberAccountsSummariesSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
+
+    # account/getAccountsSummary
+    query_data = [member_cyclos_id, None]  # ID de l'adhérent
+    return Response(cyclos.post(method='account/getAccountsSummary', data=query_data))
+
+
 @api_view(['POST'])
 def entree_stock(request):
     """
@@ -59,7 +77,7 @@ def entree_stock(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = EntreeStockBDCSerializer(data=request.data)
+    serializer = serializers.EntreeStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     payments = []
@@ -83,7 +101,7 @@ def entree_stock(request):
             ],
             'description': 'Entrée stock',
         }
-        # cyclos.post(method='payment/perform', data=query_data)
+        cyclos.post(method='payment/perform', data=query_data)
 
     return Response(request.data['selected_payments'])
 
@@ -98,7 +116,7 @@ def sortie_stock(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = SortieStockBDCSerializer(data=request.data)
+    serializer = serializers.SortieStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # payment/perform
@@ -130,7 +148,7 @@ def change_euro_eusko(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = ChangeEuroEuskoSerializer(data=request.data)
+    serializer = serializers.ChangeEuroEuskoSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
@@ -152,7 +170,7 @@ def change_euro_eusko(request):
                 'enumeratedValues': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
             },
         ],
-        'description': 'Change - {}'.format(request.data['member_login']),
+        'description': 'Change - {} - {}'.format(request.data['member_login'], request.data['payment_mode']),
     }
 
     return Response(cyclos.post(method='payment/perform', data=query_data))
@@ -168,7 +186,7 @@ def reconversion(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = ReconversionSerializer(data=request.data)
+    serializer = serializers.ReconversionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
@@ -180,7 +198,7 @@ def reconversion(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() != 'entreprise':
+    if dolibarr_member['type'].lower() == 'particulier':
         return Response({'error': 'Forbidden, reconversion is not available for non-business members!'},
                         status=status.HTTP_403_FORBIDDEN)
 
@@ -200,7 +218,7 @@ def reconversion(request):
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_facture']),
-                'enumeratedValues': request.data['facture']  # ID du mode de paiement (chèque ou espèces)
+                'stringValue': request.data['facture']  # ID Facture
             },
         ],
         'description': 'Reconversion - {}'.format(request.data['member_login']),
@@ -212,16 +230,18 @@ def reconversion(request):
 @api_view(['GET'])
 def accounts_history(request):
     """
-    Accounts history for BDC:
+    Accounts history for BDC.
     Available account types are:
     ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
+
+    You can also filter out results with the 'filter' query param
     """
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = AccountsHistorySerializer(data=request.query_params)
+    serializer = serializers.AccountsHistorySerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # account/getAccountsSummary
@@ -236,51 +256,29 @@ def accounts_history(request):
                          .format(request.query_params['account_type'])},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    data = [item
-            for item in accounts_summaries_data['result']
-            if item['type']['id'] ==
-            str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
-
-    # account/searchAccountHistory
-    search_history_data = {
-        'account': data['id'],  # ID du compte
-        'orderBy': 'DATE_DESC',
-        'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
-    }
-
-    return Response(cyclos.post(method='account/searchAccountHistory', data=search_history_data))
-
-
-@api_view(['GET'])
-def payments_available_for_deposit(request):
-    """
-    payments_available_for_deposit
-    """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # account/getAccountsSummary
-    query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
-    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
-
-    data = [item
-            for item in accounts_summaries_data['result']
-            if item['type']['id'] ==
-            str(settings.CYCLOS_CONSTANTS['account_types']['caisse_euro_bdc'])][0]
+        data = [item
+                for item in accounts_summaries_data['result']
+                if item['type']['id'] ==
+                str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
+    except IndexError:
+        return Response({'result': {'pageItems': []}})
 
     # account/searchAccountHistory
     search_history_data = {
         'account': data['id'],  # ID du compte
         'orderBy': 'DATE_DESC',
-        'statuses': [
-            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_remettre_a_euskal_moneta'])
-        ],
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
     }
+
+    try:
+        if request.query_params['filter'] == 'a_remettre_a_euskal_moneta':
+            search_history_data['statuses'] = [
+                str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_remettre_a_euskal_moneta'])
+            ]
+    except KeyError:
+        pass
 
     return Response(cyclos.post(method='account/searchAccountHistory', data=search_history_data))
 
@@ -295,7 +293,7 @@ def bank_deposit(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = BankDepositSerializer(data=request.data)
+    serializer = serializers.BankDepositSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # Récupére les détails de chaque paiement,
@@ -309,54 +307,33 @@ def bank_deposit(request):
         except KeyError:
             payments_data[payment_res['result']['type']['id']] = payment_amount
 
-    montant_changes_billet = float()
-    montant_changes_numerique = float()
-    montant_cotisations = float()
-    montant_ventes = float()
-
     try:
-        montant_changes_billet += payments_data[
+        montant_changes_billet = payments_data[
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_billets_versement_des_euro'])]
     except KeyError:
-        pass
+        montant_changes_billet = float()
 
     try:
-        montant_changes_numerique += payments_data[
+        montant_changes_numerique = payments_data[
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_bdc_versement_des_euro'])]
     except KeyError:
-        pass
+        montant_changes_numerique = float()
 
     try:
-        montant_changes_numerique += payments_data[
-            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko'])]
+        montant_cotisations = payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_euro'])]
     except KeyError:
-        pass
+        montant_cotisations = float()
 
     try:
-        montant_cotisations += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_euro'])]
+        montant_ventes = payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['vente_en_euro'])]
     except KeyError:
-        pass
-
-    try:
-        montant_cotisations += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_eusko'])]
-    except KeyError:
-        pass
-
-    try:
-        montant_ventes += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['vente_en_euro'])]
-    except KeyError:
-        pass
-
-    try:
-        montant_ventes += payments_data[str(settings.CYCLOS_CONSTANTS['payment_types']['vente_en_eusko'])]
-    except KeyError:
-        pass
+        montant_ventes = float()
 
     # Enregistrer le dépôt en banque sur le compte approprié
     try:
         bordereau = request.data['bordereau']
     except KeyError:
-        bordereau = 'N/A'
+        bordereau = ''
 
     bank_deposit_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque']),
@@ -390,19 +367,19 @@ def bank_deposit(request):
                 'decimalValue': montant_changes_numerique  # calculé
             },
         ],
-        'description': 'Dépôt en banque - {}'.format(request.data['login_bdc'])
+        'description': 'Dépôt en banque - {} - {}'.format(
+            request.data['deposit_bank_name'], request.data['payment_mode_name'])
     }
     cyclos.post(method='payment/perform', data=bank_deposit_data)
 
-    if (request.data['amount_minus_difference'] and
-       request.data['deposit_amount'] < request.data['deposit_calculated_amount']):
+    if float(request.data['deposit_amount']) < float(request.data['deposit_calculated_amount']):
 
-        regulatisation = request.data['deposit_calculated_amount'] - request.data['deposit_amount']
+        regularisation = request.data['deposit_calculated_amount'] - request.data['deposit_amount']
 
         # Enregistrer un paiement du Compte de gestion vers la Banque de dépôt
         payment_gestion_to_deposit_data = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_compte_de_gestion_vers_banque_de_depot']),  # noqa
-            'amount': regulatisation,  # Montant de la régulatisation
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_depot_insuffisant']),
+            'amount': regularisation,  # Montant de la régularisation
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': 'SYSTEM',
             'to': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
@@ -418,22 +395,21 @@ def bank_deposit(request):
         # Enregistrer un paiement de la Banque de dépôt vers la Caisse € du BDC
         payment_deposit_to_caisse_bdc_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['paiement_de_banque_de_depot_vers_caisse_euro_bdc']),  # noqa
-            'amount': regulatisation,  # Montant de la régulatisation
+            'amount': regularisation,  # Montant de la régularisation
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
             'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         }
         cyclos.post(method='payment/perform', data=payment_deposit_to_caisse_bdc_data)
 
-    elif (request.data['amount_plus_difference'] and
-          request.data['deposit_amount'] > request.data['deposit_calculated_amount']):
+    elif float(request.data['deposit_amount']) > float(request.data['deposit_calculated_amount']):
 
-        regulatisation = request.data['deposit_amount'] - request.data['deposit_calculated_amount']
+        regularisation = request.data['deposit_amount'] - request.data['deposit_calculated_amount']
 
         # Enregistrer un paiement de la Caisse € du BDC vers la Banque de dépôt
         payment_caisse_bdc_to_deposit_data = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_compte_de_gestion_vers_banque_de_depot']),  # noqa
-            'amount': regulatisation,  # Montant de la régulatisation
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['paiement_de_caisse_euro_bdc_vers_banque_de_depot']),  # noqa
+            'amount': regularisation,  # Montant de la régularisation
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': 'SYSTEM',
             'to': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
@@ -448,8 +424,8 @@ def bank_deposit(request):
 
         # Enregistrer un paiement de la Banque de dépôt vers le Compte de gestion
         payment_deposit_to_gestion_data = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['paiement_de_banque_de_depot_vers_caisse_euro_bdc']), # noqa
-            'amount': regulatisation,  # Montant de la régulatisation
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_depot_excessif']),
+            'amount': regularisation,  # Montant de la régularisation
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': request.data['deposit_bank'],     # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
             'to': cyclos.user_bdc_id,          # ID de l'utilisateur Bureau de change
@@ -477,7 +453,7 @@ def cash_deposit(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = CashDepositSerializer(data=request.data)
+    serializer = serializers.CashDepositSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     if request.data['mode'] == 'cash-deposit':
@@ -515,6 +491,136 @@ def cash_deposit(request):
         cyclos.post(method='transferStatus/changeStatus', data=transfer_change_status_data)
 
     return Response(cash_deposit_data)
+
+
+@api_view(['POST'])
+def depot_eusko_numerique(request):
+    """
+    depot-eusko-numerique
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.DepotEuskoNumeriqueSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    if not request.data['login_bdc'].lower() == 'b001':
+        return Response({'error': 'Forbidden, this operation is not publicly available!'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
+
+    # Retour des Eusko billets
+    retour_eusko_billets_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['depot_de_billets']),
+        'amount': request.data['amount'],  # montant saisi
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': 'SYSTEM',
+        'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
+                'linkedEntityValue': member_cyclos_id  # ID de l'adhérent
+            },
+        ],
+        'description': 'Dépôt - {}'.format(request.data['member_login']),
+    }
+    cyclos.post(method='payment/perform', data=retour_eusko_billets_data)
+
+    # Crédit du compte Eusko numérique du prestataire
+    depot_eusko_numerique_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['credit_du_compte']),
+        'amount': request.data['amount'],  # montant saisi
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': 'SYSTEM',
+        'to': member_cyclos_id,  # ID de l'adhérent
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['bdc']),
+                'linkedEntityValue': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+            },
+        ],
+        'description': 'Dépôt',
+    }
+    cyclos.post(method='payment/perform', data=depot_eusko_numerique_data)
+
+    return Response(depot_eusko_numerique_data)
+
+
+@api_view(['POST'])
+def retrait_eusko_numerique(request):
+    """
+    retrait-eusko-numerique
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.RetraitEuskoNumeriqueSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    if not request.data['login_bdc'].lower() == 'b001':
+        return Response({'error': 'Forbidden, this operation is not publicly available!'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
+
+    # Verify whether or not member account has enough money
+    member_account_summary_query = [member_cyclos_id, None]  # ID de l'adhérent
+    member_account_summary_res = cyclos.post(method='account/getAccountsSummary', data=member_account_summary_query)
+    # TODO: Why is this account_summary_res var empty ? => {result: []}
+
+    # Verify whether or not bdc cash stock has enough money
+    bdc_account_summary_query = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
+    bdc_account_summary_res = cyclos.post(method='account/getAccountsSummary', data=bdc_account_summary_query)
+
+    bdc_account_summary_data = [
+        item
+        for item in bdc_account_summary_res['result']
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types']['stock_de_billets_bdc'])][0]
+
+    if float(bdc_account_summary_data['status']['balance']) < float(request.data['amount']):
+        return Response({'error': "This Bureau de change doesn't have enough money to do this change."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Débit du compte
+    debit_compte_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_du_compte']),
+        'amount': request.data['amount'],  # montant saisi
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': member_cyclos_id,  # ID de l'adhérent
+        'to': 'SYSTEM',
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['bdc']),
+                'linkedEntityValue': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+            },
+        ],
+        'description': 'Retrait',
+    }
+    cyclos.post(method='payment/perform', data=debit_compte_data)
+
+    # Retrait des billets
+    retrait_billets_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_de_billets']),
+        'amount': request.data['amount'],  # montant saisi
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+        'to': 'SYSTEM',
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
+                'linkedEntityValue': member_cyclos_id,  # ID de l'adhérent
+            },
+        ],
+        'description': 'Retrait - {}'.format(request.data['member_login']),
+    }
+    cyclos.post(method='payment/perform', data=retrait_billets_data)
+
+    return Response(retrait_billets_data)
 
 
 @api_view(['GET'])

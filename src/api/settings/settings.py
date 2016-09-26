@@ -15,9 +15,16 @@ import os
 import yaml  # PyYAML
 
 CYCLOS_CONSTANTS = None
-with open("/cyclos/cyclos_constants.yml", 'r') as stream:
+with open("/cyclos/cyclos_constants.yml", 'r') as cyclos_stream:
     try:
-        CYCLOS_CONSTANTS = yaml.load(stream)
+        CYCLOS_CONSTANTS = yaml.load(cyclos_stream)
+    except yaml.YAMLError as exc:
+        assert False, exc
+
+DOLIBARR_CONSTANTS = None
+with open("/dolibarr/dolibarr_constants.yml", 'r') as dolibarr_stream:
+    try:
+        DOLIBARR_CONSTANTS = yaml.load(dolibarr_stream)
     except yaml.YAMLError as exc:
         assert False, exc
 

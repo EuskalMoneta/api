@@ -6,6 +6,7 @@ services:
     volumes:
       - ./src/api:/usr/src/app
       - ./etc/cyclos:/cyclos
+      - ./etc/dolibarr:/dolibarr
     ports:
       - 8000:8000
     environment:
@@ -21,7 +22,7 @@ services:
       - eusko_net
 
   dolibarr-app:
-    image: euskalmoneta/dolibarr:develop
+    image: euskalmoneta/dolibarr:custom
     ports:
       - 8080:80
     volumes:
@@ -48,7 +49,7 @@ services:
       - eusko_net
 
   cyclos-app:
-    image: cyclos/cyclos:4.5.4
+    image: cyclos/cyclos:4.6.2
     ports:
       - 8081:8080
     environment:

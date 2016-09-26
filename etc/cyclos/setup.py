@@ -1,4 +1,5 @@
 # coding: utf-8
+from __future__ import unicode_literals
 import argparse
 import logging
 import requests
@@ -40,20 +41,18 @@ parser.add_argument('--debug',
                     help='enable debug messages',
                     action='store_true')
 args = parser.parse_args()
+for k, v in vars(args).items():
+    logger.debug('args.%s = %s', k, v)
 
-if not args.url.endswith('/'):
-    args.url = args.url + '/'
+url = args.url.rstrip('/')
 if args.debug:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
 
-for k, v in vars(args).items():
-    logger.debug('args.%s = %s', k, v)
-
 # URLs des web services
-global_web_services = args.url + 'global/web-rpc/'
-eusko_web_services = args.url + 'eusko/web-rpc/'
+global_web_services = url + '/global/web-rpc/'
+eusko_web_services = url + '/eusko/web-rpc/'
 
 # En-têtes pour toutes les requêtes (il n'y a qu'un en-tête, pour
 # l'authentification).
@@ -99,6 +98,9 @@ logger.debug('ID_CANAL_WEB_SERVICES = %s', ID_CANAL_WEB_SERVICES)
 
 ########################################################################
 # Modification de la configuration par défaut :
+# - définition de l'URL racine, pour que l'application web fonctionne
+# - choix de la virgule comme séparateur pour les décimales
+# - activation de l'utilisation des numéros de compte
 # - activation du canal "Web services" par défaut pour tous les
 #   utilisateurs
 #
@@ -111,6 +113,24 @@ r = requests.get(global_web_services + 'configuration/getDefault',
                  headers=headers)
 check_request_status(r)
 default_config_id = r.json()['result']['id']
+# On charge la configuration par défaut pour pouvoir la modifier.
+r = requests.get(
+    global_web_services + 'configuration/load/' + default_config_id,
+    headers=headers
+)
+check_request_status(r)
+default_config = r.json()['result']
+default_config['rootUrl'] = url
+default_config['numberFormat'] = 'COMMA_AS_DECIMAL'
+default_config['accountNumberConfiguration'] = {
+    'enabled': True
+}
+r = requests.post(
+    global_web_services + 'configuration/save',
+    headers=headers,
+    json=default_config
+)
+check_request_status(r)
 # Puis on liste les config de canaux pour retrouver l'id de la config
 # du canal "Web services".
 r = requests.get(
@@ -199,148 +219,11 @@ ID_DEVISE_EURO = create_currency(
 
 
 ########################################################################
-# Création des types de comptes.
-#
-# Note : La méthode save() de l'interface AccountTypeService prend en
-# paramètre un objet de type AccountTypeDTO. AccountTypeDTO a deux
-# sous-classes, SystemAccountTypeDTO et UserAccountTypeDTO. Lorsque l'on
-# appelle la méthode save(), il faut passer en paramètre un objet du
-# type adéquat (selon que l'on crée un compte système ou un compte
-# utilisateur) et il faut indiquer explicitement quelle est la classe de
-# l'objet passé en paramètre, sinon on se prend l'erreur suivante :
-# java.lang.IllegalStateException: Could not instantiate bean of class
-# org.cyclos.entities.banking.AccountType.
-#
-def create_system_account_type(name, currency_id, limit_type):
-    logger.info('Création du type de compte système "%s"...', name)
-    params = {
-        'class': 'org.cyclos.model.banking.accounttypes.SystemAccountTypeDTO',
-        'name': name,
-        'currency': currency_id,
-        'limitType': limit_type
-    }
-    if limit_type == 'LIMITED':
-        params['creditLimit'] = 0
-    r = requests.post(eusko_web_services + 'accountType/save',
-                      headers=headers, json=params)
-    check_request_status(r)
-    account_type_id = r.json()['result']
-    logger.debug('account_type_id = %s', account_type_id)
-    add_constant('account_types', name, account_type_id)
-    return account_type_id
-
-
-def create_user_account_type(name, currency_id):
-    logger.info('Création du type de compte utilisateur "%s"...', name)
-    params = {
-        'class': 'org.cyclos.model.banking.accounttypes.UserAccountTypeDTO',
-        'name': name,
-        'currency': currency_id
-    }
-    r = requests.post(eusko_web_services + 'accountType/save',
-                      headers=headers, json=params)
-    check_request_status(r)
-    account_type_id = r.json()['result']
-    logger.debug('account_type_id = %s', account_type_id)
-    add_constant('account_types', name, account_type_id)
-    return account_type_id
-
-# Comptes système pour l'eusko billet
-ID_COMPTE_DE_DEBIT_EUSKO_BILLET = create_system_account_type(
-    name='Compte de débit eusko billet',
-    currency_id=ID_DEVISE_EUSKO,
-    limit_type='UNLIMITED',
-)
-ID_STOCK_DE_BILLETS = create_system_account_type(
-    name='Stock de billets',
-    currency_id=ID_DEVISE_EUSKO,
-    limit_type='LIMITED',
-)
-ID_COMPTE_DE_TRANSIT = create_system_account_type(
-    name='Compte de transit',
-    currency_id=ID_DEVISE_EUSKO,
-    limit_type='LIMITED',
-)
-ID_COMPTE_DES_BILLETS_EN_CIRCULATION = create_system_account_type(
-    name='Compte des billets en circulation',
-    currency_id=ID_DEVISE_EUSKO,
-    limit_type='LIMITED',
-)
-ID_COMPTE_DE_DEBIT_EURO = create_system_account_type(
-    name='Compte de débit €',
-    currency_id=ID_DEVISE_EURO,
-    limit_type='UNLIMITED',
-)
-
-# Comptes des bureaux de change :
-# - Stock de billets : stock d'eusko disponible pour le change (eusko
-#   billet) et les retraits (eusko numérique)
-# - Caisse € : € encaissés pour les changes, cotisations et ventes
-# - Caisse eusko : eusko encaissés pour les cotisations et ventes
-# - Retours d'eusko : eusko retournés par les prestataires pour les
-#   reconvertir en € ou les déposer sur leur compte
-ID_STOCK_DE_BILLETS_BDC = create_user_account_type(
-    name='Stock de billets BDC',
-    currency_id=ID_DEVISE_EUSKO,
-)
-ID_CAISSE_EURO_BDC = create_user_account_type(
-    name='Caisse € BDC',
-    currency_id=ID_DEVISE_EURO,
-)
-ID_CAISSE_EUSKO_BDC = create_user_account_type(
-    name='Caisse eusko BDC',
-    currency_id=ID_DEVISE_EUSKO,
-)
-ID_RETOURS_EUSKO_BDC = create_user_account_type(
-    name="Retours d'eusko BDC",
-    currency_id=ID_DEVISE_EUSKO,
-)
-
-# Comptes utilisateur pour la gestion interne des €
-# - pour le Crédit Agricole et La Banque Postale
-# - pour les 2 comptes dédiés (eusko billet et eusko numérique)
-ID_BANQUE_DE_DEPOT = create_user_account_type(
-    name='Banque de dépôt',
-    currency_id=ID_DEVISE_EURO,
-)
-ID_COMPTE_DEDIE = create_user_account_type(
-    name='Compte dédié',
-    currency_id=ID_DEVISE_EURO,
-)
-
-# Comptes pour l'eusko numérique
-ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE = create_system_account_type(
-    name='Compte de débit eusko numérique',
-    currency_id=ID_DEVISE_EUSKO,
-    limit_type='UNLIMITED',
-)
-ID_COMPTE_ADHERENT = create_user_account_type(
-    name="Compte d'adhérent",
-    currency_id=ID_DEVISE_EUSKO,
-)
-
-all_system_accounts = [
-    ID_COMPTE_DE_DEBIT_EUSKO_BILLET,
-    ID_STOCK_DE_BILLETS,
-    ID_COMPTE_DE_TRANSIT,
-    ID_COMPTE_DES_BILLETS_EN_CIRCULATION,
-    ID_COMPTE_DE_DEBIT_EURO,
-    ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE,
-]
-all_user_accounts = [
-    ID_STOCK_DE_BILLETS_BDC,
-    ID_CAISSE_EURO_BDC,
-    ID_CAISSE_EUSKO_BDC,
-    ID_RETOURS_EUSKO_BDC,
-    ID_BANQUE_DE_DEPOT,
-    ID_COMPTE_DEDIE,
-    ID_COMPTE_ADHERENT,
-]
-
-
-########################################################################
 # Création des champs personnalisés pour les paiements.
 #
+# Note: On a besoin de la liste des chalps personnalisés pour créer les
+# types de compte puis les types de paiement, c'est pour cette raison
+# qu'ils sont créés en premier.
 def create_transaction_custom_field_linked_user(name, internal_name,
                                                 required=True):
     logger.info('Création du champ personnalisé "%s"...', name)
@@ -525,6 +408,152 @@ all_transaction_fields = [
     ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_NUMERIQUE,
     ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
     ID_CHAMP_PERSO_PAIEMENT_NUMERO_FACTURE,
+]
+
+
+########################################################################
+# Création des types de comptes.
+#
+# Note : La méthode save() de l'interface AccountTypeService prend en
+# paramètre un objet de type AccountTypeDTO. AccountTypeDTO a deux
+# sous-classes, SystemAccountTypeDTO et UserAccountTypeDTO. Lorsque l'on
+# appelle la méthode save(), il faut passer en paramètre un objet du
+# type adéquat (selon que l'on crée un compte système ou un compte
+# utilisateur) et il faut indiquer explicitement quelle est la classe de
+# l'objet passé en paramètre, sinon on se prend l'erreur suivante :
+# java.lang.IllegalStateException: Could not instantiate bean of class
+# org.cyclos.entities.banking.AccountType.
+#
+# Note: 'customFieldsForList' définit la liste des champs personnalisés
+# visibles dans l'historique du compte. On ne fait pas dans le détail et
+# et on donne la liste de tous les champs à chaque fois. Le résultat
+# n'est pas terrible dans l'application web mais ce n'est pas grave.
+def create_system_account_type(name, currency_id, limit_type):
+    logger.info('Création du type de compte système "%s"...', name)
+    params = {
+        'class': 'org.cyclos.model.banking.accounttypes.SystemAccountTypeDTO',
+        'name': name,
+        'currency': currency_id,
+        'limitType': limit_type,
+        'customFieldsForList': all_transaction_fields,
+    }
+    if limit_type == 'LIMITED':
+        params['creditLimit'] = 0
+    r = requests.post(eusko_web_services + 'accountType/save',
+                      headers=headers, json=params)
+    check_request_status(r)
+    account_type_id = r.json()['result']
+    logger.debug('account_type_id = %s', account_type_id)
+    add_constant('account_types', name, account_type_id)
+    return account_type_id
+
+
+def create_user_account_type(name, currency_id):
+    logger.info('Création du type de compte utilisateur "%s"...', name)
+    params = {
+        'class': 'org.cyclos.model.banking.accounttypes.UserAccountTypeDTO',
+        'name': name,
+        'currency': currency_id,
+        'customFieldsForList': all_transaction_fields,
+    }
+    r = requests.post(eusko_web_services + 'accountType/save',
+                      headers=headers, json=params)
+    check_request_status(r)
+    account_type_id = r.json()['result']
+    logger.debug('account_type_id = %s', account_type_id)
+    add_constant('account_types', name, account_type_id)
+    return account_type_id
+
+# Comptes système pour l'eusko billet
+ID_COMPTE_DE_DEBIT_EUSKO_BILLET = create_system_account_type(
+    name='Compte de débit eusko billet',
+    currency_id=ID_DEVISE_EUSKO,
+    limit_type='UNLIMITED',
+)
+ID_STOCK_DE_BILLETS = create_system_account_type(
+    name='Stock de billets',
+    currency_id=ID_DEVISE_EUSKO,
+    limit_type='LIMITED',
+)
+ID_COMPTE_DE_TRANSIT = create_system_account_type(
+    name='Compte de transit',
+    currency_id=ID_DEVISE_EUSKO,
+    limit_type='LIMITED',
+)
+ID_COMPTE_DES_BILLETS_EN_CIRCULATION = create_system_account_type(
+    name='Compte des billets en circulation',
+    currency_id=ID_DEVISE_EUSKO,
+    limit_type='LIMITED',
+)
+ID_COMPTE_DE_DEBIT_EURO = create_system_account_type(
+    name='Compte de débit €',
+    currency_id=ID_DEVISE_EURO,
+    limit_type='UNLIMITED',
+)
+
+# Comptes des bureaux de change :
+# - Stock de billets : stock d'eusko disponible pour le change (eusko
+#   billet) et les retraits (eusko numérique)
+# - Caisse € : € encaissés pour les changes, cotisations et ventes
+# - Caisse eusko : eusko encaissés pour les cotisations et ventes
+# - Retours d'eusko : eusko retournés par les prestataires pour les
+#   reconvertir en € ou les déposer sur leur compte
+ID_STOCK_DE_BILLETS_BDC = create_user_account_type(
+    name='Stock de billets BDC',
+    currency_id=ID_DEVISE_EUSKO,
+)
+ID_CAISSE_EURO_BDC = create_user_account_type(
+    name='Caisse € BDC',
+    currency_id=ID_DEVISE_EURO,
+)
+ID_CAISSE_EUSKO_BDC = create_user_account_type(
+    name='Caisse eusko BDC',
+    currency_id=ID_DEVISE_EUSKO,
+)
+ID_RETOURS_EUSKO_BDC = create_user_account_type(
+    name="Retours d'eusko BDC",
+    currency_id=ID_DEVISE_EUSKO,
+)
+
+# Comptes utilisateur pour la gestion interne des €
+# - pour le Crédit Agricole et La Banque Postale
+# - pour les 2 comptes dédiés (eusko billet et eusko numérique)
+ID_BANQUE_DE_DEPOT = create_user_account_type(
+    name='Banque de dépôt',
+    currency_id=ID_DEVISE_EURO,
+)
+ID_COMPTE_DEDIE = create_user_account_type(
+    name='Compte dédié',
+    currency_id=ID_DEVISE_EURO,
+)
+
+# Comptes pour l'eusko numérique
+ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE = create_system_account_type(
+    name='Compte de débit eusko numérique',
+    currency_id=ID_DEVISE_EUSKO,
+    limit_type='UNLIMITED',
+)
+ID_COMPTE_ADHERENT = create_user_account_type(
+    name="Compte d'adhérent",
+    currency_id=ID_DEVISE_EUSKO,
+)
+
+all_system_accounts = [
+    ID_COMPTE_DE_DEBIT_EUSKO_BILLET,
+    ID_STOCK_DE_BILLETS,
+    ID_COMPTE_DE_TRANSIT,
+    ID_COMPTE_DES_BILLETS_EN_CIRCULATION,
+    ID_COMPTE_DE_DEBIT_EURO,
+    ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE,
+]
+all_user_accounts = [
+    ID_STOCK_DE_BILLETS_BDC,
+    ID_CAISSE_EURO_BDC,
+    ID_CAISSE_EUSKO_BDC,
+    ID_RETOURS_EUSKO_BDC,
+    ID_BANQUE_DE_DEPOT,
+    ID_COMPTE_DEDIE,
+    ID_COMPTE_ADHERENT,
 ]
 
 
@@ -1319,27 +1348,23 @@ ID_CHAMP_PERSO_UTILISATEUR_BDC = create_user_custom_field_linked_user(
 # doublons (c'est donc une mesure de protection).
 def create_member_product(name, user_account_type_id=None):
     logger.info('Création du produit "%s"...', name)
+    myProfileFields = []
+    for field in ('FULL_NAME', 'LOGIN_NAME', 'ACCOUNT_NUMBER'):
+        myProfileFields.append({
+            'profileField': field,
+            'enabled': True,
+            'editableAtRegistration': True,
+            'visible': True,
+            'editable': True,
+            'managePrivacy': False,
+        })
     product = {
         'class': 'org.cyclos.model.users.products.MemberProductDTO',
         'name': name,
-        'myProfileFields': [
-            {
-                'profileField': 'FULL_NAME',
-                'enabled': True,
-                'editableAtRegistration': True,
-                'visible': True,
-                'editable': True,
-                'managePrivacy': False,
-            },
-            {
-                'profileField': 'LOGIN_NAME',
-                'enabled': True,
-                'editableAtRegistration': True,
-                'visible': True,
-                'editable': True,
-                'managePrivacy': False,
-            },
-        ]
+        'myProfileFields': myProfileFields,
+        # Workaround of a bug in Cyclos 4.6.
+        'myRecordTypeFields': [
+        ],
     }
     if user_account_type_id:
         product['userAccount'] = user_account_type_id
@@ -1622,6 +1647,7 @@ set_product_properties(
     user_profile_fields = [
         'FULL_NAME',
         'LOGIN_NAME',
+        'ACCOUNT_NUMBER',
         ID_CHAMP_PERSO_UTILISATEUR_BDC,
     ],
     change_group='MANAGE',
@@ -1669,6 +1695,7 @@ set_product_properties(
     user_profile_fields = [
         'FULL_NAME',
         'LOGIN_NAME',
+        'ACCOUNT_NUMBER',
     ],
     user_registration=True,
     access_user_accounts=[
@@ -1694,6 +1721,12 @@ set_product_properties(
         ID_TYPE_PAIEMENT_RETRAIT_DU_COMPTE,
     ],
 )
+
+# Récupération de la liste des types de mot de passe.
+r = requests.get(eusko_web_services + 'passwordType/list',
+				 headers=headers)
+for passwordType in r.json()['result']:
+	add_constant('password_types', passwordType['name'], passwordType['id'])
 
 # On écrit dans un fichier toutes les constantes nécessaires à l'API,
 # après les avoir triées.

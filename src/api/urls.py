@@ -31,17 +31,19 @@ urlpatterns = [
 
     # Cyclos data, data we fetch from/push to its API
     url(r'^accounts-summaries/$', bdc_cyclos_views.accounts_summaries),
+    url(r'^member-accounts-summaries/$', bdc_cyclos_views.member_account_summary),
     url(r'^accounts-history/$', bdc_cyclos_views.accounts_history),
     url(r'^payments-available-entree-stock/$', bdc_cyclos_views.payments_available_for_entree_stock),
     url(r'^entree-stock/$', bdc_cyclos_views.entree_stock),
     url(r'^sortie-stock/$', bdc_cyclos_views.sortie_stock),
     url(r'^change-euro-eusko/$', bdc_cyclos_views.change_euro_eusko),
     url(r'^reconversion/$', bdc_cyclos_views.reconversion),
-    url(r'^payments-available-deposit/$', bdc_cyclos_views.payments_available_for_deposit),
     url(r'^bank-deposit/$', bdc_cyclos_views.bank_deposit),
     url(r'^cash-deposit/$', bdc_cyclos_views.cash_deposit),
     url(r'^sortie-caisse-eusko/$', bdc_cyclos_views.cash_deposit),
     url(r'^sortie-retour-eusko/$', bdc_cyclos_views.cash_deposit),
+    url(r'^depot-eusko-numerique/$', bdc_cyclos_views.depot_eusko_numerique),
+    url(r'^retrait-eusko-numerique/$', bdc_cyclos_views.retrait_eusko_numerique),
 ]
 
 urlpatterns += router.urls
