@@ -4,6 +4,7 @@ from rest_framework import serializers
 class EntreeStockBDCSerializer(serializers.Serializer):
 
     selected_payments = serializers.ListField()
+    login_bdc = serializers.CharField()
 
 
 class SortieStockBDCSerializer(serializers.Serializer):

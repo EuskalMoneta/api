@@ -80,14 +80,30 @@ def entree_stock(request):
     serializer = serializers.EntreeStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    payments = []
-    payments_res = []
     for payment in request.data['selected_payments']:
-        payments.append(payment)
-        payment_res = cyclos.get(method='transfer/load/{}'.format(payment['id']))
-        payments_res.append(payment_res)
+        try:
+            porteur = [
+                value['id']
+                for value in payment['customValues']
+                if value['field']['id'] == str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']) and
+                value['field']['internalName'] == 'porteur'
+            ][0]
+        except (KeyError, IndexError):
+            # TODO ?
+            porteur = ''
+
+        try:
+            bdc_name = [
+                value['linkedEntityValue']['name']
+                for value in payment['customValues']
+                if value['field']['internalName'] == 'bdc'
+            ][0]
+        except (KeyError, IndexError):
+            # TODO ?
+            bdc_name = ''
+
         # payment/perform
-        query_data = {
+        payment_query_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_stock_bdc']),
             'amount': payment['amount'],
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
@@ -96,12 +112,18 @@ def entree_stock(request):
             'customValues': [
                 {
                     'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                    'linkedEntityValue': request.data['porteur']  # ID du porteur
+                    'linkedEntityValue': porteur  # ID du porteur
                 },
             ],
-            'description': 'Entrée stock',
+            'description': 'Entrée stock - {} - {}'.format(request.data['login_bdc'], bdc_name),
         }
-        cyclos.post(method='payment/perform', data=query_data)
+        cyclos.post(method='payment/perform', data=payment_query_data)
+
+        status_query_data = {
+            'transfer': payment['id'],       # ID de l'opération d'origine (récupéré dans l'historique)
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['rapproche'])
+        }
+        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     return Response(request.data['selected_payments'])
 
