@@ -295,10 +295,12 @@ def accounts_history(request):
     }
 
     try:
-        if request.query_params['filter'] == 'a_remettre_a_euskal_moneta':
+        if request.query_params['filter']:
             search_history_data['statuses'] = [
-                str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_remettre_a_euskal_moneta'])
+                str(settings.CYCLOS_CONSTANTS['transfer_statuses'][request.query_params['filter']])
             ]
+        if request.query_params['direction']:
+            search_history_data['direction'] = request.query_params['direction']
     except KeyError:
         pass
 
@@ -322,6 +324,16 @@ def bank_deposit(request):
     # nécessaire pour connaître le type de chaque paiement, ce qui va servir à calculer la ventilation
     payments_data = {}
     for payment in request.data['selected_payments']:
+        try:
+            bdc_name = [
+                value['linkedEntityValue']['name']
+                for value in payment['customValues']
+                if value['field']['internalName'] == 'bdc'
+            ][0]
+        except (KeyError, IndexError):
+            # TODO ?
+            bdc_name = ''
+
         payment_res = cyclos.get(method='transfer/load/{}'.format(payment['id']))
         payment_amount = float(payment_res['result']['currencyAmount']['amount'])
         try:
@@ -389,7 +401,8 @@ def bank_deposit(request):
                 'decimalValue': montant_changes_numerique  # calculé
             },
         ],
-        'description': 'Dépôt en banque - {} - {}'.format(
+        'description': 'Dépôt en banque - {} - {}\r\n{} - {}'.format(
+            request.data['login_bdc'], bdc_name,
             request.data['deposit_bank_name'], request.data['payment_mode_name'])
     }
     cyclos.post(method='payment/perform', data=bank_deposit_data)

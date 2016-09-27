@@ -32,6 +32,7 @@ class AccountsHistorySerializer(serializers.Serializer):
 
     account_type = serializers.CharField()
     filter = serializers.CharField(required=False)
+    direction = serializers.CharField(required=False)
 
 
 class BankDepositSerializer(serializers.Serializer):
