@@ -654,6 +654,16 @@ def payments_available_for_entree_stock(request):
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
     }
-    accounts_summaries_data = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+    accounts_summaries_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+
+    # Filter out the results that are not "Sortie coffre" and items that are not for this BDC
+    accounts_summaries_data = [
+        item
+        for item in accounts_summaries_res['result']['pageItems']
+        for value in item['customValues']
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_coffre']) and
+        value['field']['internalName'] == 'bdc' and
+        value['linkedEntityValue']['id'] == cyclos.user_bdc_id
+    ]
 
     return Response(accounts_summaries_data)
