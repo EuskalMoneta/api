@@ -1,7 +1,13 @@
 from rest_framework import serializers
 
 
-class IOStockBDCSerializer(serializers.Serializer):
+class EntreeStockBDCSerializer(serializers.Serializer):
+
+    selected_payments = serializers.ListField()
+    login_bdc = serializers.CharField()
+
+
+class SortieStockBDCSerializer(serializers.Serializer):
 
     amount = serializers.CharField()
     porteur = serializers.CharField()
@@ -63,3 +69,7 @@ class RetraitEuskoNumeriqueSerializer(serializers.Serializer):
 
 class MemberAccountsSummariesSerializer(serializers.Serializer):
     member_login = serializers.CharField()
+
+
+class PaymentsAvailableEntreeStock(serializers.Serializer):
+    login_bdc = serializers.CharField()

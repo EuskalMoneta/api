@@ -77,26 +77,55 @@ def entree_stock(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = serializers.IOStockBDCSerializer(data=request.data)
+    serializer = serializers.EntreeStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    # payment/perform
-    query_data = {
-        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_stock_bdc']),
-        'amount': request.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-        'from': 'SYSTEM',
-        'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
-        'customValues': [
-            {
-                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                'linkedEntityValue': request.data['porteur']  # ID du porteur
-            },
-        ],
-        'description': request.data['description'],
-    }
+    for payment in request.data['selected_payments']:
+        try:
+            porteur = [
+                value['id']
+                for value in payment['customValues']
+                if value['field']['id'] == str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']) and
+                value['field']['internalName'] == 'porteur'
+            ][0]
+        except (KeyError, IndexError):
+            # TODO ?
+            porteur = ''
 
-    return Response(cyclos.post(method='payment/perform', data=query_data))
+        try:
+            bdc_name = [
+                value['linkedEntityValue']['name']
+                for value in payment['customValues']
+                if value['field']['internalName'] == 'bdc'
+            ][0]
+        except (KeyError, IndexError):
+            # TODO ?
+            bdc_name = ''
+
+        # payment/perform
+        payment_query_data = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_stock_bdc']),
+            'amount': payment['amount'],
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+            'from': 'SYSTEM',
+            'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+            'customValues': [
+                {
+                    'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
+                    'linkedEntityValue': porteur  # ID du porteur
+                },
+            ],
+            'description': 'Entrée stock - {} - {}'.format(request.data['login_bdc'], bdc_name),
+        }
+        cyclos.post(method='payment/perform', data=payment_query_data)
+
+        status_query_data = {
+            'transfer': payment['id'],       # ID de l'opération d'origine (récupéré dans l'historique)
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['rapproche'])
+        }
+        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+
+    return Response(request.data['selected_payments'])
 
 
 @api_view(['POST'])
@@ -109,7 +138,7 @@ def sortie_stock(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = serializers.IOStockBDCSerializer(data=request.data)
+    serializer = serializers.SortieStockBDCSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # payment/perform
@@ -618,3 +647,45 @@ def retrait_eusko_numerique(request):
     cyclos.post(method='payment/perform', data=retrait_billets_data)
 
     return Response(retrait_billets_data)
+
+
+@api_view(['GET'])
+def payments_available_for_entree_stock(request):
+    """
+    payments_available_for_entree_stock
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.PaymentsAvailableEntreeStock(data=request.query_params)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # cyclos.user_bdc_id
+
+    # account/searchAccountHistory
+    search_history_data = {
+        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_transit']),
+        'orderBy': 'DATE_DESC',
+        'direction': 'CREDIT',
+        'fromNature': 'SYSTEM',
+        'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher'])
+        ],
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+    accounts_summaries_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+
+    # Filter out the results that are not "Sortie coffre" and items that are not for this BDC
+    accounts_summaries_data = [
+        item
+        for item in accounts_summaries_res['result']['pageItems']
+        for value in item['customValues']
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_coffre']) and
+        value['field']['internalName'] == 'bdc' and
+        value['linkedEntityValue']['id'] == cyclos.user_bdc_id
+    ]
+
+    return Response(accounts_summaries_data)

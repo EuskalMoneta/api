@@ -35,6 +35,7 @@ urlpatterns = [
     url(r'^accounts-summaries/$', bdc_cyclos_views.accounts_summaries),
     url(r'^member-accounts-summaries/$', bdc_cyclos_views.member_account_summary),
     url(r'^accounts-history/$', bdc_cyclos_views.accounts_history),
+    url(r'^payments-available-entree-stock/$', bdc_cyclos_views.payments_available_for_entree_stock),
     url(r'^entree-stock/$', bdc_cyclos_views.entree_stock),
     url(r'^sortie-stock/$', bdc_cyclos_views.sortie_stock),
     url(r'^change-euro-eusko/$', bdc_cyclos_views.change_euro_eusko),
