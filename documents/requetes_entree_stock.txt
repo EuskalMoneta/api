@@ -1,0 +1,37 @@
+# admin_comptes : impression de 126500 eusko
+r = requests.post(
+    'http://cyclos-app:8080/eusko/web-rpc/payment/perform',
+    headers={'Authorization': 'Basic YWRtaW5fY29tcHRlczphZG1pbg=='},
+    json={
+        'type': -7371965214485201109,       # settings.CYCLOS_CONSTANTS['payment_types']['impression_de_billets_d_eusko']
+        'amount': 126500,
+        'currency': -7371965214485201109,   # settings.CYCLOS_CONSTANTS['currencies']['eusko']
+        'from': 'SYSTEM',
+        'to': 'SYSTEM',
+    }
+)
+
+# admin_comptes : sortie coffre pour les Pyrénées
+r = requests.post(
+    'http://cyclos-app:8080/eusko/web-rpc/payment/perform',
+    headers={'Authorization': 'Basic YWRtaW5fY29tcHRlczphZG1pbg=='},
+    json={
+        'type': -7371965218780168405,       # settings.CYCLOS_CONSTANTS['payment_types']['sortie_coffre']
+        'amount': 3000,
+        'currency': -7371965214485201109,   # settings.CYCLOS_CONSTANTS['currencies']['eusko']
+        'from': 'SYSTEM',
+        'to': 'SYSTEM',
+        'customValues': [
+            {
+                'field': -7371965214485201109,  # settings.CYCLOS_CONSTANTS['transaction_custom_fields']['bdc']
+                'linkedEntityValue': -7371965180125462741
+            },
+            {
+                'field': -7371965218780168405,  # settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']
+                'linkedEntityValue': -7371965184420430037
+            },
+        ],
+        'description': 'Sortie coffre - B003',
+    }
+)
+

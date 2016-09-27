@@ -637,6 +637,11 @@ def payments_available_for_entree_stock(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
+    serializer = serializers.PaymentsAvailableEntreeStock(data=request.query_params)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # cyclos.user_bdc_id
+
     # account/searchAccountHistory
     search_history_data = {
         'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_transit']),
