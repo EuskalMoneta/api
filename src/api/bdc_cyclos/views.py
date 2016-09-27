@@ -552,7 +552,7 @@ def depot_eusko_numerique(request):
 @api_view(['POST'])
 def retrait_eusko_numerique(request):
     """
-    retrait-eusko-numerique
+    Retrait eusko: numerique vers billets
     """
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
@@ -571,7 +571,11 @@ def retrait_eusko_numerique(request):
     # Verify whether or not member account has enough money
     member_account_summary_query = [member_cyclos_id, None]  # ID de l'adhérent
     member_account_summary_res = cyclos.post(method='account/getAccountsSummary', data=member_account_summary_query)
-    # TODO: Why is this account_summary_res var empty ? => {result: []}
+    # TODO:
+    # if float(member_account_summary_res['status']['balance']) < float(request.data['amount']):
+    #     return Response({'error': "This member doesn't have enough money to do this change."},
+    #                     status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # account_types compte_d_adherent
 
     # Verify whether or not bdc cash stock has enough money
     bdc_account_summary_query = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
