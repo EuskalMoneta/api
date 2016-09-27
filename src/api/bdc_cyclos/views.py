@@ -603,14 +603,41 @@ def retrait_eusko_numerique(request):
 
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        dolibarr_member = dolibarr.get(model='members', login=request.data['member_login'])[0]
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    except IndexError:
+        return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    if dolibarr_member['type'].lower() == 'particulier':
+        member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
+    else:
+        member_name = dolibarr_member['company']
+
     # Verify whether or not member account has enough money
     member_account_summary_query = [member_cyclos_id, None]  # ID de l'adhérent
     member_account_summary_res = cyclos.post(method='account/getAccountsSummary', data=member_account_summary_query)
-    # TODO:
-    # if float(member_account_summary_res['status']['balance']) < float(request.data['amount']):
-    #     return Response({'error': "This member doesn't have enough money to do this change."},
-    #                     status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    # account_types compte_d_adherent
+
+    try:
+        if (member_account_summary_res['result'][0]['type']['id'] !=
+           str(settings.CYCLOS_CONSTANTS['account_types']['compte_d_adherent'])):
+            return Response({'error': "Unable to fetch account data!"},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except (KeyError, IndexError):
+        return Response({'error': "Unable to fetch account data!"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    try:
+        if float(member_account_summary_res['result'][0]['status']['balance']) < float(request.data['amount']):
+            return Response({'error': "This member doesn't have enough money to do this change."},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    except (KeyError, IndexError):
+        return Response({'error': "Unable to fetch account data!"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+    return Response(member_account_summary_res)
 
     # Verify whether or not bdc cash stock has enough money
     bdc_account_summary_query = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
@@ -655,7 +682,7 @@ def retrait_eusko_numerique(request):
                 'linkedEntityValue': member_cyclos_id,  # ID de l'adhérent
             },
         ],
-        'description': 'Retrait - {}'.format(request.data['member_login']),
+        'description': 'Retrait - {} - {}'.format(request.data['member_login'], member_name),
     }
     cyclos.post(method='payment/perform', data=retrait_billets_data)
 
