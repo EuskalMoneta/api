@@ -59,7 +59,7 @@ class MembersAPIView(BaseAPIView):
             return Response({'error': 'You need to provide a *VALID* ?login parameter! (Format: E12345)'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        elif name and len(name) >= 4:
+        elif name and len(name) >= 3:
             # We want to search in members by name (Firstname and Lastname)
             try:
                 response = self.dolibarr.get(model='members', name=name, api_key=dolibarr_token)
@@ -67,8 +67,8 @@ class MembersAPIView(BaseAPIView):
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(response)
 
-        elif name and len(name) < 4:
-            return Response({'error': 'You need to provide a ?name parameter longer than 3 characters!'},
+        elif name and len(name) < 3:
+            return Response({'error': 'You need to provide a ?name parameter longer than 2 characters!'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         else:
