@@ -21,7 +21,7 @@ def authenticate(username, password):
     cyclos_auth_string = b64encode(bytes('{}:{}'.format(username, password), "utf-8"))
 
     if token:
-        user, created = User.objects.get_or_create(username=username, password=password)
+        user, created = User.objects.get_or_create(username=username)
         user_profile = user.profile
         user_profile.dolibarr_token = token
         user_profile.cyclos_auth_string = cyclos_auth_string
