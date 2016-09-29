@@ -37,7 +37,7 @@ class CyclosAPI(object):
         except KeyError:
             raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
-        # user/load for this ID to get field BDC IDpostm
+        # user/load for this ID to get field BDC ID
         try:
             self.user_data = self.post(method='user/load', data=self.user_id)
             self.user_bdc_id = [item['linkedEntityValue']['id']
