@@ -22,15 +22,18 @@ def check_request_status(r):
         logger.error(r.text)
         r.raise_for_status()
 
+def get_internal_name(name):
+    name = name.replace('€', 'euro')
+    return slugify(name, separator='_')
+
 # Ensemble des constantes nécessaires à l'API.
 constants_by_category = {}
 
 def add_constant(category, name, value):
     if category not in constants_by_category.keys():
         constants_by_category[category] = {}
-    name = name.replace('€', 'euro')
-    slug_name = slugify(name, separator='_')
-    constants_by_category[category][slug_name] = value
+    internal_name = get_internal_name(name)
+    constants_by_category[category][internal_name] = value
 
 # Arguments à fournir dans la ligne de commande
 parser = argparse.ArgumentParser()
@@ -100,6 +103,8 @@ logger.debug('ID_CANAL_WEB_SERVICES = %s', ID_CANAL_WEB_SERVICES)
 # Modification de la configuration par défaut :
 # - définition de l'URL racine, pour que l'application web fonctionne
 # - choix de la virgule comme séparateur pour les décimales
+# - dates au format jour/mois/année
+# - heures au format 24 heures
 # - activation de l'utilisation des numéros de compte
 # - activation du canal "Web services" par défaut pour tous les
 #   utilisateurs
@@ -122,6 +127,8 @@ check_request_status(r)
 default_config = r.json()['result']
 default_config['rootUrl'] = url
 default_config['numberFormat'] = 'COMMA_AS_DECIMAL'
+default_config['dateFormat'] = 'DMY_SLASH'
+default_config['timeFormat'] = 'H24'
 default_config['accountNumberConfiguration'] = {
     'enabled': True
 }
@@ -174,7 +181,7 @@ def create_network(name, internal_name):
             headers=headers,
             json={
                 'name': 'Eusko',
-                'internalName': 'eusko',
+                'internalName': get_internal_name(name),
                 'enabled': True
             })
     check_request_status(r)
@@ -198,6 +205,7 @@ def create_currency(name, symbol):
             headers=headers,
             json={
                 'name': name,
+                'internalName': get_internal_name(name),
                 'symbol': symbol,
                 'suffix': ' ' + symbol,
                 'precision': 2
@@ -221,18 +229,17 @@ ID_DEVISE_EURO = create_currency(
 ########################################################################
 # Création des champs personnalisés pour les paiements.
 #
-# Note: On a besoin de la liste des chalps personnalisés pour créer les
+# Note: On a besoin de la liste des champs personnalisés pour créer les
 # types de compte puis les types de paiement, c'est pour cette raison
 # qu'ils sont créés en premier.
-def create_transaction_custom_field_linked_user(name, internal_name,
-                                                required=True):
+def create_transaction_custom_field_linked_user(name, required=True):
     logger.info('Création du champ personnalisé "%s"...', name)
     r = requests.post(
             eusko_web_services + 'transactionCustomField/save',
             headers=headers,
             json={
                 'name': name,
-                'internalName': internal_name,
+                'internalName': get_internal_name(name),
                 'type': 'LINKED_ENTITY',
                 'linkedEntityType': 'USER',
                 'control': 'ENTITY_SELECTION',
@@ -245,7 +252,7 @@ def create_transaction_custom_field_linked_user(name, internal_name,
     return custom_field_id
 
 
-def create_transaction_custom_field_single_selection(name, internal_name,
+def create_transaction_custom_field_single_selection(name,
                                                      possible_values_name,
                                                      possible_values,
                                                      required=True):
@@ -255,7 +262,7 @@ def create_transaction_custom_field_single_selection(name, internal_name,
             headers=headers,
             json={
                 'name': name,
-                'internalName': internal_name,
+                'internalName': get_internal_name(name),
                 'type': 'SINGLE_SELECTION',
                 'control': 'SINGLE_SELECTION',
                 'required': required
@@ -279,17 +286,19 @@ def create_transaction_custom_field_single_selection(name, internal_name,
     return custom_field_id
 
 
-def create_transaction_custom_field_text(name, internal_name, required=True):
+def create_transaction_custom_field_text(name, unique=False,
+                                         required=True):
     logger.info('Création du champ personnalisé "%s"...', name)
     r = requests.post(
             eusko_web_services + 'transactionCustomField/save',
             headers=headers,
             json={
                 'name': name,
-                'internalName': internal_name,
+                'internalName': get_internal_name(name),
                 'type': 'STRING',
                 'size': 'LARGE',
                 'control': 'TEXT',
+                'unique': unique,
                 'required': required
             })
     check_request_status(r)
@@ -299,15 +308,14 @@ def create_transaction_custom_field_text(name, internal_name, required=True):
     return custom_field_id
 
 
-def create_transaction_custom_field_decimal(name, internal_name,
-                                            required=True):
+def create_transaction_custom_field_decimal(name, required=True):
     logger.info('Création du champ personnalisé "%s"...', name)
     r = requests.post(
             eusko_web_services + 'transactionCustomField/save',
             headers=headers,
             json={
                 'name': name,
-                'internalName': internal_name,
+                'internalName': get_internal_name(name),
                 'type': 'DECIMAL',
                 'control': 'TEXT',
                 'required': required
@@ -329,24 +337,19 @@ def add_custom_field_to_transfer_type(transfer_type_id, custom_field_id):
 
 ID_CHAMP_PERSO_PAIEMENT_BDC = create_transaction_custom_field_linked_user(
     name='BDC',
-    internal_name='bdc',
 )
 ID_CHAMP_PERSO_PAIEMENT_PORTEUR = create_transaction_custom_field_linked_user(
     name='Porteur',
-    internal_name='porteur',
 )
 ID_CHAMP_PERSO_PAIEMENT_ADHERENT = create_transaction_custom_field_linked_user(
     name='Adhérent',
-    internal_name='adherent',
 )
 ID_CHAMP_PERSO_PAIEMENT_ADHERENT_FACULTATIF = create_transaction_custom_field_linked_user(
     name='Adhérent (facultatif)',
-    internal_name='adherent_facultatif',
     required=False,
 )
 ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT = create_transaction_custom_field_single_selection(
     name='Mode de paiement',
-    internal_name='mode_de_paiement',
     possible_values_name='payment_modes',
     possible_values=[
         'Chèque',
@@ -358,7 +361,6 @@ ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT = create_transaction_custom_field_singl
 )
 ID_CHAMP_PERSO_PAIEMENT_PRODUIT = create_transaction_custom_field_single_selection(
     name='Produit',
-    internal_name='produit',
     possible_values_name='products',
     possible_values=[
         'Foulard',
@@ -366,32 +368,26 @@ ID_CHAMP_PERSO_PAIEMENT_PRODUIT = create_transaction_custom_field_single_selecti
 )
 ID_CHAMP_PERSO_PAIEMENT_NUMERO_BORDEREAU = create_transaction_custom_field_text(
     name='Numéro de bordereau',
-    internal_name='numero_bordereau',
     required=False,
 )
 ID_CHAMP_PERSO_PAIEMENT_MONTANT_COTISATIONS = create_transaction_custom_field_decimal(
     name='Montant Cotisations',
-    internal_name='montant_cotisations',
 )
 ID_CHAMP_PERSO_PAIEMENT_MONTANT_VENTES = create_transaction_custom_field_decimal(
     name='Montant Ventes',
-    internal_name='montant_ventes',
 )
 ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_BILLET = create_transaction_custom_field_decimal(
     name='Montant Changes billet',
-    internal_name='montant_changes_billet',
 )
 ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_NUMERIQUE = create_transaction_custom_field_decimal(
     name='Montant Changes numérique',
-    internal_name='montant_changes_numerique',
 )
 ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE = create_transaction_custom_field_text(
     name='Numéro de transaction banque',
-    internal_name='numero_transaction_banque',
 )
 ID_CHAMP_PERSO_PAIEMENT_NUMERO_FACTURE = create_transaction_custom_field_text(
     name='Numéro de facture',
-    internal_name='numero_facture',
+    unique=True,
 )
 
 all_transaction_fields = [
@@ -433,6 +429,7 @@ def create_system_account_type(name, currency_id, limit_type):
     params = {
         'class': 'org.cyclos.model.banking.accounttypes.SystemAccountTypeDTO',
         'name': name,
+        'internalName': get_internal_name(name),
         'currency': currency_id,
         'limitType': limit_type,
         'customFieldsForList': all_transaction_fields,
@@ -453,6 +450,7 @@ def create_user_account_type(name, currency_id):
     params = {
         'class': 'org.cyclos.model.banking.accounttypes.UserAccountTypeDTO',
         'name': name,
+        'internalName': get_internal_name(name),
         'currency': currency_id,
         'customFieldsForList': all_transaction_fields,
     }
@@ -567,6 +565,7 @@ def create_transfer_status_flow(name):
             headers=headers,
             json={
                 'name': name,
+                'internalName': get_internal_name(name),
             })
     check_request_status(r)
     status_flow_id = r.json()['result']
@@ -578,6 +577,7 @@ def create_transfer_status(name, status_flow, possible_next=None):
     logger.info('Création du statut "%s"...', name)
     status = {
         'name': name,
+        'internalName': get_internal_name(name),
         'flow': status_flow,
     }
     if possible_next:
@@ -661,17 +661,17 @@ all_status_flows = [
 #
 # On définit un "maxChargebackTime" de 2 mois, ce qui veut dire que le
 # délai maximum pour rejeter un paiment est de 2 mois.
-# Note : les paiements pourront être rejetés par les administrateurs de
-# comptes (voir le paramétrage des permissions).
+# Note : les paiements pourront être rejetés par les administrateurs du
+# groupe "Gestion interne" (voir le paramétrage des permissions).
 #
 # Par souci de simplicité, tous les types de paiement sont accessibles
 # par les 2 canaux "Main web" et "Web services". Ainsi tous les types
 # de paiement seront accessibles par l'interface web de Cyclos pour les
-# administrateurs de comptes (voir le paramétrage des permissions), ce
-# qui garantit une capacité à intervenir si nécessaire. D'autre part,
-# ils peuvent tous être utilisés par l'API Eusko (ce n'est pas forcément
-# nécessaire mais c'est possible, il n'y aura pas de question à se
-# poser.
+# administrateurs du groupe "Gestion interne" (voir le paramétrage des
+# permissions), ce qui garantit une capacité à intervenir si nécessaire.
+# D'autre part, ils peuvent tous être utilisés par l'API Eusko (ce n'est
+# pas forcément nécessaire mais c'est possible, il n'y aura pas de
+# question à se poser.
 #
 def create_payment_transfer_type(name, direction, from_account_type_id,
                                  to_account_type_id, custom_fields=[],
@@ -683,6 +683,7 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
             json={
                 'class': 'org.cyclos.model.banking.transfertypes.PaymentTransferTypeDTO',
                 'name': name,
+                'internalName': get_internal_name(name),
                 'direction': direction,
                 'from': from_account_type_id,
                 'to': to_account_type_id,
@@ -713,6 +714,7 @@ def create_generated_transfer_type(name, direction, from_account_type_id,
             json={
                 'class': 'org.cyclos.model.banking.transfertypes.GeneratedTransferTypeDTO',
                 'name': name,
+                'internalName': get_internal_name(name),
                 'direction': direction,
                 'from': from_account_type_id,
                 'to': to_account_type_id,
@@ -731,6 +733,7 @@ def create_transfer_fee(name, original_transfer_type, generated_transfer_type,
             headers=headers,
             json={
                 'name': name,
+                'internalName': get_internal_name(name),
                 'enabled': True,
                 'originalTransferType': original_transfer_type,
                 'generatedTransferType': generated_transfer_type,
@@ -1080,8 +1083,13 @@ ID_TYPE_PAIEMENT_REMISE_EUROS_EN_CAISSE = create_payment_transfer_type(
 # avoir ce compte dans Cyclos. Il est donc à l'extérieur du système et
 # c'est le Compte de débit en € qui est utilisé pour les paiements qui
 # dans la réalité font intervenir le Compte de gestion.
+#
+# Note 2 : Dans les noms des types de paiements ci-dessous on utilise
+# "Compte débit €" et pas "le Compte de débit €" de façon à avoir un
+# internalName ne dépassant pas 50 caractères (le internalName étant
+# automatiquement généré à partir du nom).
 ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_DEBIT = create_payment_transfer_type(
-    name='Virement de Banque de dépôt vers le Compte de débit en €',
+    name='Virement de Banque de dépôt vers Compte débit €',
     direction='USER_TO_SYSTEM',
     from_account_type_id=ID_BANQUE_DE_DEPOT,
     to_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
@@ -1093,7 +1101,7 @@ ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DEDIE = create_payment_transfer_type(
     to_account_type_id=ID_COMPTE_DEDIE,
 )
 ID_TYPE_PAIEMENT_COMPTE_DEDIE_VERS_COMPTE_DE_DEBIT = create_payment_transfer_type(
-    name='Virement de Compte dédié vers le Compte de débit en €',
+    name='Virement de Compte dédié vers Compte débit €',
     direction='USER_TO_SYSTEM',
     from_account_type_id=ID_COMPTE_DEDIE,
     to_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
@@ -1290,15 +1298,14 @@ all_payments_to_user = \
 ########################################################################
 # Création des champs personnalisés pour les profils utilisateur.
 #
-def create_user_custom_field_linked_user(name, internal_name,
-                                         required=True):
+def create_user_custom_field_linked_user(name, required=True):
     logger.info('Création du champ personnalisé "%s"...', name)
     r = requests.post(
             eusko_web_services + 'userCustomField/save',
             headers=headers,
             json={
                 'name': name,
-                'internalName': internal_name,
+                'internalName': get_internal_name(name),
                 'type': 'LINKED_ENTITY',
                 'linkedEntityType': 'USER',
                 'control': 'ENTITY_SELECTION',
@@ -1313,7 +1320,6 @@ def create_user_custom_field_linked_user(name, internal_name,
 
 ID_CHAMP_PERSO_UTILISATEUR_BDC = create_user_custom_field_linked_user(
     name='BDC',
-    internal_name='bdc',
 )
 
 
@@ -1361,6 +1367,7 @@ def create_member_product(name, user_account_type_id=None):
     product = {
         'class': 'org.cyclos.model.users.products.MemberProductDTO',
         'name': name,
+        'internalName': get_internal_name(name),
         'myProfileFields': myProfileFields,
         # Workaround of a bug in Cyclos 4.6.
         'myRecordTypeFields': [
@@ -1484,6 +1491,7 @@ def create_admin_group(name):
             json={
                 'class': 'org.cyclos.model.users.groups.AdminGroupDTO',
                 'name': name,
+                'internalName': get_internal_name(name),
                 'initialUserStatus': 'ACTIVE',
                 'enabled': True
             })
@@ -1504,7 +1512,9 @@ def get_admin_product(group_id):
     return product_id
 
 
-def create_member_group(name, products=[]):
+def create_member_group(name,
+                        initial_user_status='ACTIVE',
+                        products=[]):
     logger.info('Création du groupe Membre "%s"...', name)
     r = requests.post(
             eusko_web_services + 'group/save',
@@ -1512,7 +1522,8 @@ def create_member_group(name, products=[]):
             json={
                 'class': 'org.cyclos.model.users.groups.MemberGroupDTO',
                 'name': name,
-                'initialUserStatus': 'ACTIVE',
+                'internalName': get_internal_name(name),
+                'initialUserStatus': initial_user_status,
                 'enabled': True
             })
     check_request_status(r)
@@ -1523,17 +1534,30 @@ def create_member_group(name, products=[]):
         assign_product_to_group(product_id, group_id)
     return group_id
 
-# Administrateurs de comptes.
-ID_GROUPE_ADMINS_DE_COMPTES = create_admin_group(
-    name='Administrateurs de comptes',
+# Gestion interne :
+# Les membres de ce groupe ont accès à l'application de gestion interne.
+# Ils ont aussi accès à Cyclos, où ils ont toutes les permissions, ce
+# qui leur permet d'intervenir au-delà de ce que permet l'application de
+# gestion interne (par exemple pour annuler un paiement).
+ID_GROUPE_GESTION_INTERNE = create_admin_group(
+    name='Gestion interne',
 )
 
-# Opérateurs BDC.
+# Opérateurs BDC :
+# Les membres de ce groupe ont accès à l'application des bureaux de
+# change. Ils ont aussi accès à Cyclos, où ils n'ont que les permissions
+# correspondant aux opérations qu'ils peuvent faire dans l'application
+# BDC (ils ne peuvent rien faire de plus).
+# Un utilisateur est créé dans ce groupe pour chaque bureau de change,
+# et lié à l'utilisateur "Bureau de change" correspondant.
 ID_GROUPE_OPERATEURS_BDC = create_admin_group(
     name='Opérateurs BDC',
 )
 
-# Bureaux de change.
+# Bureaux de change :
+# Un utilisateur est créé dans ce groupe pour chaque bureau de change
+# (c'est cet utilisateur qui possèdes les comptes du BDC, par contre
+# toutes les opérations sont faites par l'opérateur BDC associé).
 ID_PRODUIT_STOCK_DE_BILLETS_BDC = create_member_product(
     name='Stock de billets BDC',
     user_account_type_id=ID_STOCK_DE_BILLETS_BDC,
@@ -1585,21 +1609,29 @@ ID_GROUPE_COMPTES_DEDIES = create_member_group(
 )
 
 # Adhérents.
-ID_PRODUIT_ADHERENT = create_member_product(
-    name='Adhérent',
+prestataires='Adhérents prestataires'
+ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
+    name=prestataires,
     user_account_type_id=ID_COMPTE_ADHERENT,
 )
 ID_GROUPE_ADHERENTS_PRESTATAIRES = create_member_group(
-    name='Adhérents prestataires',
+    name=prestataires,
+    initial_user_status='DISABLED',
     products=[
-        ID_PRODUIT_ADHERENT,
-    ]
+        ID_PRODUIT_ADHERENTS_PRESTATAIRES,
+    ],
+)
+utilisateurs='Adhérents utilisateurs'
+ID_PRODUIT_ADHERENTS_UTILISATEURS = create_member_product(
+    name=utilisateurs,
+    user_account_type_id=ID_COMPTE_ADHERENT,
 )
 ID_GROUPE_ADHERENTS_UTILISATEURS = create_member_group(
-    name='Adhérents utilisateurs',
+    name=utilisateurs,
+    initial_user_status='DISABLED',
     products=[
-        ID_PRODUIT_ADHERENT,
-    ]
+        ID_PRODUIT_ADHERENTS_UTILISATEURS,
+    ],
 )
 
 # Porteurs.
@@ -1625,8 +1657,10 @@ all_user_groups = [
 # Définition des permissions.
 # Il faut faire ça en dernier car nous avons besoin de tous les objets
 # créés auparavant.
+#
+# Permissions pour le groupe "Gestion interne":
 set_product_properties(
-    get_admin_product(ID_GROUPE_ADMINS_DE_COMPTES),
+    get_admin_product(ID_GROUPE_GESTION_INTERNE),
     my_profile_fields=[
         'FULL_NAME',
         'LOGIN_NAME',
@@ -1657,6 +1691,7 @@ set_product_properties(
     payments_as_user_to_system=all_user_to_system_payments,
     chargeback_of_payments_to_user=all_payments_to_user
 )
+# Permissions pour le groupe "Opérateurs BDC":
 set_product_properties(
     get_admin_product(ID_GROUPE_OPERATEURS_BDC),
     my_profile_fields=[
@@ -1722,12 +1757,14 @@ set_product_properties(
     ],
 )
 
+########################################################################
 # Récupération de la liste des types de mot de passe.
 r = requests.get(eusko_web_services + 'passwordType/list',
-				 headers=headers)
+                 headers=headers)
 for passwordType in r.json()['result']:
-	add_constant('password_types', passwordType['name'], passwordType['id'])
+    add_constant('password_types', passwordType['name'], passwordType['id'])
 
+########################################################################
 # On écrit dans un fichier toutes les constantes nécessaires à l'API,
 # après les avoir triées.
 logger.debug('Constantes :\n%s', constants_by_category)
