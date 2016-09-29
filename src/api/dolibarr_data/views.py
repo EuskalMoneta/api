@@ -39,7 +39,7 @@ def verify_usergroup(request):
     try:
         user_id = dolibarr.get(model='users', login=request.query_params['username'])[0]['id']
     except (KeyError, IndexError):
-        Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
 
     usergroups_res = dolibarr.get(model='users/{}/groups'.format(user_id))
     usergroups_ids = [item['id']
@@ -67,7 +67,7 @@ def get_usergroups(request):
     try:
         user_id = dolibarr.get(model='users', login=request.query_params['username'])[0]['id']
     except (KeyError, IndexError):
-        Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response(dolibarr.get(model='users/{}/groups'.format(user_id)))
 
@@ -97,7 +97,7 @@ def towns_by_zipcode(request):
     """
     search = request.GET.get('zipcode', '')
     if not search:
-        Response({'error': 'Zipcode must not be empty'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Zipcode must not be empty'}, status=status.HTTP_400_BAD_REQUEST)
 
     dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     return Response(dolibarr.get(model='towns', zipcode=search))
