@@ -219,6 +219,11 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
         member_cyclos_id = cyclos.get_member_id_from_login(current_member['login'])
 
+        if current_member['type'].lower() == 'particulier':
+            member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
+        else:
+            member_name = current_member['company']
+
         query_data = {}
         log.critical(data)
 
@@ -229,7 +234,8 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                  'customValues': [
                     {'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
                      'linkedEntityValue': member_cyclos_id}],
-                 'description': 'Cotisation - {}'.format(current_member['login']),  # ID de l'adhérent
+                 'description': 'Cotisation - {} - {}'.format(
+                    current_member['login'], member_name),
                  })
         elif 'Euro' in data['payment_mode']:
             query_data.update(
@@ -240,7 +246,8 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                      'linkedEntityValue': member_cyclos_id},
                     {'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
                      'enumeratedValues': data['cyclos_id_payment_mode']}],
-                 'description': 'Cotisation - {} - {}'.format(current_member['login'], payment_label),
+                 'description': 'Cotisation - {} - {} - {}'.format(
+                    current_member['login'], member_name, payment_label),
                  })
         else:
             return Response({'error': 'This payment_mode is invalid!'}, status=status.HTTP_400_BAD_REQUEST)
