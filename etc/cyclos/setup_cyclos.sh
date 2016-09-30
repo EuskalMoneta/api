@@ -10,4 +10,4 @@ rm -f cyclos_constants.yml
 
 # Base64('admin:admin') = YWRtaW46YWRtaW4=
 python setup.py http://cyclos-app:8080/ YWRtaW46YWRtaW4=
-python init_static_data.py http://cyclos-app:8080/ YWRtaW46YWRtaW4=
+python init_test_data.py http://cyclos-app:8080/ YWRtaW46YWRtaW4=

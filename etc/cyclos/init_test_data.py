@@ -122,16 +122,6 @@ create_user(
     name='La Banque Postale',
     login='LBPO',
 )
-create_user(
-    group='Comptes dédiés',
-    name='Compte dédié eusko billet',
-    login='CD_BILLET',
-)
-create_user(
-    group='Comptes dédiés',
-    name='Compte dédié eusko numérique',
-    login='CD_NUMERIQUE',
-)
 
 
 ########################################################################
@@ -146,12 +136,17 @@ for field in user_custom_fields:
     if field['internalName'] == 'bdc':
         id_user_custom_field_bdc = field['id']
 
-create_user(
-    group='Administrateurs de comptes',
-    name='Admin Comptes',
-    login='admin_comptes',
-    password='admin',
-)
+gestion_interne = {
+    'demo': 'Demo',
+    'demo2': 'Demo2',
+}
+for login, name in gestion_interne.items():
+    create_user(
+        group='Gestion interne',
+        name=name,
+        login=login,
+        password=login,
+    )
 
 bureaux_de_change = {
     'B001': 'Euskal Moneta',
@@ -162,11 +157,11 @@ for login, name in bureaux_de_change.items():
     id_bdc = create_user(
         group='Bureaux de change',
         name=name+' (BDC)',
-        login='BDC_'+login,
+        login=login+'_BDC',
     )
     create_user(
         group='Opérateurs BDC',
-        name=name+' (opérateur BDC)',
+        name=name,
         login=login,
         password=login,
         custom_values={
