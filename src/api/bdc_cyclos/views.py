@@ -563,6 +563,20 @@ def depot_eusko_numerique(request):
 
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        dolibarr_member = dolibarr.get(model='members', login=request.data['member_login'])[0]
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    except IndexError:
+        return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    if dolibarr_member['type'].lower() == 'particulier':
+        member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
+    else:
+        member_name = dolibarr_member['company']
+
     # Retour des Eusko billets
     retour_eusko_billets_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['depot_de_billets']),
@@ -576,7 +590,7 @@ def depot_eusko_numerique(request):
                 'linkedEntityValue': member_cyclos_id  # ID de l'adhérent
             },
         ],
-        'description': 'Dépôt - {}'.format(request.data['member_login']),
+        'description': 'Dépôt - {} - {}'.format(request.data['member_login'], member_name),
     }
     cyclos.post(method='payment/perform', data=retour_eusko_billets_data)
 
