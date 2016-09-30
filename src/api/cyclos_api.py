@@ -51,7 +51,11 @@ class CyclosAPI(object):
 
     def get_member_id_from_login(self, member_login):
         try:
-            member_login_data = self.post(method='user/search', data={'keywords': member_login})
+            query_data = {
+                'keywords': member_login,
+                'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
+            }
+            member_login_data = self.post(method='user/search', data=query_data)
             member_cyclos_id = member_login_data['result']['pageItems'][0]['id']
         except CyclosAPIException:
             raise CyclosAPIException(detail='Unable to connect to Cyclos!')
