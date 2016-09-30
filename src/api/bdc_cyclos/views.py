@@ -417,7 +417,7 @@ def bank_deposit(request):
                 'decimalValue': montant_changes_numerique  # calculé
             },
         ],
-        'description': 'Dépôt en banque - {} - {}\r\n{} - {}'.format(
+        'description': 'Dépôt en banque - {} - {}\n{} - {}'.format(
             request.data['login_bdc'], bdc_name,
             request.data['deposit_bank_name'], request.data['payment_mode_name'])
     }
@@ -509,38 +509,52 @@ def cash_deposit(request):
 
     dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     try:
-        user_data = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
+        bdc_name = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
     except (IndexError, KeyError):
         return Response({'error': 'Unable to get user data from your user!'}, status=status.HTTP_400_BAD_REQUEST)
 
     if request.data['mode'] == 'cash-deposit':
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['remise_d_euro_en_caisse'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['euro'])
-        description = "Remise d'espèces - {} - {}".format(request.user.profile.user, user_data)
+        description = "Remise d'espèces - {} - {}".format(request.user.profile.user, bdc_name)
     elif request.data['mode'] == 'sortie-caisse-eusko':
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
-        description = 'Sortie caisse eusko - {} - {}'.format(request.user.profile.user, user_data)
+        description = 'Sortie caisse eusko - {} - {}'.format(request.user.profile.user, bdc_name)
     elif request.data['mode'] == 'sortie-retour-eusko':
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
-        description = 'Sortie retours eusko'
     else:
         return Response({'error': 'Mode parameter is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # Enregistrer la remise d'espèces
-    cash_deposit_data = {
-        'type': payment_type,
-        'amount': request.data['deposit_amount'],  # montant total calculé
-        'currency': currency,
-        'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
-        'to': 'SYSTEM',  # System account
-        'description': description
-    }
-    cyclos.post(method='payment/perform', data=cash_deposit_data)
+    if request.data['mode'] == 'cash-deposit' or request.data['mode'] == 'sortie-caisse-eusko':
+        # Enregistrer la remise d'espèces
+        cash_deposit_data = {
+            'type': payment_type,
+            'amount': request.data['deposit_amount'],  # montant total calculé
+            'currency': currency,
+            'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+            'to': 'SYSTEM',  # System account
+            'description': description
+        }
+        cyclos.post(method='payment/perform', data=cash_deposit_data)
 
-    # Passer tous les paiements à l'origine du dépôt à l'état "Remis à Euskal Moneta"
     for payment in request.data['selected_payments']:
+            # Enregistrer la remise d'espèces
+            cash_deposit_data = {
+                'type': payment_type,
+                'amount': payment['amount'],  # montant de l'opération correspondante
+                'currency': currency,
+                'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+                'to': 'SYSTEM',  # System account
+                # "Sortie retour d'eusko - Bxxx - Nom du BDC
+                # Opération de Z12345 - Nom du prestataire" -> description du payment initial
+                'description': 'Sortie retours eusko - {} - {}\n{}'.format(
+                    request.user.profile.user, bdc_name, payment['description'])
+            }
+            cyclos.post(method='payment/perform', data=cash_deposit_data)
+
+        # Passer tous les paiements à l'origine du dépôt à l'état "Remis à Euskal Moneta"
         transfer_change_status_data = {
             'transfer': payment['id'],  # ID du paiement (récupéré dans l'historique)
             'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['remis_a_euskal_moneta'])
