@@ -175,6 +175,20 @@ def change_euro_eusko(request):
 
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        dolibarr_member = dolibarr.get(model='members', login=request.data['member_login'])[0]
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    except IndexError:
+        return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    if dolibarr_member['type'].lower() == 'particulier':
+        member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
+    else:
+        member_name = dolibarr_member['company']
+
     # payment/perform
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_billets_versement_des_euro']),
@@ -192,7 +206,9 @@ def change_euro_eusko(request):
                 'enumeratedValues': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
             },
         ],
-        'description': 'Change - {} - {}'.format(request.data['member_login'], request.data['payment_mode']),
+        # "Change - E12345 - Nom de l'adhérent - Mode de paiement"
+        'description': 'Change - {} - {} - {}'.format(
+            request.data['member_login'], member_name, request.data['payment_mode']),
     }
 
     return Response(cyclos.post(method='payment/perform', data=query_data))
