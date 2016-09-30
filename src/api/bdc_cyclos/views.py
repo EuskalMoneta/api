@@ -507,10 +507,16 @@ def cash_deposit(request):
     serializer = serializers.CashDepositSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
+    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    try:
+        user_data = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
+    except (IndexError, KeyError):
+        return Response({'error': 'Unable to get user data from your user!'}, status=status.HTTP_400_BAD_REQUEST)
+
     if request.data['mode'] == 'cash-deposit':
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['remise_d_euro_en_caisse'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['euro'])
-        description = "Remise d'espèces"
+        description = "Remise d'espèces - {} - {}".format(request.user.profile.user, user_data)
     elif request.data['mode'] == 'sortie-caisse-eusko':
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
