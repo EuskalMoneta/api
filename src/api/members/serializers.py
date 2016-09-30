@@ -25,10 +25,10 @@ class MemberSerializer(serializers.Serializer):
     state_id = serializers.CharField(read_only=True)
     country = serializers.CharField(read_only=True)
     country_id = serializers.CharField()
-    phone = serializers.CharField(allow_null=True)
+    phone = serializers.CharField(allow_null=True, required=False)
     phone_perso = serializers.CharField(allow_null=True, read_only=True)
     phone_mobile = serializers.CharField(allow_null=True, read_only=True)
-    email = serializers.EmailField()
+    email = serializers.EmailField(required=False)
     array_options = ArrayOptionsSerializer(read_only=True)  # contient le champ "newsletter": (recevoir_actus)
     options_recevoir_actus = serializers.CharField(write_only=True)
     # Ajouter association parainée
