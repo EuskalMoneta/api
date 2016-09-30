@@ -259,7 +259,7 @@ def reconversion(request):
                 'stringValue': request.data['facture']  # ID Facture
             },
         ],
-        'description': 'Reconversion - {}'.format(request.data['member_login']),
+        'description': 'Reconversion - {} - {}'.format(request.data['member_login'], dolibarr_member['company']),
     }
 
     return Response(cyclos.post(method='payment/perform', data=query_data))
