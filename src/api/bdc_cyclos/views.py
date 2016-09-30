@@ -520,7 +520,7 @@ def cash_deposit(request):
     elif request.data['mode'] == 'sortie-caisse-eusko':
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
-        description = 'Sortie caisse eusko'
+        description = 'Sortie caisse eusko - {} - {}'.format(request.user.profile.user, user_data)
     elif request.data['mode'] == 'sortie-retour-eusko':
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
