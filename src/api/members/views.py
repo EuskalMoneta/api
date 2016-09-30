@@ -23,7 +23,6 @@ class MembersAPIView(BaseAPIView):
 
     def create(self, request):
         data = request.data
-        dolibarr_token = request.user.profile.dolibarr_token
         serializer = MemberSerializer(data=data)
         if serializer.is_valid():
             data = Member.validate_data(data)
@@ -33,8 +32,23 @@ class MembersAPIView(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         log.info('posted data: {}'.format(data))
-        response_obj = self.dolibarr.post(model=self.model, data=data, api_key=dolibarr_token)
+        response_obj = self.dolibarr.post(model=self.model, data=data, api_key=request.user.profile.dolibarr_token)
         log.info(response_obj)
+
+        # Cyclos: Register member
+        try:
+            cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+        except CyclosAPIException:
+            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        create_user_data = {
+            'group': str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs']),
+            'name': '{} {}'.format(data['firstname'], data['lastname']),
+            'username': data['login'],
+            'skipActivationEmail': True,
+        }
+        cyclos.post(method='user/register', data=create_user_data)
+
         try:
             sendmail_euskalmoneta(subject="subject", body="body", to_email=data['email'])
         except KeyError:
