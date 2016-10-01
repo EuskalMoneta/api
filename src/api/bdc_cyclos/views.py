@@ -540,7 +540,8 @@ def cash_deposit(request):
         cyclos.post(method='payment/perform', data=cash_deposit_data)
 
     for payment in request.data['selected_payments']:
-            # Enregistrer la remise d'espèces
+        if request.data['mode'] == 'sortie-retour-eusko':
+            # Enregistrer les retours d'eusko
             cash_deposit_data = {
                 'type': payment_type,
                 'amount': payment['amount'],  # montant de l'opération correspondante
@@ -782,7 +783,7 @@ def payments_available_for_entree_stock(request):
 @api_view(['POST'])
 def bdc_change_password(request):
     """
-    payments_available_for_entree_stock
+    bdc_change_password
     """
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
