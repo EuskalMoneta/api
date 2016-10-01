@@ -83,7 +83,7 @@ def entree_stock(request):
     for payment in request.data['selected_payments']:
         try:
             porteur = [
-                value['id']
+                value['linkedEntityValue']['id']
                 for value in payment['customValues']
                 if value['field']['id'] == str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']) and
                 value['field']['internalName'] == 'porteur'
