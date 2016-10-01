@@ -2,7 +2,7 @@ version: '2'
 
 services:
   api:
-    build: src/api
+    build: . 
     volumes:
       - ./src/api:/usr/src/app
       - ./etc/cyclos:/cyclos

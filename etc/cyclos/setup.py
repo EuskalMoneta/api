@@ -1412,9 +1412,6 @@ def set_product_properties(
         user_profile_fields=[],
         change_group='NONE',
         user_registration=False,
-        blocked_users_manage=False,
-        disabled_users='NONE',
-        removed_users='NONE',
         access_user_accounts=[],
         payments_as_user_to_user=[],
         payments_as_user_to_system=[],
@@ -1472,9 +1469,6 @@ def set_product_properties(
         profile_field['editable'] = enable
     product['userGroup'] = change_group
     product['userRegistration'] = user_registration
-    product['blockedUsersManage'] = blocked_users_manage
-    product['disabledUsers'] = disabled_users
-    product['removedUsers'] = removed_users
     product['userAccountsAccess'] = access_user_accounts
     product['userPaymentsAsUser'] = payments_as_user_to_user
     product['systemPaymentsAsUser'] = payments_as_user_to_system
@@ -1692,9 +1686,6 @@ set_product_properties(
     ],
     change_group='MANAGE',
     user_registration=True,
-    blocked_users_manage=True,
-    disabled_users='MANAGE',
-    removed_users='MANAGE',
     access_user_accounts=all_user_accounts,
     payments_as_user_to_user=all_user_to_user_payments,
     payments_as_user_to_system=all_user_to_system_payments,
@@ -1742,7 +1733,6 @@ set_product_properties(
         'ACCOUNT_NUMBER',
     ],
     user_registration=True,
-    disabled_users='VIEW',
     access_user_accounts=[
         ID_STOCK_DE_BILLETS_BDC,
         ID_CAISSE_EURO_BDC,
@@ -1767,46 +1757,12 @@ set_product_properties(
     ],
 )
 
-
-########################################################################
-# Création des utilisateurs pour les comptes dédiés.
-#
-def create_user(group, name, login):
-    logger.info('Création de l\'utilisateur "%s"...', name)
-    r = requests.post(
-            eusko_web_services + 'user/register',
-            headers=headers,
-            json={
-                'group': group,
-                'name': name,
-                'username': login,
-                'skipActivationEmail': True,
-            })
-    check_request_status(r)
-    user_id = r.json()['result']['user']['id']
-    logger.debug('user_id = %s', user_id)
-    add_constant('users', name, user_id)
-    return user_id
-
-create_user(
-    group=ID_GROUPE_COMPTES_DEDIES,
-    name='Compte dédié eusko billet',
-    login='CD_BILLET',
-)
-create_user(
-    group=ID_GROUPE_COMPTES_DEDIES,
-    name='Compte dédié eusko numérique',
-    login='CD_NUMERIQUE',
-)
-
-
 ########################################################################
 # Récupération de la liste des types de mot de passe.
 r = requests.get(eusko_web_services + 'passwordType/list',
                  headers=headers)
 for passwordType in r.json()['result']:
     add_constant('password_types', passwordType['name'], passwordType['id'])
-
 
 ########################################################################
 # On écrit dans un fichier toutes les constantes nécessaires à l'API,
