@@ -39,7 +39,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'kci-=2)4_qh#a3+k#xt!0)_t838t9zjcjpl#&09(&2&kftskr('
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG') and os.environ.get('DJANGO_DEBUG') == 'True'
+# You need to explicitly set DJANGO_DEBUG=True in docker-compose.yml (or environment variable) to have DEBUG on
+DEBUG = os.environ.get('DJANGO_DEBUG', False)
+if DEBUG and DEBUG in [True, 'true', 'True', 'yes', 'Yes']:
+    DEBUG = True
+else:
+    DEBUG = False
 
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
