@@ -14,6 +14,7 @@ services:
       - API_PUBLIC_URL=http://localhost:8000
       - DOLIBARR_PUBLIC_URL=http://localhost:8080
       - BDC_PUBLIC_URL=http://localhost:8001
+      - GI_PUBLIC_URL=http://localhost:8002
       - RAVEN_CONFIG_DSN=http://46498c24303d4b27828e5e47ce927818:6177efcf6d1d47508f1c22332c8dddaf@sentry:9000/2
     depends_on:
       - dolibarr-app

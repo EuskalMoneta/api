@@ -159,6 +159,7 @@ STATIC_URL = '/static/'
 API_PUBLIC_URL = os.environ.get('API_PUBLIC_URL')
 DOLIBARR_PUBLIC_URL = os.environ.get('DOLIBARR_PUBLIC_URL')
 BDC_PUBLIC_URL = os.environ.get('BDC_PUBLIC_URL')
+GI_PUBLIC_URL = os.environ.get('GI_PUBLIC_URL')
 
 # APIs URLs
 DOLIBARR_URL = 'http://dolibarr-app/api/index.php'
@@ -176,8 +177,14 @@ if 'https' in BDC_PUBLIC_URL:
 else:
     BDC_CORS_URL = BDC_PUBLIC_URL.replace('http://', '')
 
+if 'https' in GI_PUBLIC_URL:
+    GI_CORS_URL = GI_PUBLIC_URL.replace('https://', '')
+else:
+    GI_CORS_URL = GI_PUBLIC_URL.replace('http://', '')
+
 CORS_ORIGIN_WHITELIST = (
     BDC_CORS_URL,
+    GI_CORS_URL,
 )
 
 # Raven + Logging
