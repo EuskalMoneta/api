@@ -126,10 +126,4 @@ def get_bdc_name(request):
     """
     Get the bdc name (lastname) for the current user.
     """
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-    try:
-        user_data = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
-    except (IndexError, KeyError):
-        return Response({'error': 'Unable to get user data from your user!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    return Response(user_data)
+    return Response(request.user.profile.lastname)
