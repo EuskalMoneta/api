@@ -208,7 +208,7 @@ def change_euro_eusko(request):
         ],
         # "Change - E12345 - Nom de l'adhérent - Mode de paiement"
         'description': 'Change - {} - {} - {}'.format(
-            request.data['member_login'], member_name, request.data['payment_mode']),
+            request.data['member_login'], member_name, request.data['payment_mode_name']),
     }
 
     return Response(cyclos.post(method='payment/perform', data=query_data))
