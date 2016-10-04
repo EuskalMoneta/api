@@ -6,8 +6,9 @@ from rest_framework.response import Response
 
 from base_api import BaseAPIView
 from cyclos_api import CyclosAPIException
+from dolibarr_api import DolibarrAPIException
 from bureauxdechange.misc import BDC
-# from bureauxdechange.serializers import BDCSerializer
+from bureauxdechange import serializers
 from pagination import CustomPagination
 
 log = logging.getLogger()
@@ -19,7 +20,67 @@ class BDCAPIView(BaseAPIView):
         super(BDCAPIView, self).__init__()
 
     def create(self, request):
-        pass
+        serializer = serializers.BDCSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+        # Création du user Bureau de change
+        bdc_query_data = {
+            'group': str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change']),
+            'name': '{} (BDC)'.format(request.data['name']),
+            'username': '{}_BDC'.format(request.data['login']),
+            'skipActivationEmail': True,
+        }
+
+        try:
+            bdc_id = self.cyclos.post(method='user/register', data=bdc_query_data,
+                                      auth_string=request.user.profile.cyclos_auth_string)['result']['user']['id']
+        except (CyclosAPIException, KeyError):
+            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Création du user Opérateur BDC
+        operator_bdc_query_data = {
+            'group': str(settings.CYCLOS_CONSTANTS['groups']['operateurs_bdc']),
+            'name': request.data['name'],
+            'username': request.data['login'],
+            'passwords': [
+                {
+                    'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+                    'value': request.data['login'],
+                    'confirmationValue': request.data['login'],
+                    'assign': True,
+                    'forceChange': False,
+                },
+            ],
+            'customValues': [
+                {
+                    'field': str(settings.CYCLOS_CONSTANTS['user_custom_fields']['bdc']),
+                    'linkedEntityValue': bdc_id,
+                }
+            ],
+            'skipActivationEmail': True,
+        }
+
+        try:
+            self.cyclos.post(method='user/register', data=operator_bdc_query_data)
+        except CyclosAPIException:
+            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Création du user dans Dolibarr
+        try:
+            user_id = self.dolibarr.post(
+                model='users', api_key=request.user.profile.dolibarr_token,
+                data={"login": request.data['login'], "lastname": request.data['name']})['id']
+        except (DolibarrAPIException, KeyError):
+            return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Ajouter l'utilisateur au groupe "Opérateurs BDC"
+        try:
+            self.dolibarr.get(model='users/{}/setGroup/{}'.format(
+                user_id, str(settings.CYCLOS_CONSTANTS['groups']['operateurs_bdc'])))
+        except (DolibarrAPIException, KeyError):
+            return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(request.data)
 
     def retrieve(self, request, pk):
         """
@@ -39,7 +100,7 @@ class BDCAPIView(BaseAPIView):
                 return Response(status=status.HTTP_204_NO_CONTENT)
 
         elif pk and not valid_login:
-            return Response({'error': 'You need to provide a *VALID* ?login parameter! (Format: B001)'},
+            return Response({'error': 'You need to provide a *VALID* parameter! (Format: /B001)'},
                             status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request):
