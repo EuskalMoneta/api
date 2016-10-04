@@ -43,10 +43,20 @@ class BDCAPIView(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
     def list(self, request):
-        # user/search for group = 'bureaux_de_change'
-        data = self.cyclos.post(
-            auth_string=request.user.profile.cyclos_auth_string, method='user/search',
-            data={'groups': [settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change']]})
+        """
+        view_all param is used for filtering, it can filter out the bureaux de change that are disabled in Cyclos
+        view_all is set to False by default: It doesn't return bureaux de change that are disabled in Cyclos
+        """
+        view_all = request.GET.get('view_all', False)
+        if view_all and view_all in [True, 'true', 'True', 'yes', 'Yes']:
+            # user/search for group = 'bureaux_de_change'
+            query_data = {'groups': []}
+        else:
+            # user/search for group = 'bureaux_de_change'
+            query_data = {'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])]}
+
+        data = self.cyclos.post(method='user/search', data=query_data,
+                                auth_string=request.user.profile.cyclos_auth_string)
         objects = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
                    for item in data['result']['pageItems']]
 
