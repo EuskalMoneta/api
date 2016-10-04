@@ -3,13 +3,17 @@
 from django.conf.urls import url
 from rest_framework import routers
 
+from bureauxdechange.views import BDCAPIView
+from members.views import MembersAPIView, MembersSubscriptionsAPIView
+
 from auth_token import views as auth_token_views
 import bdc_cyclos.views as bdc_cyclos_views
 import dolibarr_data.views as dolibarr_data_views
 import euskalmoneta_data.views as euskalmoneta_data_views
-from members.views import MembersAPIView, MembersSubscriptionsAPIView
+
 
 router = routers.SimpleRouter()
+router.register(r'bdc', BDCAPIView, base_name='bdc')
 router.register(r'members', MembersAPIView, base_name='members')
 router.register(r'members-subscriptions', MembersSubscriptionsAPIView, base_name='members-subscriptions')
 
@@ -33,7 +37,7 @@ urlpatterns = [
     url(r'^deposit-banks/$', euskalmoneta_data_views.deposit_banks),
 
     # Cyclos data, data we fetch from/push to its API
-    url(r'^accounts-summaries/$', bdc_cyclos_views.accounts_summaries),
+    url(r'^accounts-summaries/(?P<bdc_login>[\w\-]+)?/?$', bdc_cyclos_views.accounts_summaries),
     url(r'^member-accounts-summaries/$', bdc_cyclos_views.member_account_summary),
     url(r'^accounts-history/$', bdc_cyclos_views.accounts_history),
     url(r'^payments-available-entree-stock/$', bdc_cyclos_views.payments_available_for_entree_stock),
