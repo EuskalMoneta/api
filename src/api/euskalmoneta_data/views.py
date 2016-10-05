@@ -26,7 +26,7 @@ def porteurs_eusko(request):
     List porteurs d'euskos.
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
