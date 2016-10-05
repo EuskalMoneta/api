@@ -66,6 +66,8 @@ INSTALLED_APPS = [
     'dolibarr_data',
     'euskalmoneta_data',
 
+    'gestioninterne',
+
     'corsheaders',
     'raven.contrib.django.raven_compat',
     'rest_framework.authtoken',
