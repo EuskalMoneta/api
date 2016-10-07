@@ -531,40 +531,21 @@ def cash_deposit(request):
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
         description = 'Sortie caisse eusko - {} - {}'.format(request.user.profile.user, bdc_name)
-    elif request.data['mode'] == 'sortie-retour-eusko':
-        payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc'])
-        currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
     else:
         return Response({'error': 'Mode parameter is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if request.data['mode'] == 'cash-deposit' or request.data['mode'] == 'sortie-caisse-eusko':
-        # Enregistrer la remise d'espèces
-        cash_deposit_data = {
-            'type': payment_type,
-            'amount': request.data['deposit_amount'],  # montant total calculé
-            'currency': currency,
-            'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
-            'to': 'SYSTEM',  # System account
-            'description': description
-        }
-        cyclos.post(method='payment/perform', data=cash_deposit_data)
+    # Enregistrer la remise d'espèces
+    cash_deposit_data = {
+        'type': payment_type,
+        'amount': request.data['deposit_amount'],  # montant total calculé
+        'currency': currency,
+        'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+        'to': 'SYSTEM',  # System account
+        'description': description
+    }
+    cyclos.post(method='payment/perform', data=cash_deposit_data)
 
     for payment in request.data['selected_payments']:
-        if request.data['mode'] == 'sortie-retour-eusko':
-            # Enregistrer les retours d'eusko
-            cash_deposit_data = {
-                'type': payment_type,
-                'amount': payment['amount'],  # montant de l'opération correspondante
-                'currency': currency,
-                'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
-                'to': 'SYSTEM',  # System account
-                # "Sortie retour d'eusko - Bxxx - Nom du BDC
-                # Opération de Z12345 - Nom du prestataire" -> description du payment initial
-                'description': 'Sortie retours eusko - {} - {}\n{}'.format(
-                    request.user.profile.user, bdc_name, payment['description'])
-            }
-            cyclos.post(method='payment/perform', data=cash_deposit_data)
-
         # Passer tous les paiements à l'origine du dépôt à l'état "Remis à Euskal Moneta"
         transfer_change_status_data = {
             'transfer': payment['id'],  # ID du paiement (récupéré dans l'historique)
@@ -573,6 +554,71 @@ def cash_deposit(request):
         cyclos.post(method='transferStatus/changeStatus', data=transfer_change_status_data)
 
     return Response(cash_deposit_data)
+
+
+@api_view(['POST'])
+def sortie_retour_eusko(request):
+    """
+    sortie_retour_eusko
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.SortieRetourEuskoSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    try:
+        bdc_name = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
+    except (IndexError, KeyError):
+        return Response({'error': 'Unable to get user data from your user!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    for payment in request.data['selected_payments']:
+        try:
+            adherent_id = [
+                value['linkedEntityValue']['id']
+                for value in payment['customValues']
+                if value['field']['id'] == str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']) and
+                value['field']['internalName'] == 'adherent'
+            ][0]
+        except (KeyError, IndexError):
+            return Response({'error': 'Unable to get adherent_id from one of your selected_payments!'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Enregistrer les retours d'eusko
+        sortie_retour_eusko_data = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc']),
+            'amount': payment['amount'],  # montant de l'opération correspondante
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+            'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+            'to': 'SYSTEM',  # System account
+            'customValues': [
+                {
+                    'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
+                    'linkedEntityValue': adherent_id,  # ID de l'adhérent
+                },
+                {
+                    'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
+                    'linkedEntityValue': payment['porteur']  # ID du porteur
+                },
+            ],
+            # "Sortie retour d'eusko - Bxxx - Nom du BDC
+            # Opération de Z12345 - Nom du prestataire" -> description du payment initial
+            'description': 'Sortie retours eusko - {} - {}\n{}'.format(
+                request.user.profile.user, bdc_name, payment['description'])
+        }
+        cyclos.post(method='payment/perform', data=sortie_retour_eusko_data)
+
+        # Passer tous les paiements à l'origine du dépôt à l'état "Remis à Euskal Moneta"
+        transfer_change_status_data = {
+            'transfer': payment['id'],  # ID du paiement (récupéré dans l'historique)
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['remis_a_euskal_moneta'])
+        }
+        cyclos.post(method='transferStatus/changeStatus', data=transfer_change_status_data)
+
+    return Response(request.data)
 
 
 @api_view(['POST'])
