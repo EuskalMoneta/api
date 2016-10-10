@@ -60,14 +60,14 @@ def payments_available_for_entree_coffre(request):
         'statuses': [
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
         ],
-        'pageSize': 20,
+        'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
     }
     query_data = cyclos.post(method='account/searchAccountHistory', data=entree_coffre_query)
-    if query_data['result']['totalCount'] != 0:
-        return Response(query_data)
-    else:
+    if query_data['result']['totalCount'] == 0:
         return Response({}, status=status.HTTP_204_NO_CONTENT)
+    else:
+        return Response(query_data)
 
 
 @api_view(['POST'])
@@ -161,6 +161,102 @@ def entree_coffre(request):
         # Enregistrer l'Entrée coffre dans Cyclos
         cyclos.post(method='payment/perform', data=payment_query_data)
 
+        # Passer l'opération à l'état "Rapproché"
+        status_query_data = {
+            'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['rapproche'])
+        }
+        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+
+    return Response(request.data['selected_payments'])
+
+
+@api_view(['GET'])
+def payments_available_for_entrees_euro(request):
+    """
+    payments_available_for_entrees_euro
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    query = {
+        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_debit_euro']),
+        'orderBy': 'DATE_DESC',
+        'direction': 'CREDIT',
+        'fromNature': 'USER',
+        'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
+        ],
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+
+    query_data = cyclos.post(method='account/searchAccountHistory', data=query)
+    if query_data['result']['totalCount'] == 0:
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # Il faut filtrer et ne garder que les paiements de type remise_d_euro_en_caisse
+    filtered_data = [
+        item
+        for item in query_data['result']['pageItems']
+        for value in item['customValues']
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['remise_d_euro_en_caisse'])
+    ]
+    return Response(filtered_data)
+
+
+@api_view(['GET'])
+def payments_available_for_entrees_eusko(request):
+    """
+    payments_available_for_entrees_eusko
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    query = {
+        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_des_billets_en_circulation']),
+        'orderBy': 'DATE_DESC',
+        'direction': 'CREDIT',
+        'fromNature': 'USER',
+        'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
+        ],
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+
+    query_data = cyclos.post(method='account/searchAccountHistory', data=query)
+    if query_data['result']['totalCount'] == 0:
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # Il faut filtrer et ne garder que les paiements de type sortie_caisse_eusko_bdc
+    filtered_data = [
+        item
+        for item in query_data['result']['pageItems']
+        for value in item['customValues']
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
+    ]
+    return Response(filtered_data)
+
+
+@api_view(['POST'])
+def validate_entrees_eusko_euro(request):
+    """
+    validate_entrees_eusko_euro
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.GenericHistoryValidationSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    for payment in request.data['selected_payments']:
         # Passer l'opération à l'état "Rapproché"
         status_query_data = {
             'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
