@@ -10,3 +10,13 @@ class SortieCoffreSerializer(serializers.Serializer):
 
 class GenericHistoryValidationSerializer(serializers.Serializer):
     selected_payments = serializers.ListField()
+
+
+class PaymentsAvailableBanqueSerializer(serializers.Serializer):
+    bank_name = serializers.CharField()
+    mode = serializers.CharField()
+
+
+class ValidateBanquesVirements(serializers.Serializer):
+    bank_name = serializers.CharField()
+    selected_payments = serializers.ListField()

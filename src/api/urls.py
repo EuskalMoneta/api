@@ -59,9 +59,12 @@ urlpatterns = [
     url(r'^payments-available-entree-coffre/$', gi_views.payments_available_for_entree_coffre),
     url(r'^entree-coffre/$', gi_views.entree_coffre),
     url(r'^payments-available-entrees-euro/$', gi_views.payments_available_for_entrees_euro),
-    url(r'^validate-entrees-euro/$', gi_views.validate_entrees_eusko_euro),
+    url(r'^validate-entrees-euro/$', gi_views.validate_history),
     url(r'^payments-available-entrees-eusko/$', gi_views.payments_available_for_entrees_eusko),
-    url(r'^validate-entrees-eusko/$', gi_views.validate_entrees_eusko_euro),
+    url(r'^validate-entrees-eusko/$', gi_views.validate_history),
+    url(r'^payments-available-banques/$', gi_views.payments_available_for_banques),
+    url(r'^validate-banques-rapprochement/$', gi_views.validate_history),
+    url(r'^validate-banques-virement/$', gi_views.validate_banques_virement),
 ]
 
 urlpatterns += router.urls

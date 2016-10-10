@@ -244,9 +244,9 @@ def payments_available_for_entrees_eusko(request):
 
 
 @api_view(['POST'])
-def validate_entrees_eusko_euro(request):
+def validate_history(request):
     """
-    validate_entrees_eusko_euro
+    validate_history
     """
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
@@ -261,6 +261,153 @@ def validate_entrees_eusko_euro(request):
         status_query_data = {
             'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
             'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['rapproche'])
+        }
+        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+
+    return Response(request.data['selected_payments'])
+
+
+@api_view(['GET'])
+def payments_available_for_banques(request):
+    """
+    payments_available_for_banques:
+    virements & rapprochements
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.PaymentsAvailableBanqueSerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    bank_user_query = {
+        'keywords': request.query_params['bank_name'],  # bank_name = shortDisplay from Cyclos
+    }
+    try:
+        bank_user_data = cyclos.post(method='user/search', data=bank_user_query)['result']['pageItems'][0]
+
+        bank_account_query = [bank_user_data['id'], None]
+        bank_account_data = cyclos.post(method='account/getAccountsSummary', data=bank_account_query)['result'][0]
+
+        bank_account_id = bank_account_data['id']
+    except (KeyError, IndexError):
+                return Response({'error': 'Unable to get bank data for the provided bank_name!'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+    bank_history_query = {
+        'account': bank_account_id,  # ID du compte
+        'orderBy': 'DATE_DESC',
+        'direction': 'CREDIT',
+        'fromNature': 'USER',
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+
+    if request.query_params['mode'] == 'virement':
+        bank_history_query.update({'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
+        ]})
+    elif request.query_params['mode'] == 'rapprochement':
+        bank_history_query.update({'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
+        ]})
+    else:
+        return Response({'error': 'The mode you privded is not supported by this endpoint!'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    bank_history_data = cyclos.post(method='account/searchAccountHistory', data=bank_history_query)
+    if bank_history_data['result']['totalCount'] == 0:
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    # Il faut filtrer et ne garder que les paiements de type depot_en_banque
+    filtered_data = [
+        item
+        for item in bank_history_data['result']['pageItems']
+        for value in item['customValues']
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque'])
+    ]
+    return Response(filtered_data)
+
+
+@api_view(['POST'])
+def validate_banques_virement(request):
+    """
+    validate_banques_virement
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.ValidateBanquesVirements(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    bank_user_query = {
+        'keywords': request.data['bank_name'],  # bank_name = shortDisplay from Cyclos
+    }
+    try:
+        bank_fullname = cyclos.post(method='user/search', data=bank_user_query)['result']['pageItems'][0]['display']
+    except (KeyError, IndexError):
+                return Response({'error': 'Unable to get bank data for the provided bank_name!'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        user_id = cyclos.post(method='user/getCurrentUser', data=[])['result']['id']
+    except KeyError:
+        return Response({'error': 'Unable to get current user Cyclos data!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Cotisations
+    cotisation_query = {
+        'type': str(
+            settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_le_compte_de_debit_en_euro']),
+        'amount': 60,  # montant du virement "Cotisations"
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'from': user_id,  # ID de l'utilisateur Banque de dépôt
+        'to': 'SYSTEM',
+        'description': '{} - Cotisations'.format(bank_fullname)  # nom de la banque de dépôt
+    }
+    cyclos.post(method='payment/perform', data=cotisation_query)
+
+    # Ventes
+    ventes_query = {
+        'type': str(
+            settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_le_compte_de_debit_en_euro']),
+        'amount': 12,  # montant du virement "Ventes"
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'from': user_id,  # ID de l'utilisateur Banque de dépôt
+        'to': 'SYSTEM',
+        'description': '{} - Ventes'.format(bank_fullname)  # nom de la banque de dépôt
+    }
+    cyclos.post(method='payment/perform', data=ventes_query)
+
+    # Change eusko billet
+    change_eusko_billet_query = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_dedie']),
+        'amount': 2450,  # montant du virement "Changes eusko billets"
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'from': user_id,  # ID de l'utilisateur Banque de dépôt
+        'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
+        'description': '{} - Changes Eusko billet'.format(bank_fullname)  # nom de la banque de dépôt
+    }
+    cyclos.post(method='payment/perform', data=change_eusko_billet_query)
+
+    # Change eusko numérique
+    change_eusko_numerique_query = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_dedie']),
+        'amount': 180,  # montant du virement "Changes eusko numérique"
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'from': user_id,  # ID de l'utilisateur Banque de dépôt
+        'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+        'description': '{} - Changes Eusko numérique'.format(bank_fullname)  # nom de la banque de dépôt
+    }
+    cyclos.post(method='payment/perform', data=change_eusko_numerique_query)
+
+    for payment in request.data['selected_payments']:
+        # Passer l'opération à l'état "Virements faits"
+        status_query_data = {
+            'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
         }
         cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
