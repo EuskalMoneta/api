@@ -10,7 +10,7 @@ from auth_token import views as auth_token_views
 import bdc_cyclos.views as bdc_cyclos_views
 import dolibarr_data.views as dolibarr_data_views
 import euskalmoneta_data.views as euskalmoneta_data_views
-import gestioninterne.views as gestioninterne_views
+import gestioninterne.views as gi_views
 
 
 router = routers.SimpleRouter()
@@ -55,7 +55,9 @@ urlpatterns = [
     url(r'^bdc-change-password/$', bdc_cyclos_views.bdc_change_password),
 
     # Endpoints for Gestion Interne
-    url(r'^sortie-coffre/$', gestioninterne_views.sortie_coffre),
+    url(r'^sortie-coffre/$', gi_views.sortie_coffre),
+    url(r'^payments-available-entree-coffre/$', gi_views.payments_available_for_entree_coffre),
+    url(r'^entree-coffre/$', gi_views.entree_coffre),
 ]
 
 urlpatterns += router.urls

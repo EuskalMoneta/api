@@ -6,3 +6,7 @@ class SortieCoffreSerializer(serializers.Serializer):
     porteur = serializers.CharField()
     bdc_dest = serializers.CharField()
     description = serializers.CharField()
+
+
+class GenericHistoryValidationSerializer(serializers.Serializer):
+    selected_payments = serializers.ListField()
