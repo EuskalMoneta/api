@@ -353,13 +353,21 @@ def bank_deposit(request):
     """
     bank_deposit: bank deposit
     """
-    try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     serializer = serializers.BankDepositSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    try:
+        login_bdc = request.data['login_bdc']
+        cyclos_mode = 'gi_bdc'
+    except KeyError:
+        login_bdc = None
+        cyclos_mode = 'bdc'
+
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     # Récupére les détails de chaque paiement,
     # nécessaire pour connaître le type de chaque paiement, ce qui va servir à calculer la ventilation
