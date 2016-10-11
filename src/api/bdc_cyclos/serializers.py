@@ -32,7 +32,7 @@ class ReconversionSerializer(serializers.Serializer):
 class AccountsHistorySerializer(serializers.Serializer):
 
     account_type = serializers.CharField()
-    bdc_login = serializers.CharField(required=False)
+    login_bdc = serializers.CharField(required=False)
     filter = serializers.CharField(required=False)
     direction = serializers.CharField(required=False)
 

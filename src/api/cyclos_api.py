@@ -24,7 +24,7 @@ class CyclosAPI(object):
         try:
             if self.mode == 'bdc':
                 self._init_bdc()
-            elif self.mode == 'gi_bdc' and self.bdc_login:
+            elif self.mode == 'gi_bdc' and self.login_bdc:
                 self._init_gi_bdc()
         except AttributeError:
             pass
@@ -52,7 +52,7 @@ class CyclosAPI(object):
             raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
     def _init_gi_bdc(self):
-        self.user_id = self.get_member_id_from_login(self.bdc_login)
+        self.user_id = self.get_member_id_from_login(self.login_bdc)
         self.user_bdc_id = self.user_id
 
     def get_member_id_from_login(self, member_login, auth_string=None):

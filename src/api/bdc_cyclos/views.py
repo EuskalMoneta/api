@@ -13,14 +13,14 @@ log = logging.getLogger()
 
 
 @api_view(['GET'])
-def accounts_summaries(request, bdc_login=None):
+def accounts_summaries(request, login_bdc=None):
     """
     List all accounts_summaries for this BDC user.
     """
-    cyclos_mode = 'gi_bdc' if bdc_login else 'bdc'
+    cyclos_mode = 'gi_bdc' if login_bdc else 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, bdc_login=bdc_login)
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -281,14 +281,14 @@ def accounts_history(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
-        bdc_login = request.query_params['bdc_login']
+        login_bdc = request.query_params['login_bdc']
         cyclos_mode = 'gi_bdc'
     except KeyError:
-        bdc_login = None
+        login_bdc = None
         cyclos_mode = 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, bdc_login=bdc_login)
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
