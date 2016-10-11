@@ -532,7 +532,6 @@ def cash_deposit(request):
     """
     cash_deposit
     """
-
     serializer = serializers.CashDepositSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
@@ -592,13 +591,20 @@ def sortie_retour_eusko(request):
     """
     sortie_retour_eusko
     """
-    try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
     serializer = serializers.SortieRetourEuskoSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    try:
+        login_bdc = request.data['login_bdc']
+        cyclos_mode = 'gi_bdc'
+    except KeyError:
+        login_bdc = None
+        cyclos_mode = 'bdc'
+
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     try:
