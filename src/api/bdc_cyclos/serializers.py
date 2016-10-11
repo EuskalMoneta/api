@@ -12,6 +12,7 @@ class SortieStockBDCSerializer(serializers.Serializer):
     amount = serializers.CharField()
     porteur = serializers.CharField()
     description = serializers.CharField()
+    login_bdc = serializers.CharField(required=False)
 
 
 class ChangeEuroEuskoSerializer(serializers.Serializer):
