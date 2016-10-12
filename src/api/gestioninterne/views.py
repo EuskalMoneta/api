@@ -340,7 +340,7 @@ def validate_banques_virement(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = serializers.ValidateBanquesVirements(data=request.data)
+    serializer = serializers.ValidateBanquesVirementsSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     bank_user_query = {
