@@ -476,4 +476,4 @@ def close_bdc(request, login_bdc):
     }
     cyclos.post(method='userStatus/changeStatus', data=deactivate_bdc_data)
 
-    return Response([])
+    return Response(login_bdc)
