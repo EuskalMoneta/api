@@ -4,6 +4,7 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from cyclos_api import CyclosAPI, CyclosAPIException
+from dolibarr_api import DolibarrAPI
 from gestioninterne import serializers
 
 
@@ -412,3 +413,67 @@ def validate_banques_virement(request):
         cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     return Response(request.data['selected_payments'])
+
+
+@api_view(['DELETE'])
+def close_bdc(request, login_bdc):
+    """
+    Close BDC
+    """
+    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+
+    # Récupérer le user Opérateur BDC
+    try:
+        operator_bdc_id = dolibarr.get(model='users', login=login_bdc)[0]['id']
+    except (KeyError, IndexError):
+        return Response({'error': 'Unable to get operator_bdc_id from this username!'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    # Désactiver l'utilisateur Opérateur BDC
+    # TODO: il faut une constante pour le statut
+    dolibarr.post(model='users/{}'.format(operator_bdc_id), data={"statut": "0"})
+
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Récupérer l'opérateur BDC correspondant au bureau de change
+    bdc_operator_cyclos_query = {
+        'groups': [str(settings.CYCLOS_CONSTANTS['groups']['operateurs_bdc'])],
+        'keywords': login_bdc,  # par exemple B003
+    }
+    try:
+        bdc_operator_cyclos_id = cyclos.post(
+            method='user/search', data=bdc_operator_cyclos_query)['result']['pageItems'][0]['id']
+    except (KeyError, IndexError):
+                return Response({'error': 'Unable to get bdc_operator_cyclos_id data!'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+    # Désactiver l'opérateur BDC
+    deactivate_operator_bdc_data = {
+        'user': bdc_operator_cyclos_id,
+        'status': 'DISABLED',
+    }
+    cyclos.post(method='userStatus/changeStatus', data=deactivate_operator_bdc_data)
+
+    # Récupérer l'utilisateur bureau de change
+    bdc_operator_cyclos_query = {
+        'groups': [str(settings.CYCLOS_CONSTANTS['groups']['operateurs_bdc'])],
+        'keywords': login_bdc,  # par exemple B003
+    }
+    try:
+        bdc_cyclos_id = cyclos.post(
+            method='user/search', data=bdc_operator_cyclos_query)['result']['pageItems'][0]['id']
+    except (KeyError, IndexError):
+                return Response({'error': 'Unable to get bdc_cyclos_id data!'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+    # Désactiver le bureau de change
+    deactivate_bdc_data = {
+        'user': bdc_cyclos_id,
+        'status': 'DISABLED',
+    }
+    cyclos.post(method='userStatus/changeStatus', data=deactivate_bdc_data)
+
+    return Response([])
