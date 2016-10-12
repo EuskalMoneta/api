@@ -477,3 +477,66 @@ def close_bdc(request, login_bdc):
     cyclos.post(method='userStatus/changeStatus', data=deactivate_bdc_data)
 
     return Response(login_bdc)
+
+
+@api_view(['GET'])
+def payments_available_depots_retraits(request):
+    """
+    payments_available_depots_retraits
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    res = []
+
+    depots_query = {
+        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_des_billets_en_circulation']),
+        'orderBy': 'DATE_DESC',
+        'direction': 'DEBIT',
+        'toNature': 'USER',
+        'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
+        ],
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+    depots_data = cyclos.post(method='account/searchAccountHistory', data=depots_query)
+
+    # Il faut filtrer et ne garder que les opérations de type depot_de_billets
+    depots_filtered_data = [
+        item
+        for item in depots_data['result']['pageItems']
+        for value in item['customValues']
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['depot_de_billets'])
+    ]
+    res.append(depots_filtered_data)
+
+    retraits_query = {
+        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_des_billets_en_circulation']),
+        'orderBy': 'DATE_DESC',
+        'direction': 'CREDIT',
+        'fromNature': 'USER',
+        'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
+        ],
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+    retraits_data = cyclos.post(method='account/searchAccountHistory', data=retraits_query)
+
+    # Il faut filtrer et ne garder que les opérations de type retrait_de_billets
+    retraits_filtered_data = [
+        item
+        for item in retraits_data['result']['pageItems']
+        for value in item['customValues']
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_de_billets'])
+    ]
+    res.append(retraits_filtered_data)
+
+    if res:
+        # flatten res (which used to be a list containing 2 lists)
+        return Response(sum(res, []))
+    else:
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
