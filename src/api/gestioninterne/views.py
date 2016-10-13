@@ -527,3 +527,113 @@ def validate_depots_retraits(request):
 
     return Response(request.data['selected_payments'])
 
+
+@api_view(['GET'])
+def payments_available_for_reconversions(request):
+    """
+    payments_available_for_reconversions
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    res = []
+
+    # Reconversions d'eusko billets
+    query_billets = {
+        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_des_billets_en_circulation']),
+        'orderBy': 'DATE_DESC',
+        'direction': 'DEBIT',
+        'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
+        ],
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+    query_billets_data = cyclos.post(method='account/searchAccountHistory', data=query_billets)
+
+    # Il faut filtrer et ne garder que les paiements de type reconversion_billets_versement_des_eusko
+    filtered_billets_data = [
+        item
+        for item in query_billets_data['result']['pageItems']
+        for value in item['customValues']
+        if item['type']['id'] ==
+        str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko'])
+    ]
+    res.append(filtered_billets_data)
+
+    # Reconversions d'eusko numériques
+    query_numeriques = {
+        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_debit_eusko_numerique']),
+        'orderBy': 'DATE_DESC',
+        'direction': 'CREDIT',
+        'statuses': [
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
+        ],
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+    query_numeriques_data = cyclos.post(method='account/searchAccountHistory', data=query_numeriques)
+
+    # Il faut filtrer et ne garder que les paiements de type reconversion_billets_versement_des_eusko
+    filtered_numeriques_data = [
+        item
+        for item in query_numeriques_data['result']['pageItems']
+        for value in item['customValues']
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_numerique'])
+    ]
+    res.append(filtered_numeriques_data)
+
+    if res:
+        # flatten res (which used to be a list containing 2 lists)
+        return Response(sum(res, []))
+    else:
+        return Response({}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['POST'])
+def validate_reconversions(request):
+    """
+    validate_reconversions
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.ValidateReconversionsSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # 1) Enregistrer le virement pour les eusko billet
+    billets_query = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
+        'amount': request.data['montant_total_billets'],  # montant total des reconversions billet sélectionnées
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
+        'to': 'SYSTEM',
+        'description': 'Reconversions - Remboursement des prestataires + commission pour Euskal Moneta.',
+    }
+    cyclos.post(method='payment/perform', data=billets_query)
+
+    # 2) Enregistrer le virement pour les eusko numériques
+    numeriques_query = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
+        'amount': request.data['montant_total_numerique'],  # montant total des reconversions numériques sélectionnées
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+        'to': 'SYSTEM',
+        'description': 'Reconversions - Remboursement des prestataires + commission pour Euskal Moneta.',
+    }
+    cyclos.post(method='payment/perform', data=numeriques_query)
+
+    # 3) Passer chaque opération sélectionnée à l'état "Virements faits" :
+    for payment in request.data['selected_payments']:
+        # Passer l'opération à l'état "Virements faits"
+        status_query_data = {
+            'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+        }
+        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+
+    return Response(request.data['selected_payments'])

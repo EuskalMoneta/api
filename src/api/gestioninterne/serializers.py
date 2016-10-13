@@ -33,3 +33,8 @@ class ValidateDepotsRetraitsSerializer(serializers.Serializer):
     montant_total_retraits = serializers.CharField()
 
 
+class ValidateReconversionsSerializer(serializers.Serializer):
+
+    selected_payments = serializers.ListField()
+    montant_total_billets = serializers.CharField()
+    montant_total_numerique = serializers.CharField()

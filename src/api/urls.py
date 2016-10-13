@@ -68,6 +68,8 @@ urlpatterns = [
     url(r'^validate-banques-virement/$', gi_views.validate_banques_virement),
     url(r'^payments-available-depots-retraits/$', gi_views.payments_available_depots_retraits),
     url(r'^validate-depots-retraits/$', gi_views.validate_depots_retraits),
+    url(r'^payments-available-reconversions/$', gi_views.payments_available_for_reconversions),
+    url(r'^validate-reconversions/$', gi_views.validate_reconversions),
 ]
 
 urlpatterns += router.urls
