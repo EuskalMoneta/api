@@ -24,3 +24,8 @@ class ValidateBanquesVirementsSerializer(serializers.Serializer):
 
     bank_name = serializers.CharField()
     selected_payments = serializers.ListField()
+
+
+class ValidateDepotsRetraitsSerializer(serializers.Serializer):
+
+    selected_payments = serializers.ListField()

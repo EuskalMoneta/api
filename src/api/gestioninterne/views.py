@@ -475,3 +475,55 @@ def payments_available_depots_retraits(request):
         return Response(sum(res, []))
     else:
         return Response({}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['POST'])
+def validate_depots_retraits(request):
+    """
+    validate_depots_retraits
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.ValidateDepotsRetraitsSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # 1) Enregistrer le virement :
+
+    # Si montant_total_depots > montant_total_retraits
+    if request.data['montant_total_depots'] > request.data['montant_total_retraits']:
+        virement_query = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_entre_comptes_dedies']),
+            'amount': request.data['montant_total_depots'] - request.data['montant_total_retraits'],
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
+            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+            'description': "Régularisation entre comptes dédiés suite à des dépôts et retraits d'eusko.",
+        }
+        cyclos.post(method='payment/perform', data=virement_query)
+
+    elif request.data['montant_total_depots'] > request.data['montant_total_retraits']:
+        # Si montant_total_depots < montant_total_retraits
+        virement_query = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_entre_comptes_dedies']),
+            'amount': request.data['montant_total_retraits'] - request.data['montant_total_depots'],
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
+            'description': "Régularisation entre comptes dédiés suite à des dépôts et retraits d'eusko.",
+        }
+        cyclos.post(method='payment/perform', data=virement_query)
+
+    # 2) Passer chaque opération sélectionnée à l'état "Virements faits" :
+    for payment in request.data['selected_payments']:
+        # Passer l'opération à l'état "Virements faits"
+        status_query_data = {
+            'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+        }
+        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+
+    return Response(request.data['selected_payments'])
+
