@@ -125,6 +125,63 @@ class BDCAPIView(BaseAPIView):
         result_page = paginator.paginate_queryset(objects, request)
         return paginator.get_paginated_response(result_page)
 
+    def destroy(self, request, pk):
+        """
+        Close BDC
+        """
+        # Récupérer le user Opérateur BDC
+        try:
+            operator_bdc_id = self.dolibarr.get(
+                api_key=request.user.profile.dolibarr_token, model='users', login=pk)[0]['id']
+        except (KeyError, IndexError):
+            return Response({'error': 'Unable to get operator_bdc_id from this username!'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        # Désactiver l'utilisateur Opérateur BDC
+        # TODO: il faut une constante pour le statut
+        self.dolibarr.post(model='users/{}'.format(operator_bdc_id), data={"statut": "0"})
+
+        # Récupérer l'opérateur BDC correspondant au bureau de change
+        bdc_operator_cyclos_query = {
+            'groups': [str(settings.CYCLOS_CONSTANTS['groups']['operateurs_bdc'])],
+            'keywords': pk,  # par exemple B003
+        }
+        try:
+            bdc_operator_cyclos_id = self.cyclos.post(
+                auth_string=request.user.profile.cyclos_auth_string,
+                method='user/search', data=bdc_operator_cyclos_query)['result']['pageItems'][0]['id']
+        except (KeyError, IndexError):
+                    return Response({'error': 'Unable to get bdc_operator_cyclos_id data!'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+
+        # Désactiver l'opérateur BDC
+        deactivate_operator_bdc_data = {
+            'user': bdc_operator_cyclos_id,
+            'status': 'DISABLED',
+        }
+        self.cyclos.post(method='userStatus/changeStatus', data=deactivate_operator_bdc_data)
+
+        # Récupérer l'utilisateur bureau de change
+        bdc_operator_cyclos_query = {
+            'groups': [str(settings.CYCLOS_CONSTANTS['groups']['operateurs_bdc'])],
+            'keywords': pk,  # par exemple B003
+        }
+        try:
+            bdc_cyclos_id = self.cyclos.post(
+                method='user/search', data=bdc_operator_cyclos_query)['result']['pageItems'][0]['id']
+        except (KeyError, IndexError):
+                    return Response({'error': 'Unable to get bdc_cyclos_id data!'},
+                                    status=status.HTTP_400_BAD_REQUEST)
+
+        # Désactiver le bureau de change
+        deactivate_bdc_data = {
+            'user': bdc_cyclos_id,
+            'status': 'DISABLED',
+        }
+        self.cyclos.post(method='userStatus/changeStatus', data=deactivate_bdc_data)
+
+        return Response(pk)
+
     def update(self, request, pk=None):
         # return Response(self.dolibarr.patch(model=self.model, api_key=dolibarr_token))
         pass

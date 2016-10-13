@@ -66,7 +66,6 @@ urlpatterns = [
     url(r'^payments-available-banques/$', gi_views.payments_available_for_banques),
     url(r'^validate-banques-rapprochement/$', gi_views.validate_history),
     url(r'^validate-banques-virement/$', gi_views.validate_banques_virement),
-    url(r'^close-bdc/(?P<login_bdc>[\w\-]+)/?$', gi_views.close_bdc),
     url(r'^payments-available-depots-retraits/$', gi_views.payments_available_depots_retraits),
 ]
 
