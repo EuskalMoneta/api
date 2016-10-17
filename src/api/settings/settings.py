@@ -190,10 +190,14 @@ if 'https' in GI_PUBLIC_URL:
 else:
     GI_CORS_URL = GI_PUBLIC_URL.replace('http://', '')
 
-CORS_ORIGIN_WHITELIST = (
-    BDC_CORS_URL,
-    GI_CORS_URL,
-)
+# This is needed for Selenium tests to pass (we don't know the URL inside containers)
+if DEBUG:
+    CORS_ORIGIN_ALLOW_ALL = True
+else:
+    CORS_ORIGIN_WHITELIST = (
+        BDC_CORS_URL,
+        GI_CORS_URL,
+    )
 
 # Raven + Logging
 RAVEN_CONFIG = {
