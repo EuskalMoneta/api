@@ -22,6 +22,14 @@ services:
     networks:
       - eusko_net
 
+  selenium:
+    image: selenium/standalone-firefox
+    container_name: eusko_selenium
+    ports:
+      - 4444:4444
+    networks:
+      - eusko_net
+
   dolibarr-app:
     image: euskalmoneta/dolibarr:custom
     ports:
