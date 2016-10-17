@@ -23,10 +23,11 @@ services:
       - eusko_net
 
   selenium:
-    image: selenium/standalone-firefox
+    image: selenium/standalone-firefox-debug
     container_name: eusko_selenium
     ports:
       - 4444:4444
+      - 5900:5900
     networks:
       - eusko_net
 
