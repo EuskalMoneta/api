@@ -456,9 +456,18 @@ def bank_deposit(request):
     }
     cyclos.post(method='payment/perform', data=bank_deposit_data)
 
-    if float(request.data['deposit_amount']) < float(request.data['deposit_calculated_amount']):
+    if request.data['deposit_amount']:
+        deposit_amount = float(request.data['deposit_amount'])
+    else:
+        deposit_amount = float(0)
 
-        regularisation = request.data['deposit_calculated_amount'] - request.data['deposit_amount']
+    if request.data['deposit_calculated_amount']:
+        deposit_calculated_amount = float(request.data['deposit_calculated_amount'])
+    else:
+        deposit_calculated_amount = float(0)
+
+    if deposit_amount < deposit_calculated_amount:
+        regularisation = deposit_calculated_amount - deposit_amount
 
         # Enregistrer un paiement du Compte de gestion vers la Banque de dépôt
         payment_gestion_to_deposit_data = {
@@ -486,9 +495,9 @@ def bank_deposit(request):
         }
         cyclos.post(method='payment/perform', data=payment_deposit_to_caisse_bdc_data)
 
-    elif float(request.data['deposit_amount']) > float(request.data['deposit_calculated_amount']):
+    elif deposit_amount > deposit_calculated_amount:
 
-        regularisation = request.data['deposit_amount'] - request.data['deposit_calculated_amount']
+        regularisation = deposit_amount - deposit_calculated_amount
 
         # Enregistrer un paiement de la Caisse € du BDC vers la Banque de dépôt
         payment_caisse_bdc_to_deposit_data = {
