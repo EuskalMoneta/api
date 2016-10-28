@@ -1094,12 +1094,16 @@ ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_DEBIT = create_payment_transfer_type(
     from_account_type_id=ID_BANQUE_DE_DEPOT,
     to_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
 )
+# Type de paiement utilisé pour les virements depuis les banques de
+# dépôt pour l'argent des changes.
 ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DEDIE = create_payment_transfer_type(
     name='Virement de Banque de dépôt vers Compte dédié',
     direction='USER_TO_USER',
     from_account_type_id=ID_BANQUE_DE_DEPOT,
     to_account_type_id=ID_COMPTE_DEDIE,
 )
+# Type de paiement utilisé pour les virements de remboursement des
+# reconversions.
 ID_TYPE_PAIEMENT_COMPTE_DEDIE_VERS_COMPTE_DE_DEBIT = create_payment_transfer_type(
     name='Virement de Compte dédié vers Compte débit €',
     direction='USER_TO_SYSTEM',
@@ -1158,14 +1162,17 @@ ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_BDC = create_payment_transfer_type(
     ],
 )
 
-# Même fonctionnement que pour la reconversion billets, sauf que les
-# virements générés par l'API Eusko sont faits à partir du compte dédié
-# numérique au lieu du compte dédié billet.
 ID_TYPE_PAIEMENT_RECONVERSION_NUMERIQUE = create_payment_transfer_type(
     name='Reconversion numérique',
     direction='USER_TO_SYSTEM',
     from_account_type_id=ID_COMPTE_ADHERENT,
     to_account_type_id=ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE,
+    status_flows=[
+        ID_STATUS_FLOW_VIREMENTS,
+    ],
+    initial_statuses=[
+        ID_STATUS_VIREMENTS_A_FAIRE,
+    ],
 )
 
 # Les 2 types de paiement ci-dessous seront utilisés lorsqu'un adhérent
@@ -1187,9 +1194,11 @@ ID_TYPE_PAIEMENT_DEPOT_DE_BILLETS = create_payment_transfer_type(
     ],
     status_flows=[
         ID_STATUS_FLOW_REMISE_A_EM,
+        ID_STATUS_FLOW_VIREMENTS,
     ],
     initial_statuses=[
         ID_STATUS_A_REMETTRE,
+        ID_STATUS_VIREMENTS_A_FAIRE,
     ],
 )
 ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE = create_payment_transfer_type(
@@ -1225,6 +1234,12 @@ ID_TYPE_PAIEMENT_RETRAIT_DE_BILLETS = create_payment_transfer_type(
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_VIREMENTS,
+    ],
+    initial_statuses=[
+        ID_STATUS_VIREMENTS_A_FAIRE,
+    ],
 )
 ID_TYPE_PAIEMENT_RETRAIT_DU_COMPTE = create_payment_transfer_type(
     name='Retrait du compte',
@@ -1243,6 +1258,20 @@ ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT = create_payment_transfer_type(
     direction='USER_TO_USER',
     from_account_type_id=ID_COMPTE_ADHERENT,
     to_account_type_id=ID_COMPTE_ADHERENT,
+)
+
+# Types de paiement pour des régularisations entre caisses des BDC.
+ID_TYPE_PAIEMENT_DE_STOCK_DE_BILLETS_BDC_VERS_RETOURS_EUSKO_BDC = create_payment_transfer_type(
+    name="De Stock de billets BDC vers Retours d'eusko BDC",
+    direction='USER_TO_SELF',
+    from_account_type_id=ID_STOCK_DE_BILLETS_BDC,
+    to_account_type_id=ID_RETOURS_EUSKO_BDC,
+)
+ID_TYPE_PAIEMENT_DE_RETOURS_EUSKO_BDC_VERS_STOCK_DE_BILLETS_BDC = create_payment_transfer_type(
+    name="De Retours d'eusko BDC vers Stock de billets BDC",
+    direction='USER_TO_SELF',
+    from_account_type_id=ID_RETOURS_EUSKO_BDC,
+    to_account_type_id=ID_STOCK_DE_BILLETS_BDC,
 )
 
 
@@ -1287,12 +1316,17 @@ all_user_to_user_payments = [
     ID_TYPE_PAIEMENT_VIREMENT_ENTRE_COMPTES_DEDIES,
     ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
 ]
+all_user_to_self_payments = [
+    ID_TYPE_PAIEMENT_DE_STOCK_DE_BILLETS_BDC_VERS_RETOURS_EUSKO_BDC,
+    ID_TYPE_PAIEMENT_DE_RETOURS_EUSKO_BDC_VERS_STOCK_DE_BILLETS_BDC,
+]
 all_payments_to_system = \
     all_system_to_system_payments \
     + all_user_to_system_payments
 all_payments_to_user = \
     all_system_to_user_payments \
-    + all_user_to_user_payments
+    + all_user_to_user_payments \
+    + all_user_to_self_payments
 
 
 ########################################################################
@@ -1352,29 +1386,26 @@ ID_CHAMP_PERSO_UTILISATEUR_BDC = create_user_custom_field_linked_user(
 # groupes "Bureaux de change", "Banques de dépôt" ou "Porteurs"). Comme
 # Cyclos vérifie l'unicité du login, cela rend impossible la création de
 # doublons (c'est donc une mesure de protection).
-def create_member_product(name, user_account_type_id=None):
+def create_member_product(name,
+                          my_profile_fields=[],
+                          accessible_user_groups=[],
+                          other_users_profile_fields={},
+                          user_account_type_id=None,
+                          dashboard_actions=[],
+                          system_payments=[],
+                          user_payments=[]):
     logger.info('Création du produit "%s"...', name)
-    myProfileFields = []
-    for field in ('FULL_NAME', 'LOGIN_NAME', 'ACCOUNT_NUMBER'):
-        myProfileFields.append({
-            'profileField': field,
-            'enabled': True,
-            'editableAtRegistration': True,
-            'visible': True,
-            'editable': True,
-            'managePrivacy': False,
-        })
+    # On commence par créer le produit avec les propriétés de base.
     product = {
         'class': 'org.cyclos.model.users.products.MemberProductDTO',
         'name': name,
         'internalName': get_internal_name(name),
-        'myProfileFields': myProfileFields,
         # Workaround of a bug in Cyclos 4.6.
-        'myRecordTypeFields': [
-        ],
+        'myRecordTypeFields': [],
     }
     if user_account_type_id:
         product['userAccount'] = user_account_type_id
+        product['accountAccessibility'] = 'ALWAYS'
     r = requests.post(
             eusko_web_services + 'product/save',
             headers=headers,
@@ -1382,6 +1413,47 @@ def create_member_product(name, user_account_type_id=None):
     check_request_status(r)
     product_id = r.json()['result']
     logger.debug('product_id = %s', product_id)
+    # Ensuite on charge le produit pour pouvoir le modifier.
+    r = requests.get(
+        eusko_web_services + 'product/load/' + product_id,
+        headers=headers
+    )
+    check_request_status(r)
+    product = r.json()['result']
+    # On modifie les paramètres du produit puis on l'enregistre.
+    for field in product['myProfileFields']:
+        if field['profileField'] in my_profile_fields:
+            field['enabled'] = True
+            field['editableAtRegistration'] = True
+            field['visible'] = True
+            field['editable'] = True
+    if accessible_user_groups:
+        product['userGroupAccessibility'] = 'SPECIFIC'
+        product['accessibleUserGroups'] = accessible_user_groups
+        product['searchUsersOnGroups'] = 'ALL'
+    for field in product['userProfileFields']:
+        key = field['profileField']
+        try:
+            if key in other_users_profile_fields:
+                field['visible'] = True
+                field['userKeywords'] = other_users_profile_fields[key]
+        except TypeError:
+            # Pour les champs de profil personnalisés (comme 'BDC'),
+            # 'profileField' n'est une string mais un dictionnaire et
+            # un TypeError est balancé. On ignore l'erreur car on ne
+            # traite ici que les champs de profil standards.
+            pass
+    for dashboard_action in product['dashboardActions']:
+        if dashboard_action['dashboardAction'] in dashboard_actions:
+            dashboard_action['enabled'] = True
+            dashboard_action['enabledByDefault'] = True
+    product['systemPayments'] = system_payments
+    product['userPayments'] = user_payments
+    r = requests.post(
+            eusko_web_services + 'product/save',
+            headers=headers,
+            json=product)
+    check_request_status(r)
     return product_id
 
 
@@ -1394,11 +1466,18 @@ def assign_product_to_group(product_id, group_id):
     check_request_status(r)
 
 
-# TODO Modifier en set_admin_group_permissions(group_id, ...) ?
-# A faire s'il s'avère que cette fonction n'est pas adaptée pour les
-# produits de membres.
-def set_product_properties(
-        product_id,
+def get_admin_product(group_id):
+    r = requests.get(
+            eusko_web_services + 'group/load/' + group_id,
+            headers=headers,
+            json={})
+    check_request_status(r)
+    product_id = r.json()['result']['adminProduct']['id']
+    return product_id
+
+
+def set_admin_group_permissions(
+        group_id,
         my_profile_fields=[],
         passwords=[],
         visible_transaction_fields=[],
@@ -1418,7 +1497,10 @@ def set_product_properties(
         access_user_accounts=[],
         payments_as_user_to_user=[],
         payments_as_user_to_system=[],
+        payments_as_user_to_self=[],
         chargeback_of_payments_to_user=[]):
+    # Récupération de l'id du produit de ce groupe.
+    product_id = get_admin_product(group_id)
     # Chargement du produit
     r = requests.get(
             eusko_web_services + 'product/load/' + product_id,
@@ -1478,6 +1560,7 @@ def set_product_properties(
     product['userAccountsAccess'] = access_user_accounts
     product['userPaymentsAsUser'] = payments_as_user_to_user
     product['systemPaymentsAsUser'] = payments_as_user_to_system
+    product['selfPaymentsAsUser'] = payments_as_user_to_self
     product['chargebackPaymentsToUser'] = chargeback_of_payments_to_user
     # Enregistrement du produit modifié
     r = requests.post(
@@ -1506,16 +1589,6 @@ def create_admin_group(name):
     logger.debug('group_id = %s', group_id)
     add_constant('groups', name, group_id)
     return group_id
-
-
-def get_admin_product(group_id):
-    r = requests.get(
-            eusko_web_services + 'group/load/' + group_id,
-            headers=headers,
-            json={})
-    check_request_status(r)
-    product_id = r.json()['result']['adminProduct']['id']
-    return product_id
 
 
 def create_member_group(name,
@@ -1566,6 +1639,10 @@ ID_GROUPE_OPERATEURS_BDC = create_admin_group(
 # toutes les opérations sont faites par l'opérateur BDC associé).
 ID_PRODUIT_STOCK_DE_BILLETS_BDC = create_member_product(
     name='Stock de billets BDC',
+    my_profile_fields=[
+        'FULL_NAME',
+        'LOGIN_NAME',
+    ],
     user_account_type_id=ID_STOCK_DE_BILLETS_BDC,
 )
 ID_PRODUIT_CAISSE_EURO_BDC = create_member_product(
@@ -1593,6 +1670,10 @@ ID_GROUPE_BUREAUX_DE_CHANGE = create_member_group(
 # Banques de dépôt.
 ID_PRODUIT_BANQUE_DE_DEPOT = create_member_product(
     name='Banque de dépôt',
+    my_profile_fields=[
+        'FULL_NAME',
+        'LOGIN_NAME',
+    ],
     user_account_type_id=ID_BANQUE_DE_DEPOT,
 )
 ID_GROUPE_BANQUES_DE_DEPOT = create_member_group(
@@ -1605,6 +1686,10 @@ ID_GROUPE_BANQUES_DE_DEPOT = create_member_group(
 # Comptes dédiés.
 ID_PRODUIT_COMPTE_DEDIE = create_member_product(
     name='Compte dédié',
+    my_profile_fields=[
+        'FULL_NAME',
+        'LOGIN_NAME',
+    ],
     user_account_type_id=ID_COMPTE_DEDIE,
 )
 ID_GROUPE_COMPTES_DEDIES = create_member_group(
@@ -1614,40 +1699,94 @@ ID_GROUPE_COMPTES_DEDIES = create_member_group(
     ]
 )
 
-# Adhérents.
+# Adhérents : On crée d'abord les 2 groupes car on en a besoin pour
+# définir les permissions (autrement dit pour créer les produits).
 prestataires='Adhérents prestataires'
-ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
-    name=prestataires,
-    user_account_type_id=ID_COMPTE_ADHERENT,
-)
+utilisateurs='Adhérents utilisateurs'
 ID_GROUPE_ADHERENTS_PRESTATAIRES = create_member_group(
     name=prestataires,
     initial_user_status='DISABLED',
-    products=[
-        ID_PRODUIT_ADHERENTS_PRESTATAIRES,
-    ],
-)
-utilisateurs='Adhérents utilisateurs'
-ID_PRODUIT_ADHERENTS_UTILISATEURS = create_member_product(
-    name=utilisateurs,
-    user_account_type_id=ID_COMPTE_ADHERENT,
 )
 ID_GROUPE_ADHERENTS_UTILISATEURS = create_member_group(
     name=utilisateurs,
     initial_user_status='DISABLED',
-    products=[
-        ID_PRODUIT_ADHERENTS_UTILISATEURS,
-    ],
 )
 
-# Porteurs.
-ID_PRODUIT_PORTEUR = create_member_product(
-    name='Porteur',
+# Permissions pour les prestataires.
+ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
+    name=prestataires,
+    my_profile_fields=[
+        'FULL_NAME',
+        'LOGIN_NAME',
+        'ACCOUNT_NUMBER',
+    ],
+    accessible_user_groups=[
+        ID_GROUPE_ADHERENTS_PRESTATAIRES,
+        ID_GROUPE_ADHERENTS_UTILISATEURS,
+    ],
+    other_users_profile_fields={
+        'FULL_NAME': False,
+        'ACCOUNT_NUMBER': True,
+    },
+    user_account_type_id=ID_COMPTE_ADHERENT,
+    dashboard_actions=[
+        'ACCOUNT_INFO',
+        'PAYMENT_USER_TO_USER',
+        'PAYMENT_USER_TO_SYSTEM',
+    ],
+    system_payments=[
+        ID_TYPE_PAIEMENT_RECONVERSION_NUMERIQUE,
+    ],
+    user_payments=[
+        ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
+    ],
 )
+assign_product_to_group(ID_PRODUIT_ADHERENTS_PRESTATAIRES,
+                        ID_GROUPE_ADHERENTS_PRESTATAIRES)
+
+# Permissions pour les utilisateurs.
+ID_PRODUIT_ADHERENTS_UTILISATEURS = create_member_product(
+    name=utilisateurs,
+    my_profile_fields=[
+        'FULL_NAME',
+        'LOGIN_NAME',
+        'ACCOUNT_NUMBER',
+    ],
+    accessible_user_groups=[
+        ID_GROUPE_ADHERENTS_PRESTATAIRES,
+        ID_GROUPE_ADHERENTS_UTILISATEURS,
+    ],
+    other_users_profile_fields={
+        'FULL_NAME': False,
+        'ACCOUNT_NUMBER': True,
+    },
+    user_account_type_id=ID_COMPTE_ADHERENT,
+    dashboard_actions=[
+        'ACCOUNT_INFO',
+        'PAYMENT_USER_TO_USER',
+        'PAYMENT_USER_TO_SYSTEM',
+    ],
+    user_payments=[
+        ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
+    ],
+)
+assign_product_to_group(ID_PRODUIT_ADHERENTS_UTILISATEURS,
+                        ID_GROUPE_ADHERENTS_UTILISATEURS)
+
+# Produit pour tous les groupes d'utilisateurs qui n'auront pas de
+# compte.
+ID_PRODUIT_UTILISATEURS_BASIQUES_SANS_COMPTE = create_member_product(
+    name='Utilisateurs basiques sans compte',
+    my_profile_fields=[
+        'FULL_NAME',
+        'LOGIN_NAME',
+    ],
+)
+# Porteurs.
 ID_GROUPE_PORTEURS = create_member_group(
     name='Porteurs',
     products=[
-        ID_PRODUIT_PORTEUR,
+        ID_PRODUIT_UTILISATEURS_BASIQUES_SANS_COMPTE,
     ]
 )
 
@@ -1665,8 +1804,8 @@ all_user_groups = [
 # créés auparavant.
 #
 # Permissions pour le groupe "Gestion interne":
-set_product_properties(
-    get_admin_product(ID_GROUPE_GESTION_INTERNE),
+set_admin_group_permissions(
+    group_id=ID_GROUPE_GESTION_INTERNE,
     my_profile_fields=[
         'FULL_NAME',
         'LOGIN_NAME',
@@ -1698,11 +1837,12 @@ set_product_properties(
     access_user_accounts=all_user_accounts,
     payments_as_user_to_user=all_user_to_user_payments,
     payments_as_user_to_system=all_user_to_system_payments,
+    payments_as_user_to_self=all_user_to_self_payments,
     chargeback_of_payments_to_user=all_payments_to_user
 )
 # Permissions pour le groupe "Opérateurs BDC":
-set_product_properties(
-    get_admin_product(ID_GROUPE_OPERATEURS_BDC),
+set_admin_group_permissions(
+    group_id=ID_GROUPE_OPERATEURS_BDC,
     my_profile_fields=[
         'FULL_NAME',
         'LOGIN_NAME',
@@ -1748,6 +1888,7 @@ set_product_properties(
         ID_CAISSE_EURO_BDC,
         ID_CAISSE_EUSKO_BDC,
         ID_RETOURS_EUSKO_BDC,
+        ID_BANQUE_DE_DEPOT,
         ID_COMPTE_ADHERENT,
     ],
     payments_as_user_to_user=[
