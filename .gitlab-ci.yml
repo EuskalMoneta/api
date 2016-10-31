@@ -89,6 +89,8 @@ deploy_job_staging:
     - docker-compose stop
     - docker-compose rm -f api
     - docker-compose up -d
+    - docker cp etc/dolibarr/conf.php eusko-dolibarr-app-staging:/var/www/html/conf/
+    - docker-compose exec --user root dolibarr-app chown -R www-data:www-data /var/www/documents/
   tags:
     - eusko-integration
   only:
