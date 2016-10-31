@@ -469,7 +469,18 @@ def bank_deposit(request):
     if deposit_amount < deposit_calculated_amount:
         regularisation = deposit_calculated_amount - deposit_amount
 
-        # Enregistrer un paiement du Compte de gestion vers la Banque de dépôt
+        # Enregistrer un paiement de la Banque de dépôt vers la Caisse € du BDC
+        payment_deposit_to_caisse_bdc_data = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['paiement_de_banque_de_depot_vers_caisse_euro_bdc']),  # noqa
+            'amount': regularisation,  # Montant de la régularisation
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
+            'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+            'description': 'Espèces non déposées'
+        }
+        cyclos.post(method='payment/perform', data=payment_deposit_to_caisse_bdc_data)
+
+        # Enregistrer un paiement du Compte de débit € vers la Banque de dépôt
         payment_gestion_to_deposit_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_depot_insuffisant']),
             'amount': regularisation,  # Montant de la régularisation
@@ -482,20 +493,9 @@ def bank_deposit(request):
                     'linkedEntityValue': cyclos.user_bdc_id  # ID de l'utilisateur Bureau de change
                 },
             ],
-            'description': 'Régularisation dépôt insuffisant'
+            'description': 'Régularisation espèces non déposées'
         }
         cyclos.post(method='payment/perform', data=payment_gestion_to_deposit_data)
-
-        # Enregistrer un paiement de la Banque de dépôt vers la Caisse € du BDC
-        payment_deposit_to_caisse_bdc_data = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['paiement_de_banque_de_depot_vers_caisse_euro_bdc']),  # noqa
-            'amount': regularisation,  # Montant de la régularisation
-            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
-            'from': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
-            'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
-            'description': 'Régularisation dépôt insuffisant'
-        }
-        cyclos.post(method='payment/perform', data=payment_deposit_to_caisse_bdc_data)
 
     elif deposit_amount > deposit_calculated_amount:
 
@@ -508,11 +508,11 @@ def bank_deposit(request):
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': cyclos.user_bdc_id,          # ID de l'utilisateur Bureau de change
             'to': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
-            'description': 'Régularisation dépôt excessif'
+            'description': 'Espèces déposées en trop'
         }
         cyclos.post(method='payment/perform', data=payment_caisse_bdc_to_deposit_data)
 
-        # Enregistrer un paiement de la Banque de dépôt vers le Compte de gestion
+        # Enregistrer un paiement de la Banque de dépôt vers le Compte de débit €
         payment_deposit_to_gestion_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['regularisation_depot_excessif']),
             'amount': regularisation,  # Montant de la régularisation
@@ -525,7 +525,7 @@ def bank_deposit(request):
                     'linkedEntityValue': cyclos.user_bdc_id  # ID de l'utilisateur Bureau de change
                 },
             ],
-            'description': 'Régularisation dépôt excessif'
+            'description': 'Régularisation espèces déposées en trop'
         }
         cyclos.post(method='payment/perform', data=payment_deposit_to_gestion_data)
 
