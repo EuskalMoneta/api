@@ -172,9 +172,13 @@ $dolibarr_main_db_collation='utf8_general_ci';
 // $dolibarr_main_authentication='openid,dolibarr';
 // $dolibarr_main_authentication='forceuser';	// Add also $dolibarr_auto_user='loginforuser';
 
-//
-$dolibarr_main_authentication='dolibarr';
+$dolibarr_main_authentication='cyclos4';
 
+// Parameters used to setup Cyclos 4 authentication.
+// Uncomment them if dolibarr_main_authentication = 'cyclos4'
+//
+// URL of the Cyclos 4 network.
+$dolibarr_main_auth_cyclos4_network_url='http://cyclos-app:8080/eusko/';
 
 // Parameters used to setup LDAP authentication.
 // Uncomment them if dolibarr_main_authentication = 'ldap'

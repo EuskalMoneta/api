@@ -1,4 +1,5 @@
 # coding: utf-8
+from __future__ import unicode_literals
 import argparse
 import logging
 import requests
@@ -21,16 +22,18 @@ def check_request_status(r):
         logger.error(r.text)
         r.raise_for_status()
 
+def get_internal_name(name):
+    name = name.replace('€', 'euro')
+    return slugify(name, separator='_')
+
 # Ensemble des constantes nécessaires à l'API.
 constants_by_category = {}
-
 
 def add_constant(category, name, value):
     if category not in constants_by_category.keys():
         constants_by_category[category] = {}
-    name = name.replace('€', 'euro')
-    slug_name = slugify(name, separator='_')
-    constants_by_category[category][slug_name] = value
+    internal_name = get_internal_name(name)
+    constants_by_category[category][internal_name] = value
 
 # Arguments à fournir dans la ligne de commande
 parser = argparse.ArgumentParser()
@@ -41,20 +44,18 @@ parser.add_argument('--debug',
                     help='enable debug messages',
                     action='store_true')
 args = parser.parse_args()
+for k, v in vars(args).items():
+    logger.debug('args.%s = %s', k, v)
 
-if not args.url.endswith('/'):
-    args.url = args.url + '/'
+url = args.url.rstrip('/')
 if args.debug:
     logger.setLevel(logging.DEBUG)
 else:
     logger.setLevel(logging.INFO)
 
-for k, v in vars(args).items():
-    logger.debug('args.%s = %s', k, v)
-
 # URLs des web services
-global_web_services = args.url + 'global/web-rpc/'
-eusko_web_services = args.url + 'eusko/web-rpc/'
+global_web_services = url + '/global/web-rpc/'
+eusko_web_services = url + '/eusko/web-rpc/'
 
 # En-têtes pour toutes les requêtes (il n'y a qu'un en-tête, pour
 # l'authentification).
@@ -100,6 +101,11 @@ logger.debug('ID_CANAL_WEB_SERVICES = %s', ID_CANAL_WEB_SERVICES)
 
 ########################################################################
 # Modification de la configuration par défaut :
+# - définition de l'URL racine, pour que l'application web fonctionne
+# - choix de la virgule comme séparateur pour les décimales
+# - dates au format jour/mois/année
+# - heures au format 24 heures
+# - activation de l'utilisation des numéros de compte
 # - activation du canal "Web services" par défaut pour tous les
 #   utilisateurs
 #
@@ -112,6 +118,26 @@ r = requests.get(global_web_services + 'configuration/getDefault',
                  headers=headers)
 check_request_status(r)
 default_config_id = r.json()['result']['id']
+# On charge la configuration par défaut pour pouvoir la modifier.
+r = requests.get(
+    global_web_services + 'configuration/load/' + default_config_id,
+    headers=headers
+)
+check_request_status(r)
+default_config = r.json()['result']
+default_config['rootUrl'] = url
+default_config['numberFormat'] = 'COMMA_AS_DECIMAL'
+default_config['dateFormat'] = 'DMY_SLASH'
+default_config['timeFormat'] = 'H24'
+default_config['accountNumberConfiguration'] = {
+    'enabled': True
+}
+r = requests.post(
+    global_web_services + 'configuration/save',
+    headers=headers,
+    json=default_config
+)
+check_request_status(r)
 # Puis on liste les config de canaux pour retrouver l'id de la config
 # du canal "Web services".
 r = requests.get(
@@ -150,11 +176,14 @@ check_request_status(r)
 #
 def create_network(name, internal_name):
     logger.info('Création du réseau "%s"...', name)
-    r = requests.post(global_web_services + 'network/save',
-                      headers=headers,
-                      json={'name': 'Eusko',
-                            'internalName': 'eusko',
-                            'enabled': True})
+    r = requests.post(
+            global_web_services + 'network/save',
+            headers=headers,
+            json={
+                'name': 'Eusko',
+                'internalName': get_internal_name(name),
+                'enabled': True
+            })
     check_request_status(r)
     network_id = r.json()['result']
     logger.debug('network_id = %s', network_id)
@@ -171,12 +200,16 @@ ID_RESEAU_EUSKO = create_network(
 #
 def create_currency(name, symbol):
     logger.info('Création de la devise "%s"...', name)
-    r = requests.post(eusko_web_services + 'currency/save',
-                      headers=headers,
-                      json={'name': name,
-                            'symbol': symbol,
-                            'suffix': ' ' + symbol,
-                            'precision': 2})
+    r = requests.post(
+            eusko_web_services + 'currency/save',
+            headers=headers,
+            json={
+                'name': name,
+                'internalName': get_internal_name(name),
+                'symbol': symbol,
+                'suffix': ' ' + symbol,
+                'precision': 2
+            })
     check_request_status(r)
     currency_id = r.json()['result']
     logger.debug('currency_id = %s', currency_id)
@@ -194,6 +227,187 @@ ID_DEVISE_EURO = create_currency(
 
 
 ########################################################################
+# Création des champs personnalisés pour les paiements.
+#
+# Note: On a besoin de la liste des champs personnalisés pour créer les
+# types de compte puis les types de paiement, c'est pour cette raison
+# qu'ils sont créés en premier.
+def create_transaction_custom_field_linked_user(name, required=True):
+    logger.info('Création du champ personnalisé "%s"...', name)
+    r = requests.post(
+            eusko_web_services + 'transactionCustomField/save',
+            headers=headers,
+            json={
+                'name': name,
+                'internalName': get_internal_name(name),
+                'type': 'LINKED_ENTITY',
+                'linkedEntityType': 'USER',
+                'control': 'ENTITY_SELECTION',
+                'required': required
+            })
+    check_request_status(r)
+    custom_field_id = r.json()['result']
+    logger.debug('custom_field_id = %s', custom_field_id)
+    add_constant('transaction_custom_fields', name, custom_field_id)
+    return custom_field_id
+
+
+def create_transaction_custom_field_single_selection(name,
+                                                     possible_values_name,
+                                                     possible_values,
+                                                     required=True):
+    logger.info('Création du champ personnalisé "%s"...', name)
+    r = requests.post(
+            eusko_web_services + 'transactionCustomField/save',
+            headers=headers,
+            json={
+                'name': name,
+                'internalName': get_internal_name(name),
+                'type': 'SINGLE_SELECTION',
+                'control': 'SINGLE_SELECTION',
+                'required': required
+            })
+    check_request_status(r)
+    custom_field_id = r.json()['result']
+    logger.debug('custom_field_id = %s', custom_field_id)
+    add_constant('transaction_custom_fields', name, custom_field_id)
+    for value in possible_values:
+        logger.info('Ajout de la valeur possible "%s"...', value)
+        r = requests.post(
+                eusko_web_services + 'transactionCustomFieldPossibleValue/save',
+                headers=headers,
+                json={
+                    'field': custom_field_id,
+                    'value': value
+                })
+        check_request_status(r)
+        possible_value_id = r.json()['result']
+        add_constant(possible_values_name, value, possible_value_id)
+    return custom_field_id
+
+
+def create_transaction_custom_field_text(name, unique=False,
+                                         required=True):
+    logger.info('Création du champ personnalisé "%s"...', name)
+    r = requests.post(
+            eusko_web_services + 'transactionCustomField/save',
+            headers=headers,
+            json={
+                'name': name,
+                'internalName': get_internal_name(name),
+                'type': 'STRING',
+                'size': 'LARGE',
+                'control': 'TEXT',
+                'unique': unique,
+                'required': required
+            })
+    check_request_status(r)
+    custom_field_id = r.json()['result']
+    logger.debug('custom_field_id = %s', custom_field_id)
+    add_constant('transaction_custom_fields', name, custom_field_id)
+    return custom_field_id
+
+
+def create_transaction_custom_field_decimal(name, required=True):
+    logger.info('Création du champ personnalisé "%s"...', name)
+    r = requests.post(
+            eusko_web_services + 'transactionCustomField/save',
+            headers=headers,
+            json={
+                'name': name,
+                'internalName': get_internal_name(name),
+                'type': 'DECIMAL',
+                'control': 'TEXT',
+                'required': required
+            })
+    check_request_status(r)
+    custom_field_id = r.json()['result']
+    logger.debug('custom_field_id = %s', custom_field_id)
+    add_constant('transaction_custom_fields', name, custom_field_id)
+    return custom_field_id
+
+
+def add_custom_field_to_transfer_type(transfer_type_id, custom_field_id):
+    logger.info("Ajout d'un champ personnalisé...")
+    r = requests.post(
+            eusko_web_services + 'transactionCustomField/addRelation',
+            headers=headers,
+            json=[transfer_type_id, custom_field_id])
+    check_request_status(r)
+
+ID_CHAMP_PERSO_PAIEMENT_BDC = create_transaction_custom_field_linked_user(
+    name='BDC',
+)
+ID_CHAMP_PERSO_PAIEMENT_PORTEUR = create_transaction_custom_field_linked_user(
+    name='Porteur',
+)
+ID_CHAMP_PERSO_PAIEMENT_ADHERENT = create_transaction_custom_field_linked_user(
+    name='Adhérent',
+)
+ID_CHAMP_PERSO_PAIEMENT_ADHERENT_FACULTATIF = create_transaction_custom_field_linked_user(
+    name='Adhérent (facultatif)',
+    required=False,
+)
+ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT = create_transaction_custom_field_single_selection(
+    name='Mode de paiement',
+    possible_values_name='payment_modes',
+    possible_values=[
+        'Chèque',
+        'Espèces',
+        'Paiement en ligne',
+        'Prélèvement',
+        'Virement',
+    ],
+)
+ID_CHAMP_PERSO_PAIEMENT_PRODUIT = create_transaction_custom_field_single_selection(
+    name='Produit',
+    possible_values_name='products',
+    possible_values=[
+        'Foulard',
+    ],
+)
+ID_CHAMP_PERSO_PAIEMENT_NUMERO_BORDEREAU = create_transaction_custom_field_text(
+    name='Numéro de bordereau',
+    required=False,
+)
+ID_CHAMP_PERSO_PAIEMENT_MONTANT_COTISATIONS = create_transaction_custom_field_decimal(
+    name='Montant Cotisations',
+)
+ID_CHAMP_PERSO_PAIEMENT_MONTANT_VENTES = create_transaction_custom_field_decimal(
+    name='Montant Ventes',
+)
+ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_BILLET = create_transaction_custom_field_decimal(
+    name='Montant Changes billet',
+)
+ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_NUMERIQUE = create_transaction_custom_field_decimal(
+    name='Montant Changes numérique',
+)
+ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE = create_transaction_custom_field_text(
+    name='Numéro de transaction banque',
+)
+ID_CHAMP_PERSO_PAIEMENT_NUMERO_FACTURE = create_transaction_custom_field_text(
+    name='Numéro de facture',
+    unique=True,
+)
+
+all_transaction_fields = [
+    ID_CHAMP_PERSO_PAIEMENT_BDC,
+    ID_CHAMP_PERSO_PAIEMENT_PORTEUR,
+    ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
+    ID_CHAMP_PERSO_PAIEMENT_ADHERENT_FACULTATIF,
+    ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT,
+    ID_CHAMP_PERSO_PAIEMENT_PRODUIT,
+    ID_CHAMP_PERSO_PAIEMENT_NUMERO_BORDEREAU,
+    ID_CHAMP_PERSO_PAIEMENT_MONTANT_COTISATIONS,
+    ID_CHAMP_PERSO_PAIEMENT_MONTANT_VENTES,
+    ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_BILLET,
+    ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_NUMERIQUE,
+    ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
+    ID_CHAMP_PERSO_PAIEMENT_NUMERO_FACTURE,
+]
+
+
+########################################################################
 # Création des types de comptes.
 #
 # Note : La méthode save() de l'interface AccountTypeService prend en
@@ -206,13 +420,19 @@ ID_DEVISE_EURO = create_currency(
 # java.lang.IllegalStateException: Could not instantiate bean of class
 # org.cyclos.entities.banking.AccountType.
 #
+# Note: 'customFieldsForList' définit la liste des champs personnalisés
+# visibles dans l'historique du compte. On ne fait pas dans le détail et
+# et on donne la liste de tous les champs à chaque fois. Le résultat
+# n'est pas terrible dans l'application web mais ce n'est pas grave.
 def create_system_account_type(name, currency_id, limit_type):
     logger.info('Création du type de compte système "%s"...', name)
     params = {
         'class': 'org.cyclos.model.banking.accounttypes.SystemAccountTypeDTO',
         'name': name,
+        'internalName': get_internal_name(name),
         'currency': currency_id,
-        'limitType': limit_type
+        'limitType': limit_type,
+        'customFieldsForList': all_transaction_fields,
     }
     if limit_type == 'LIMITED':
         params['creditLimit'] = 0
@@ -230,7 +450,9 @@ def create_user_account_type(name, currency_id):
     params = {
         'class': 'org.cyclos.model.banking.accounttypes.UserAccountTypeDTO',
         'name': name,
-        'currency': currency_id
+        'internalName': get_internal_name(name),
+        'currency': currency_id,
+        'customFieldsForList': all_transaction_fields,
     }
     r = requests.post(eusko_web_services + 'accountType/save',
                       headers=headers, json=params)
@@ -261,25 +483,10 @@ ID_COMPTE_DES_BILLETS_EN_CIRCULATION = create_system_account_type(
     currency_id=ID_DEVISE_EUSKO,
     limit_type='LIMITED',
 )
-ID_CAISSE_EUSKO_EM = create_system_account_type(
-    name='Caisse eusko EM',
-    currency_id=ID_DEVISE_EUSKO,
-    limit_type='LIMITED',
-)
 ID_COMPTE_DE_DEBIT_EURO = create_system_account_type(
     name='Compte de débit €',
     currency_id=ID_DEVISE_EURO,
     limit_type='UNLIMITED',
-)
-ID_COMPTE_DE_GESTION = create_system_account_type(
-    name='Compte de gestion',
-    currency_id=ID_DEVISE_EURO,
-    limit_type='LIMITED',
-)
-ID_CAISSE_EURO_EM = create_system_account_type(
-    name='Caisse € EM',
-    currency_id=ID_DEVISE_EURO,
-    limit_type='LIMITED',
 )
 
 # Comptes des bureaux de change :
@@ -334,10 +541,7 @@ all_system_accounts = [
     ID_STOCK_DE_BILLETS,
     ID_COMPTE_DE_TRANSIT,
     ID_COMPTE_DES_BILLETS_EN_CIRCULATION,
-    ID_CAISSE_EUSKO_EM,
     ID_COMPTE_DE_DEBIT_EURO,
-    ID_COMPTE_DE_GESTION,
-    ID_CAISSE_EURO_EM,
     ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE,
 ]
 all_user_accounts = [
@@ -352,201 +556,93 @@ all_user_accounts = [
 
 
 ########################################################################
-# Création des champs personnalisés pour les paiements.
+# Création des "status flow" pour les paiements.
 #
-def create_transaction_custom_field_linked_user(name, internal_name,
-                                                required=True):
-    logger.info('Création du champ personnalisé "%s"...', name)
-    r = requests.post(eusko_web_services + 'transactionCustomField/save',
-                      headers=headers,
-                      json={'name': name,
-                            'internalName': internal_name,
-                            'type': 'LINKED_ENTITY',
-                            'linkedEntityType': 'USER',
-                            'control': 'ENTITY_SELECTION',
-                            'required': required})
+def create_transfer_status_flow(name):
+    logger.info('Création du "status flow" "%s"...', name)
+    r = requests.post(
+            eusko_web_services + 'transferStatusFlow/save',
+            headers=headers,
+            json={
+                'name': name,
+                'internalName': get_internal_name(name),
+            })
     check_request_status(r)
-    custom_field_id = r.json()['result']
-    logger.debug('custom_field_id = %s', custom_field_id)
-    add_constant('transaction_custom_fields', name, custom_field_id)
-    return custom_field_id
+    status_flow_id = r.json()['result']
+    logger.debug('status_flow_id = %s', status_flow_id)
+    add_constant('transfer_status_flows', name, status_flow_id)
+    return status_flow_id
 
-
-def create_transaction_custom_field_single_selection(name, internal_name,
-                                                     possible_values,
-                                                     required=True):
-    logger.info('Création du champ personnalisé "%s"...', name)
-    r = requests.post(eusko_web_services + 'transactionCustomField/save',
-                      headers=headers,
-                      json={'name': name,
-                            'internalName': internal_name,
-                            'type': 'SINGLE_SELECTION',
-                            'control': 'SINGLE_SELECTION',
-                            'required': required})
+def create_transfer_status(name, status_flow, possible_next=None):
+    logger.info('Création du statut "%s"...', name)
+    status = {
+        'name': name,
+        'internalName': get_internal_name(name),
+        'flow': status_flow,
+    }
+    if possible_next:
+        status['possibleNext'] = possible_next
+    r = requests.post(
+            eusko_web_services + 'transferStatus/save',
+            headers=headers,
+            json=status)
     check_request_status(r)
-    custom_field_id = r.json()['result']
-    logger.debug('custom_field_id = %s', custom_field_id)
-    add_constant('transaction_custom_fields', name, custom_field_id)
-    for value in possible_values:
-        logger.info('Ajout de la valeur possible "%s"...', value)
-        r = requests.post(eusko_web_services + 'transactionCustomFieldPossibleValue/save',
-                          headers=headers,
-                          json={'field': custom_field_id,
-                                'value': value})
-        check_request_status(r)
-    return custom_field_id
+    status_id = r.json()['result']
+    logger.debug('status_id = %s', status_id)
+    add_constant('transfer_statuses', name, status_id)
+    return status_id
 
-
-def create_transaction_custom_field_text(name, internal_name, required=True):
-    logger.info('Création du champ personnalisé "%s"...', name)
-    r = requests.post(eusko_web_services + 'transactionCustomField/save',
-                      headers=headers,
-                      json={'name': name,
-                            'internalName': internal_name,
-                            'type': 'STRING',
-                            'size': 'LARGE',
-                            'control': 'TEXT',
-                            'required': required})
-    check_request_status(r)
-    custom_field_id = r.json()['result']
-    logger.debug('custom_field_id = %s', custom_field_id)
-    add_constant('transaction_custom_fields', name, custom_field_id)
-    return custom_field_id
-
-
-def create_transaction_custom_field_decimal(name, internal_name,
-                                            required=True):
-    logger.info('Création du champ personnalisé "%s"...', name)
-    r = requests.post(eusko_web_services + 'transactionCustomField/save',
-                      headers=headers,
-                      json={'name': name,
-                            'internalName': internal_name,
-                            'type': 'DECIMAL',
-                            'control': 'TEXT',
-                            'required': required})
-    check_request_status(r)
-    custom_field_id = r.json()['result']
-    logger.debug('custom_field_id = %s', custom_field_id)
-    add_constant('transaction_custom_fields', name, custom_field_id)
-    return custom_field_id
-
-
-def add_custom_field_to_transfer_type(transfer_type_id, custom_field_id):
-    logger.info("Ajout d'un champ personnalisé...")
-    r = requests.post(eusko_web_services + 'transactionCustomField/addRelation',
-                      headers=headers,
-                      json=[transfer_type_id, custom_field_id])
-    check_request_status(r)
-
-ID_CHAMP_PERSO_PAIEMENT_BDC = create_transaction_custom_field_linked_user(
-    name='BDC',
-    internal_name='bdc',
+# Rapprochement : pour toutes les opérations pour lesquelles on
+# souhaite faire des rapprochements.
+ID_STATUS_FLOW_RAPPROCHEMENT = create_transfer_status_flow(
+    name='Rapprochement',
 )
-ID_CHAMP_PERSO_PAIEMENT_PORTEUR = create_transaction_custom_field_linked_user(
-    name='Porteur',
-    internal_name='porteur',
+ID_STATUS_RAPPROCHE = create_transfer_status(
+    name='Rapproché',
+    status_flow=ID_STATUS_FLOW_RAPPROCHEMENT,
 )
-ID_CHAMP_PERSO_PAIEMENT_ADHERENT = create_transaction_custom_field_linked_user(
-    name='Adhérent',
-    internal_name='adherent',
-)
-ID_CHAMP_PERSO_PAIEMENT_ADHERENT_FACULTATIF = create_transaction_custom_field_linked_user(
-    name='Adhérent (facultatif)',
-    internal_name='adherent_facultatif',
-    required=False,
-)
-ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT = create_transaction_custom_field_single_selection(
-    name='Mode de paiement',
-    internal_name='mode_de_paiement',
-    possible_values=[
-        'Chèque',
-        'Espèces',
-        'Paiement en ligne',
-        'Prélèvement',
-        'Virement',
-    ],
-)
-ID_CHAMP_PERSO_PAIEMENT_PRODUIT = create_transaction_custom_field_single_selection(
-    name='Produit',
-    internal_name='produit',
-    possible_values=[
-        'Foulard',
-    ],
-)
-ID_CHAMP_PERSO_PAIEMENT_NUMERO_BORDEREAU = create_transaction_custom_field_text(
-    name='Numéro de bordereau',
-    internal_name='numero_bordereau',
-)
-ID_CHAMP_PERSO_PAIEMENT_MONTANT_COTISATIONS = create_transaction_custom_field_decimal(
-    name='Montant Cotisations',
-    internal_name='montant_cotisations',
-)
-ID_CHAMP_PERSO_PAIEMENT_MONTANT_VENTES = create_transaction_custom_field_decimal(
-    name='Montant Ventes',
-    internal_name='montant_ventes',
-)
-ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_BILLET = create_transaction_custom_field_decimal(
-    name='Montant Changes billet',
-    internal_name='montant_changes_billet',
-)
-ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_NUMERIQUE = create_transaction_custom_field_decimal(
-    name='Montant Changes numérique',
-    internal_name='montant_changes_numerique',
-)
-ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE = create_transaction_custom_field_text(
-    name='Numéro de transaction banque',
-    internal_name='numero_transaction_banque',
+ID_STATUS_A_RAPPROCHER = create_transfer_status(
+    name='A rapprocher',
+    status_flow=ID_STATUS_FLOW_RAPPROCHEMENT,
+    possible_next=ID_STATUS_RAPPROCHE,
 )
 
-all_transaction_fields = [
-    ID_CHAMP_PERSO_PAIEMENT_BDC,
-    ID_CHAMP_PERSO_PAIEMENT_PORTEUR,
-    ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
-    ID_CHAMP_PERSO_PAIEMENT_ADHERENT_FACULTATIF,
-    ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT,
-    ID_CHAMP_PERSO_PAIEMENT_PRODUIT,
-    ID_CHAMP_PERSO_PAIEMENT_NUMERO_BORDEREAU,
-    ID_CHAMP_PERSO_PAIEMENT_MONTANT_COTISATIONS,
-    ID_CHAMP_PERSO_PAIEMENT_MONTANT_VENTES,
-    ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_BILLET,
-    ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_NUMERIQUE,
-    ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
+# Remise à Euskal Moneta : pour tous les paiements qui créditent les
+# caisses €, eusko et retours d'eusko des bureaux de change.
+ID_STATUS_FLOW_REMISE_A_EM = create_transfer_status_flow(
+    name='Remise à Euskal Moneta',
+)
+ID_STATUS_REMIS = create_transfer_status(
+    name='Remis à Euskal Moneta',
+    status_flow=ID_STATUS_FLOW_REMISE_A_EM,
+)
+ID_STATUS_A_REMETTRE = create_transfer_status(
+    name='A remettre à Euskal Moneta',
+    status_flow=ID_STATUS_FLOW_REMISE_A_EM,
+    possible_next=ID_STATUS_REMIS,
+)
+
+# Virements : pour les reconversions d'eusko en € (virement à faire au
+# prestataire qui a reconverti) et pour les dépôts en banque (virements
+# à faire vers les comptes dédiés).
+ID_STATUS_FLOW_VIREMENTS = create_transfer_status_flow(
+    name='Virements',
+)
+ID_STATUS_VIREMENTS_FAITS = create_transfer_status(
+    name='Virements faits',
+    status_flow=ID_STATUS_FLOW_VIREMENTS,
+)
+ID_STATUS_VIREMENTS_A_FAIRE = create_transfer_status(
+    name='Virements à faire',
+    status_flow=ID_STATUS_FLOW_VIREMENTS,
+    possible_next=ID_STATUS_VIREMENTS_FAITS,
+)
+
+all_status_flows = [
+    ID_STATUS_FLOW_RAPPROCHEMENT,
+    ID_STATUS_FLOW_REMISE_A_EM,
+    ID_STATUS_FLOW_VIREMENTS,
 ]
-
-
-########################################################################
-# Création du rôle "Administrateurs de comptes" pour les autorisations.
-#
-# Ce rôle sera attribué au groupe "Administrateurs de comptes" et sera
-# utilisé dans tous les paiements soumis à autorisation. De cette
-# manière, ce sont les membres du groupe "Administrateurs de comptes"
-# qui pourront autoriser les paiements soumis à autorisation.
-#
-def create_authorization_role(name):
-    logger.info('Création du rôle "%s" pour les autorisations...', name)
-    r = requests.post(eusko_web_services + 'authorizationRole/save',
-                      headers=headers,
-                      json={'name': name})
-    check_request_status(r)
-    authorization_role_id = r.json()['result']
-    logger.debug('authorization_role_id = %s', authorization_role_id)
-    return authorization_role_id
-
-
-def create_authorization_level(transfer_type_id, authorization_role_id):
-    logger.info("Création d'un niveau d'autorisation...")
-    r = requests.post(eusko_web_services + 'authorizationLevel/save',
-                      headers=headers,
-                      json={'transferType': transfer_type_id,
-                            'roles': [authorization_role_id]})
-    check_request_status(r)
-    authorization_level_id = r.json()['result']
-    logger.debug('authorization_level_id = %s', authorization_level_id)
-    return authorization_level_id
-
-ID_ROLE_AUTORISATION_ADMIN_COMPTES = create_authorization_role(
-    name='Administrateurs de comptes',
-)
 
 
 ########################################################################
@@ -565,33 +661,38 @@ ID_ROLE_AUTORISATION_ADMIN_COMPTES = create_authorization_role(
 #
 # On définit un "maxChargebackTime" de 2 mois, ce qui veut dire que le
 # délai maximum pour rejeter un paiment est de 2 mois.
-# Note : les paiements pourront être rejetés par les administrateurs de
-# comptes (voir le paramétrage des permissions).
+# Note : les paiements pourront être rejetés par les administrateurs du
+# groupe "Gestion interne" (voir le paramétrage des permissions).
 #
 # Par souci de simplicité, tous les types de paiement sont accessibles
 # par les 2 canaux "Main web" et "Web services". Ainsi tous les types
 # de paiement seront accessibles par l'interface web de Cyclos pour les
-# administrateurs de comptes (voir le paramétrage des permissions), ce
-# qui garantit une capacité à intervenir si nécessaire. D'autre part,
-# ils peuvent tous être utilisés par l'API Eusko (ce n'est pas forcément
-# nécessaire mais c'est possible, il n'y aura pas de question à se
-# poser.
+# administrateurs du groupe "Gestion interne" (voir le paramétrage des
+# permissions), ce qui garantit une capacité à intervenir si nécessaire.
+# D'autre part, ils peuvent tous être utilisés par l'API Eusko (ce n'est
+# pas forcément nécessaire mais c'est possible, il n'y aura pas de
+# question à se poser.
 #
 def create_payment_transfer_type(name, direction, from_account_type_id,
                                  to_account_type_id, custom_fields=[],
-                                 requires_authorization=False):
+                                 status_flows=[], initial_statuses=[]):
     logger.info('Création du type de paiement "%s"...', name)
-    r = requests.post(eusko_web_services + 'transferType/save',
-                      headers=headers,
-                      json={'class': 'org.cyclos.model.banking.transfertypes.PaymentTransferTypeDTO',
-                            'name': name,
-                            'direction': direction,
-                            'from': from_account_type_id,
-                            'to': to_account_type_id,
-                            'enabled': True,
-                            'requiresAuthorization': requires_authorization,
-                            'maxChargebackTime': {'amount': '2', 'field': 'MONTHS'},
-                            'channels': [ID_CANAL_MAIN_WEB, ID_CANAL_WEB_SERVICES]})
+    r = requests.post(
+            eusko_web_services + 'transferType/save',
+            headers=headers,
+            json={
+                'class': 'org.cyclos.model.banking.transfertypes.PaymentTransferTypeDTO',
+                'name': name,
+                'internalName': get_internal_name(name),
+                'direction': direction,
+                'from': from_account_type_id,
+                'to': to_account_type_id,
+                'enabled': True,
+                'statusFlows': status_flows,
+                'initialStatuses': initial_statuses,
+                'maxChargebackTime': {'amount': '2', 'field': 'MONTHS'},
+                'channels': [ID_CANAL_MAIN_WEB, ID_CANAL_WEB_SERVICES]
+            })
     check_request_status(r)
     payment_transfer_type_id = r.json()['result']
     logger.debug('payment_transfer_type_id = %s', payment_transfer_type_id)
@@ -601,12 +702,50 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
             transfer_type_id=payment_transfer_type_id,
             custom_field_id=custom_field_id,
         )
-    if requires_authorization:
-        create_authorization_level(
-            transfer_type_id=payment_transfer_type_id,
-            authorization_role_id=ID_ROLE_AUTORISATION_ADMIN_COMPTES,
-        )
     return payment_transfer_type_id
+
+
+def create_generated_transfer_type(name, direction, from_account_type_id,
+                                   to_account_type_id):
+    logger.info('Création du type de paiement "%s"...', name)
+    r = requests.post(
+            eusko_web_services + 'transferType/save',
+            headers=headers,
+            json={
+                'class': 'org.cyclos.model.banking.transfertypes.GeneratedTransferTypeDTO',
+                'name': name,
+                'internalName': get_internal_name(name),
+                'direction': direction,
+                'from': from_account_type_id,
+                'to': to_account_type_id,
+            })
+    check_request_status(r)
+    generated_transfer_type_id = r.json()['result']
+    logger.debug('generated_transfer_type_id = %s', generated_transfer_type_id)
+    return generated_transfer_type_id
+
+
+def create_transfer_fee(name, original_transfer_type, generated_transfer_type,
+                        other_currency, payer, receiver, charge_mode, amount):
+    logger.info('Création des frais de transfert "%s"...', name)
+    r = requests.post(
+            eusko_web_services + 'transferFee/save',
+            headers=headers,
+            json={
+                'name': name,
+                'internalName': get_internal_name(name),
+                'enabled': True,
+                'originalTransferType': original_transfer_type,
+                'generatedTransferType': generated_transfer_type,
+                'otherCurrency': other_currency,
+                'payer': payer,
+                'receiver': receiver,
+                'chargeMode': charge_mode,
+                'amount': amount,
+            })
+    check_request_status(r)
+    transfer_fee_id = r.json()['result']
+    logger.debug('transfer_fee_id = %s', transfer_fee_id)
 
 # Types de paiement pour l'eusko billet
 #
@@ -625,6 +764,12 @@ ID_TYPE_PAIEMENT_SORTIE_COFFRE = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_PORTEUR,
         ID_CHAMP_PERSO_PAIEMENT_BDC,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_RAPPROCHEMENT,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_RAPPROCHER,
+    ],
 )
 ID_TYPE_PAIEMENT_ENTREE_COFFRE = create_payment_transfer_type(
     name='Entrée coffre',
@@ -635,16 +780,6 @@ ID_TYPE_PAIEMENT_ENTREE_COFFRE = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_PORTEUR,
         ID_CHAMP_PERSO_PAIEMENT_BDC,
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT_FACULTATIF,
-    ],
-)
-ID_TYPE_PAIEMENT_ENTREE_CAISSE_EUSKO_EM = create_payment_transfer_type(
-    name='Entrée caisse eusko EM',
-    direction='SYSTEM_TO_SYSTEM',
-    from_account_type_id=ID_COMPTE_DE_TRANSIT,
-    to_account_type_id=ID_CAISSE_EUSKO_EM,
-    custom_fields=[
-        ID_CHAMP_PERSO_PAIEMENT_PORTEUR,
-        ID_CHAMP_PERSO_PAIEMENT_BDC,
     ],
 )
 ID_TYPE_PAIEMENT_ENTREE_STOCK_BDC = create_payment_transfer_type(
@@ -664,14 +799,32 @@ ID_TYPE_PAIEMENT_SORTIE_STOCK_BDC = create_payment_transfer_type(
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_PORTEUR,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_RAPPROCHEMENT,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_RAPPROCHER,
+    ],
 )
+# Les eusko sortis de la Caisse eusko du BDC vont dans le compte des
+# billets en circulation (dans la pratique, ces eusko rentrent dans la
+# caisse eusko d'Euskal Moneta mais ce sont bien des eusko en
+# circulation). Les sorties caisse sont initialement dans l'état
+# "A rapprocher" et seront passées dans l'état "Rapproché" lorsque leur
+# entrée dans la Caisse eusko d'E.M. sera validée.
 ID_TYPE_PAIEMENT_SORTIE_CAISSE_EUSKO_BDC = create_payment_transfer_type(
     name='Sortie caisse eusko BDC',
     direction='USER_TO_SYSTEM',
     from_account_type_id=ID_CAISSE_EUSKO_BDC,
-    to_account_type_id=ID_COMPTE_DE_TRANSIT,
+    to_account_type_id=ID_COMPTE_DES_BILLETS_EN_CIRCULATION,
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_PORTEUR,
+    ],
+    status_flows=[
+        ID_STATUS_FLOW_RAPPROCHEMENT,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_RAPPROCHER,
     ],
 )
 ID_TYPE_PAIEMENT_SORTIE_RETOURS_EUSKO_BDC = create_payment_transfer_type(
@@ -682,6 +835,12 @@ ID_TYPE_PAIEMENT_SORTIE_RETOURS_EUSKO_BDC = create_payment_transfer_type(
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_PORTEUR,
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
+    ],
+    status_flows=[
+        ID_STATUS_FLOW_RAPPROCHEMENT,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_RAPPROCHER,
     ],
 )
 ID_TYPE_PAIEMENT_PERTE_DE_BILLETS = create_payment_transfer_type(
@@ -696,7 +855,22 @@ ID_TYPE_PAIEMENT_GAIN_DE_BILLETS = create_payment_transfer_type(
     from_account_type_id=ID_COMPTE_DES_BILLETS_EN_CIRCULATION,
     to_account_type_id=ID_STOCK_DE_BILLETS_BDC,
 )
-ID_TYPE_PAIEMENT_CHANGE_BILLETS = create_payment_transfer_type(
+
+# Change billets :
+# Cette opération se fait en 2 temps :
+# 1) l'adhérent(e) donne des € au BDC
+# 2) le BDC donne des € à l'adhérent(e) : les eusko sortent du stock de
+# billets du BDC et vont dans le compte système "Compte des billets en
+# circulation". En effet, une fois donnés à l'adhérent(e), les eusko
+# sont "dans la nature", on ne sait pas exactement ce qu'ils deviennent.
+#
+# Le paiement enregistré est le versement des € et cela génère
+# automatiquement le paiement correspondant au fait de donner les eusko
+# à l'adhérent(e). On utilise pour cela le mécanisme des frais de
+# transaction. Les frais sont payés par le destinataire, çad le BDC, au
+# système (le compte des billets en circulation). Ils correspondent à
+# 100% du montant du paiement original.
+ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_EUROS = create_payment_transfer_type(
     name='Change billets - Versement des €',
     direction='SYSTEM_TO_USER',
     from_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
@@ -705,16 +879,30 @@ ID_TYPE_PAIEMENT_CHANGE_BILLETS = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
         ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
 )
-# TODO frais : versement des eusko
+ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_EUSKO = create_generated_transfer_type(
+    name='Change billets - Versement des eusko',
+    direction='USER_TO_SYSTEM',
+    from_account_type_id=ID_STOCK_DE_BILLETS_BDC,
+    to_account_type_id=ID_COMPTE_DES_BILLETS_EN_CIRCULATION,
+)
+create_transfer_fee(
+    name='Change billets - Versement des eusko',
+    original_transfer_type=ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_EUROS,
+    generated_transfer_type=ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_EUSKO,
+    other_currency=True,
+    payer='DESTINATION',
+    receiver='SYSTEM',
+    charge_mode='PERCENTAGE',
+    amount=1.00,
+)
 
-# TODO ajouter un commentaire pour expliquer que pour l'opération
-# correspondante, l'API Eusko doit générer 3 paiements : celui
-# ci-dessous + 2 virements du compte dédié billet vers le compte de
-# gestion € (5%) et le compte de débit € (95%); ces 2 derniers virements
-# ne peuvent pas être des frais car ils sont soumis à autorisation et
-# cela n'est pas possible pour des frais (enfin, je crois, à vérifier,
-# d'autant que c'était avec Cyclos 3.7.3, qu'en est-il avec Cyclos 4 ?)
 ID_TYPE_PAIEMENT_RECONVERSION_BILLETS = create_payment_transfer_type(
     name='Reconversion billets - Versement des eusko',
     direction='SYSTEM_TO_USER',
@@ -722,6 +910,15 @@ ID_TYPE_PAIEMENT_RECONVERSION_BILLETS = create_payment_transfer_type(
     to_account_type_id=ID_RETOURS_EUSKO_BDC,
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
+        ID_CHAMP_PERSO_PAIEMENT_NUMERO_FACTURE,
+    ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+        ID_STATUS_FLOW_VIREMENTS,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+        ID_STATUS_VIREMENTS_A_FAIRE,
     ],
 )
 ID_TYPE_PAIEMENT_COTISATION_EN_EURO = create_payment_transfer_type(
@@ -733,6 +930,12 @@ ID_TYPE_PAIEMENT_COTISATION_EN_EURO = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
         ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
 )
 ID_TYPE_PAIEMENT_COTISATION_EN_EUSKO = create_payment_transfer_type(
     name='Cotisation en eusko',
@@ -741,6 +944,12 @@ ID_TYPE_PAIEMENT_COTISATION_EN_EUSKO = create_payment_transfer_type(
     to_account_type_id=ID_CAISSE_EUSKO_BDC,
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
+    ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
     ],
 )
 ID_TYPE_PAIEMENT_VENTE_EN_EURO = create_payment_transfer_type(
@@ -752,6 +961,12 @@ ID_TYPE_PAIEMENT_VENTE_EN_EURO = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_PRODUIT,
         ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
 )
 ID_TYPE_PAIEMENT_VENTE_EN_EUSKO = create_payment_transfer_type(
     name='Vente en eusko',
@@ -761,7 +976,20 @@ ID_TYPE_PAIEMENT_VENTE_EN_EUSKO = create_payment_transfer_type(
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_PRODUIT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
 )
+
+# Dépôt en banque :
+# 1 type de paiement pour le dépôt proprement dit + 4 types de paiements
+# pour régulariser les dépôts dont le montant ne correspond pas au
+# montant calculé.
+#
+# Le dépôt proprement dit :
 ID_TYPE_PAIEMENT_DEPOT_EN_BANQUE = create_payment_transfer_type(
     name='Dépôt en banque',
     direction='USER_TO_USER',
@@ -775,21 +1003,96 @@ ID_TYPE_PAIEMENT_DEPOT_EN_BANQUE = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_BILLET,
         ID_CHAMP_PERSO_PAIEMENT_MONTANT_CHANGES_NUMERIQUE,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_RAPPROCHEMENT,
+        ID_STATUS_FLOW_VIREMENTS,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_RAPPROCHER,
+        ID_STATUS_VIREMENTS_A_FAIRE,
+    ],
+)
+ID_TYPE_PAIEMENT_REGUL_DEPOT_INSUFFISANT = create_payment_transfer_type(
+    direction='SYSTEM_TO_USER',
+    name='Régularisation dépôt insuffisant',
+    from_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
+    to_account_type_id=ID_BANQUE_DE_DEPOT,
+    custom_fields=[
+        ID_CHAMP_PERSO_PAIEMENT_BDC,
+    ],
+)
+ID_TYPE_PAIEMENT_BANQUE_VERS_CAISSE_EURO_BDC = create_payment_transfer_type(
+    name='Paiement de Banque de dépôt vers Caisse € BDC',
+    direction='USER_TO_USER',
+    from_account_type_id=ID_BANQUE_DE_DEPOT,
+    to_account_type_id=ID_CAISSE_EURO_BDC,
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
+)
+ID_TYPE_PAIEMENT_CAISSE_EURO_BDC_VERS_BANQUE = create_payment_transfer_type(
+    name='Paiement de Caisse € BDC vers Banque de dépôt',
+    direction='USER_TO_USER',
+    from_account_type_id=ID_CAISSE_EURO_BDC,
+    to_account_type_id=ID_BANQUE_DE_DEPOT,
+)
+ID_TYPE_PAIEMENT_REGUL_DEPOT_EXCESSIF = create_payment_transfer_type(
+    name='Régularisation dépôt excessif',
+    direction='USER_TO_SYSTEM',
+    from_account_type_id=ID_BANQUE_DE_DEPOT,
+    to_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
+    custom_fields=[
+        ID_CHAMP_PERSO_PAIEMENT_BDC,
+    ],
 )
 
 # Type de paiement utilisé lorsqu'un BDC remet des espèces à Euskal
 # Moneta suite à un refus de la banque de prendre ces espèces.
+#
+# Les € remis à E.M. vont dans le compte de débit et les opérations sont
+# initialemnt dans l'état "A rapprocher", ce qui permettra de les
+# valider (c'est le même fonctionnement que pour les sorties de la
+# Caisse eusko des BDC).
 ID_TYPE_PAIEMENT_REMISE_EUROS_EN_CAISSE = create_payment_transfer_type(
     name="Remise d'€ en caisse",
     direction='USER_TO_SYSTEM',
     from_account_type_id=ID_CAISSE_EURO_BDC,
-    to_account_type_id=ID_CAISSE_EURO_EM,
+    to_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
+    status_flows=[
+        ID_STATUS_FLOW_RAPPROCHEMENT,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_RAPPROCHER,
+    ],
 )
-ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_GESTION = create_payment_transfer_type(
-    name='Virement de Banque de dépôt vers le Compte de gestion',
+# Paiement utilisé pour les virements depuis les banques de dépôt pour
+# l'argent des cotisations, ventes, .... Dans la pratique, cet argent va
+# sur le Compte de gestion d'Euskal Moneta mais ce compte n'existe pas
+# dans Cyclos et on considère tout simplement que cet argent sort du
+# système.
+#
+# Note : Le Compte de gestion d'Euskal Moneta n'existe pas dans Cyclos
+# car il n'aurait donné qu'une vision partielle du Compte de gestion
+# réel (celui qui se trouve au Crédit Coopératif). Plutôt que d'avoir un
+# compte incomplet (toutes les opérations n'auraient pas été tracées
+# dans Cyclos) et dans un état artificiel (le solde aurait été faux,
+# complètement déconnecté de la réalité), il a été décidé de ne pas
+# avoir ce compte dans Cyclos. Il est donc à l'extérieur du système et
+# c'est le Compte de débit en € qui est utilisé pour les paiements qui
+# dans la réalité font intervenir le Compte de gestion.
+#
+# Note 2 : Dans les noms des types de paiements ci-dessous on utilise
+# "Compte débit €" et pas "le Compte de débit €" de façon à avoir un
+# internalName ne dépassant pas 50 caractères (le internalName étant
+# automatiquement généré à partir du nom).
+ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_DEBIT = create_payment_transfer_type(
+    name='Virement de Banque de dépôt vers Compte débit €',
     direction='USER_TO_SYSTEM',
     from_account_type_id=ID_BANQUE_DE_DEPOT,
-    to_account_type_id=ID_COMPTE_DE_GESTION,
+    to_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
 )
 ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DEDIE = create_payment_transfer_type(
     name='Virement de Banque de dépôt vers Compte dédié',
@@ -798,18 +1101,10 @@ ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DEDIE = create_payment_transfer_type(
     to_account_type_id=ID_COMPTE_DEDIE,
 )
 ID_TYPE_PAIEMENT_COMPTE_DEDIE_VERS_COMPTE_DE_DEBIT = create_payment_transfer_type(
-    name='Virement de Compte dédié vers le Compte de débit en €',
+    name='Virement de Compte dédié vers Compte débit €',
     direction='USER_TO_SYSTEM',
     from_account_type_id=ID_COMPTE_DEDIE,
     to_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
-    requires_authorization=True,
-)
-ID_TYPE_PAIEMENT_COMPTE_DEDIE_VERS_COMPTE_DE_GESTION = create_payment_transfer_type(
-    name='Virement de Compte dédié vers le Compte de gestion',
-    direction='USER_TO_SYSTEM',
-    from_account_type_id=ID_COMPTE_DEDIE,
-    to_account_type_id=ID_COMPTE_DE_GESTION,
-    requires_authorization=True,
 )
 
 # Le type de paiement ci-dessous, "Virement entre comptes dédiés",
@@ -855,6 +1150,12 @@ ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_BDC = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
         ID_CHAMP_PERSO_PAIEMENT_MODE_DE_PAIEMENT,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
+    ],
 )
 
 # Même fonctionnement que pour la reconversion billets, sauf que les
@@ -883,6 +1184,12 @@ ID_TYPE_PAIEMENT_DEPOT_DE_BILLETS = create_payment_transfer_type(
     to_account_type_id=ID_RETOURS_EUSKO_BDC,
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_ADHERENT,
+    ],
+    status_flows=[
+        ID_STATUS_FLOW_REMISE_A_EM,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_REMETTRE,
     ],
 )
 ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE = create_payment_transfer_type(
@@ -943,17 +1250,17 @@ all_system_to_system_payments = [
     ID_TYPE_PAIEMENT_IMPRESSION_BILLETS,
     ID_TYPE_PAIEMENT_SORTIE_COFFRE,
     ID_TYPE_PAIEMENT_ENTREE_COFFRE,
-    ID_TYPE_PAIEMENT_ENTREE_CAISSE_EUSKO_EM,
 ]
 all_system_to_user_payments = [
     ID_TYPE_PAIEMENT_ENTREE_STOCK_BDC,
     ID_TYPE_PAIEMENT_GAIN_DE_BILLETS,
-    ID_TYPE_PAIEMENT_CHANGE_BILLETS,
+    ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_EUROS,
     ID_TYPE_PAIEMENT_RECONVERSION_BILLETS,
     ID_TYPE_PAIEMENT_COTISATION_EN_EURO,
     ID_TYPE_PAIEMENT_COTISATION_EN_EUSKO,
     ID_TYPE_PAIEMENT_VENTE_EN_EURO,
     ID_TYPE_PAIEMENT_VENTE_EN_EUSKO,
+    ID_TYPE_PAIEMENT_REGUL_DEPOT_INSUFFISANT,
     ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE,
     ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_BDC,
     ID_TYPE_PAIEMENT_DEPOT_DE_BILLETS,
@@ -964,16 +1271,18 @@ all_user_to_system_payments = [
     ID_TYPE_PAIEMENT_SORTIE_CAISSE_EUSKO_BDC,
     ID_TYPE_PAIEMENT_SORTIE_RETOURS_EUSKO_BDC,
     ID_TYPE_PAIEMENT_PERTE_DE_BILLETS,
+    ID_TYPE_PAIEMENT_REGUL_DEPOT_EXCESSIF,
     ID_TYPE_PAIEMENT_REMISE_EUROS_EN_CAISSE,
-    ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_GESTION,
+    ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_DEBIT,
     ID_TYPE_PAIEMENT_COMPTE_DEDIE_VERS_COMPTE_DE_DEBIT,
-    ID_TYPE_PAIEMENT_COMPTE_DEDIE_VERS_COMPTE_DE_GESTION,
     ID_TYPE_PAIEMENT_RECONVERSION_NUMERIQUE,
     ID_TYPE_PAIEMENT_RETRAIT_DE_BILLETS,
     ID_TYPE_PAIEMENT_RETRAIT_DU_COMPTE,
 ]
 all_user_to_user_payments = [
     ID_TYPE_PAIEMENT_DEPOT_EN_BANQUE,
+    ID_TYPE_PAIEMENT_BANQUE_VERS_CAISSE_EURO_BDC,
+    ID_TYPE_PAIEMENT_CAISSE_EURO_BDC_VERS_BANQUE,
     ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DEDIE,
     ID_TYPE_PAIEMENT_VIREMENT_ENTRE_COMPTES_DEDIES,
     ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
@@ -989,17 +1298,19 @@ all_payments_to_user = \
 ########################################################################
 # Création des champs personnalisés pour les profils utilisateur.
 #
-def create_user_custom_field_linked_user(name, internal_name,
-                                         required=True):
+def create_user_custom_field_linked_user(name, required=True):
     logger.info('Création du champ personnalisé "%s"...', name)
-    r = requests.post(eusko_web_services + 'userCustomField/save',
-                      headers=headers,
-                      json={'name': name,
-                            'internalName': internal_name,
-                            'type': 'LINKED_ENTITY',
-                            'linkedEntityType': 'USER',
-                            'control': 'ENTITY_SELECTION',
-                            'required': required})
+    r = requests.post(
+            eusko_web_services + 'userCustomField/save',
+            headers=headers,
+            json={
+                'name': name,
+                'internalName': get_internal_name(name),
+                'type': 'LINKED_ENTITY',
+                'linkedEntityType': 'USER',
+                'control': 'ENTITY_SELECTION',
+                'required': required
+            })
     check_request_status(r)
     custom_field_id = r.json()['result']
     logger.debug('custom_field_id = %s', custom_field_id)
@@ -1009,7 +1320,6 @@ def create_user_custom_field_linked_user(name, internal_name,
 
 ID_CHAMP_PERSO_UTILISATEUR_BDC = create_user_custom_field_linked_user(
     name='BDC',
-    internal_name='bdc',
 )
 
 
@@ -1029,41 +1339,46 @@ ID_CHAMP_PERSO_UTILISATEUR_BDC = create_user_custom_field_linked_user(
 # encore, c'est via les produits que les permissions et les règles
 # d'accès sont définies. Si plusieurs produits sont associés à un
 # groupe, les permissions se cumulent.
-# Un produit de nature Membre contient un et un seul compte utilisateur.
-# Chaque utilisateur appartenant à un groupe associé à ce produit aura
-# un compte de ce type.
+# Un produit de nature Membre ne peut être lié qu'à un seul type de
+# compte utilisateur. Chaque utilisateur appartenant à un groupe associé
+# à ce produit aura un compte de ce type.
 # Si on veut attribuer plusieurs comptes à des utilisateurs (c'est notre
 # cas pour les bureaux de change), il faut créer un produit pour chaque
 # type de compte utilisateur et associer tous ces produits au groupe des
 # utilisateurs.
 #
-def create_member_product(name, user_account_type_id):
+# Note: Tous les utilisateurs ont un nom et un login, même ceux qui ne
+# peuvent pas se connecter à Cyclos (par exemple les utilisateurs des
+# groupes "Bureaux de change", "Banques de dépôt" ou "Porteurs"). Comme
+# Cyclos vérifie l'unicité du login, cela rend impossible la création de
+# doublons (c'est donc une mesure de protection).
+def create_member_product(name, user_account_type_id=None):
     logger.info('Création du produit "%s"...', name)
-    r = requests.post(eusko_web_services + 'product/save',
-                      headers=headers,
-                      json={'class': 'org.cyclos.model.users.products.MemberProductDTO',
-                            'name': name,
-                            'userAccount': user_account_type_id,
-                            # TODO rendre paramétrable la liste des champs de
-                            # profil utilisateur
-                            'myProfileFields': [
-                                {
-                                    'profileField': 'FULL_NAME',
-                                    'enabled': True,
-                                    'editableAtRegistration': True,
-                                    'visible': True,
-                                    'editable': True,
-                                    'managePrivacy': False,
-                                },
-                                # {
-                                #     'profileField': 'LOGIN_NAME',
-                                #     'enabled': True,
-                                #     'editableAtRegistration': True,
-                                #     'visible': True,
-                                #     'editable': True,
-                                #     'managePrivacy': False,
-                                # },
-                            ]})
+    myProfileFields = []
+    for field in ('FULL_NAME', 'LOGIN_NAME', 'ACCOUNT_NUMBER'):
+        myProfileFields.append({
+            'profileField': field,
+            'enabled': True,
+            'editableAtRegistration': True,
+            'visible': True,
+            'editable': True,
+            'managePrivacy': False,
+        })
+    product = {
+        'class': 'org.cyclos.model.users.products.MemberProductDTO',
+        'name': name,
+        'internalName': get_internal_name(name),
+        'myProfileFields': myProfileFields,
+        # Workaround of a bug in Cyclos 4.6.
+        'myRecordTypeFields': [
+        ],
+    }
+    if user_account_type_id:
+        product['userAccount'] = user_account_type_id
+    r = requests.post(
+            eusko_web_services + 'product/save',
+            headers=headers,
+            json=product)
     check_request_status(r)
     product_id = r.json()['result']
     logger.debug('product_id = %s', product_id)
@@ -1072,9 +1387,10 @@ def create_member_product(name, user_account_type_id):
 
 def assign_product_to_group(product_id, group_id):
     logger.info("Affectation du produit à un groupe...")
-    r = requests.post(eusko_web_services + 'productsGroup/assign',
-                      headers=headers,
-                      json=[product_id, group_id])
+    r = requests.post(
+            eusko_web_services + 'productsGroup/assign',
+            headers=headers,
+            json=[product_id, group_id])
     check_request_status(r)
 
 
@@ -1101,8 +1417,10 @@ def set_product_properties(
         payments_as_user_to_system=[],
         chargeback_of_payments_to_user=[]):
     # Chargement du produit
-    r = requests.get(eusko_web_services + 'product/load/' + product_id,
-                     headers=headers, json={})
+    r = requests.get(
+            eusko_web_services + 'product/load/' + product_id,
+            headers=headers,
+            json={})
     check_request_status(r)
     product = r.json()['result']
     # Plusieurs champs de profil sont activés par défaut et on doit les
@@ -1126,7 +1444,11 @@ def set_product_properties(
             password_action['change'] = True
             password_action['atRegistration'] = True
     product['visibleTransactionFields'] = visible_transaction_fields
-    product['transferStatusFlows'] = transfer_status_flows
+    # Status flows.
+    for product_transfer_status_flow in product['transferStatusFlows']:
+        if product_transfer_status_flow['flow']['id'] in transfer_status_flows:
+            product_transfer_status_flow['visible'] = True
+            product_transfer_status_flow['editable'] = True
     product['systemAccounts'] = system_accounts
     product['systemToSystemPayments'] = system_to_system_payments
     product['systemToUserPayments'] = system_to_user_payments
@@ -1152,9 +1474,10 @@ def set_product_properties(
     product['systemPaymentsAsUser'] = payments_as_user_to_system
     product['chargebackPaymentsToUser'] = chargeback_of_payments_to_user
     # Enregistrement du produit modifié
-    r = requests.post(eusko_web_services + 'product/save',
-                      headers=headers,
-                      json=product)
+    r = requests.post(
+            eusko_web_services + 'product/save',
+            headers=headers,
+            json=product)
     check_request_status(r)
 
 
@@ -1162,12 +1485,16 @@ def set_product_properties(
 # create_group(nature = 'ADMIN' ou 'MEMBER', name)
 def create_admin_group(name):
     logger.info('Création du groupe Administrateur "%s"...', name)
-    r = requests.post(eusko_web_services + 'group/save',
-                      headers=headers,
-                      json={'class': 'org.cyclos.model.users.groups.AdminGroupDTO',
-                            'name': name,
-                            'initialUserStatus': 'ACTIVE',
-                            'enabled': True})
+    r = requests.post(
+            eusko_web_services + 'group/save',
+            headers=headers,
+            json={
+                'class': 'org.cyclos.model.users.groups.AdminGroupDTO',
+                'name': name,
+                'internalName': get_internal_name(name),
+                'initialUserStatus': 'ACTIVE',
+                'enabled': True
+            })
     check_request_status(r)
     group_id = r.json()['result']
     logger.debug('group_id = %s', group_id)
@@ -1176,22 +1503,29 @@ def create_admin_group(name):
 
 
 def get_admin_product(group_id):
-    r = requests.get(eusko_web_services + 'group/load/' + group_id,
-                     headers=headers,
-                     json={})
+    r = requests.get(
+            eusko_web_services + 'group/load/' + group_id,
+            headers=headers,
+            json={})
     check_request_status(r)
     product_id = r.json()['result']['adminProduct']['id']
     return product_id
 
 
-def create_member_group(name, products=[]):
+def create_member_group(name,
+                        initial_user_status='ACTIVE',
+                        products=[]):
     logger.info('Création du groupe Membre "%s"...', name)
-    r = requests.post(eusko_web_services + 'group/save',
-                      headers=headers,
-                      json={'class': 'org.cyclos.model.users.groups.MemberGroupDTO',
-                            'name': name,
-                            'initialUserStatus': 'ACTIVE',
-                            'enabled': True})
+    r = requests.post(
+            eusko_web_services + 'group/save',
+            headers=headers,
+            json={
+                'class': 'org.cyclos.model.users.groups.MemberGroupDTO',
+                'name': name,
+                'internalName': get_internal_name(name),
+                'initialUserStatus': initial_user_status,
+                'enabled': True
+            })
     check_request_status(r)
     group_id = r.json()['result']
     logger.debug('group_id = %s', group_id)
@@ -1200,17 +1534,30 @@ def create_member_group(name, products=[]):
         assign_product_to_group(product_id, group_id)
     return group_id
 
-# Administrateurs de comptes.
-ID_GROUPE_ADMINS_DE_COMPTES = create_admin_group(
-    name='Administrateurs de comptes',
+# Gestion interne :
+# Les membres de ce groupe ont accès à l'application de gestion interne.
+# Ils ont aussi accès à Cyclos, où ils ont toutes les permissions, ce
+# qui leur permet d'intervenir au-delà de ce que permet l'application de
+# gestion interne (par exemple pour annuler un paiement).
+ID_GROUPE_GESTION_INTERNE = create_admin_group(
+    name='Gestion interne',
 )
 
-# Opérateurs BDC.
+# Opérateurs BDC :
+# Les membres de ce groupe ont accès à l'application des bureaux de
+# change. Ils ont aussi accès à Cyclos, où ils n'ont que les permissions
+# correspondant aux opérations qu'ils peuvent faire dans l'application
+# BDC (ils ne peuvent rien faire de plus).
+# Un utilisateur est créé dans ce groupe pour chaque bureau de change,
+# et lié à l'utilisateur "Bureau de change" correspondant.
 ID_GROUPE_OPERATEURS_BDC = create_admin_group(
     name='Opérateurs BDC',
 )
 
-# Bureaux de change.
+# Bureaux de change :
+# Un utilisateur est créé dans ce groupe pour chaque bureau de change
+# (c'est cet utilisateur qui possèdes les comptes du BDC, par contre
+# toutes les opérations sont faites par l'opérateur BDC associé).
 ID_PRODUIT_STOCK_DE_BILLETS_BDC = create_member_product(
     name='Stock de billets BDC',
     user_account_type_id=ID_STOCK_DE_BILLETS_BDC,
@@ -1262,26 +1609,40 @@ ID_GROUPE_COMPTES_DEDIES = create_member_group(
 )
 
 # Adhérents.
-ID_PRODUIT_ADHERENT = create_member_product(
-    name='Adhérent',
+prestataires='Adhérents prestataires'
+ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
+    name=prestataires,
     user_account_type_id=ID_COMPTE_ADHERENT,
 )
 ID_GROUPE_ADHERENTS_PRESTATAIRES = create_member_group(
-    name='Adhérents prestataires',
+    name=prestataires,
+    initial_user_status='DISABLED',
     products=[
-        ID_PRODUIT_ADHERENT,
-    ]
+        ID_PRODUIT_ADHERENTS_PRESTATAIRES,
+    ],
+)
+utilisateurs='Adhérents utilisateurs'
+ID_PRODUIT_ADHERENTS_UTILISATEURS = create_member_product(
+    name=utilisateurs,
+    user_account_type_id=ID_COMPTE_ADHERENT,
 )
 ID_GROUPE_ADHERENTS_UTILISATEURS = create_member_group(
-    name='Adhérents utilisateurs',
+    name=utilisateurs,
+    initial_user_status='DISABLED',
     products=[
-        ID_PRODUIT_ADHERENT,
-    ]
+        ID_PRODUIT_ADHERENTS_UTILISATEURS,
+    ],
 )
 
 # Porteurs.
+ID_PRODUIT_PORTEUR = create_member_product(
+    name='Porteur',
+)
 ID_GROUPE_PORTEURS = create_member_group(
     name='Porteurs',
+    products=[
+        ID_PRODUIT_PORTEUR,
+    ]
 )
 
 all_user_groups = [
@@ -1296,8 +1657,10 @@ all_user_groups = [
 # Définition des permissions.
 # Il faut faire ça en dernier car nous avons besoin de tous les objets
 # créés auparavant.
+#
+# Permissions pour le groupe "Gestion interne":
 set_product_properties(
-    get_admin_product(ID_GROUPE_ADMINS_DE_COMPTES),
+    get_admin_product(ID_GROUPE_GESTION_INTERNE),
     my_profile_fields=[
         'FULL_NAME',
         'LOGIN_NAME',
@@ -1306,7 +1669,7 @@ set_product_properties(
         'login',
     ],
     visible_transaction_fields=all_transaction_fields,
-    transfer_status_flows=[],
+    transfer_status_flows=all_status_flows,
     system_accounts=all_system_accounts,
     system_to_system_payments=all_system_to_system_payments,
     system_to_user_payments=all_system_to_user_payments,
@@ -1315,9 +1678,10 @@ set_product_properties(
     accessible_administrator_groups=[
         ID_GROUPE_OPERATEURS_BDC,
     ],
-    user_profile_fields=[
+    user_profile_fields = [
         'FULL_NAME',
         'LOGIN_NAME',
+        'ACCOUNT_NUMBER',
         ID_CHAMP_PERSO_UTILISATEUR_BDC,
     ],
     change_group='MANAGE',
@@ -1327,6 +1691,7 @@ set_product_properties(
     payments_as_user_to_system=all_user_to_system_payments,
     chargeback_of_payments_to_user=all_payments_to_user
 )
+# Permissions pour le groupe "Opérateurs BDC":
 set_product_properties(
     get_admin_product(ID_GROUPE_OPERATEURS_BDC),
     my_profile_fields=[
@@ -1339,6 +1704,8 @@ set_product_properties(
     ],
     visible_transaction_fields=all_transaction_fields,
     transfer_status_flows=[
+        ID_STATUS_FLOW_RAPPROCHEMENT,
+        ID_STATUS_FLOW_REMISE_A_EM,
     ],
     system_accounts=[
         ID_COMPTE_DE_TRANSIT,
@@ -1348,46 +1715,63 @@ set_product_properties(
     ],
     system_to_user_payments=[
         ID_TYPE_PAIEMENT_ENTREE_STOCK_BDC,
-        ID_TYPE_PAIEMENT_CHANGE_BILLETS,
+        ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_EUROS,
         ID_TYPE_PAIEMENT_RECONVERSION_BILLETS,
         ID_TYPE_PAIEMENT_COTISATION_EN_EURO,
         ID_TYPE_PAIEMENT_COTISATION_EN_EUSKO,
         ID_TYPE_PAIEMENT_VENTE_EN_EURO,
         ID_TYPE_PAIEMENT_VENTE_EN_EUSKO,
+        ID_TYPE_PAIEMENT_REGUL_DEPOT_INSUFFISANT,
         ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_BDC,
         ID_TYPE_PAIEMENT_DEPOT_DE_BILLETS,
         ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE,
     ],
     accessible_user_groups=all_user_groups,
+    user_profile_fields = [
+        'FULL_NAME',
+        'LOGIN_NAME',
+        'ACCOUNT_NUMBER',
+    ],
     user_registration=True,
     access_user_accounts=[
         ID_STOCK_DE_BILLETS_BDC,
         ID_CAISSE_EURO_BDC,
         ID_CAISSE_EUSKO_BDC,
         ID_RETOURS_EUSKO_BDC,
+        ID_COMPTE_ADHERENT,
     ],
     payments_as_user_to_user=[
         ID_TYPE_PAIEMENT_DEPOT_EN_BANQUE,
+        ID_TYPE_PAIEMENT_BANQUE_VERS_CAISSE_EURO_BDC,
+        ID_TYPE_PAIEMENT_CAISSE_EURO_BDC_VERS_BANQUE,
     ],
     payments_as_user_to_system=[
         ID_TYPE_PAIEMENT_SORTIE_STOCK_BDC,
         ID_TYPE_PAIEMENT_SORTIE_CAISSE_EUSKO_BDC,
         ID_TYPE_PAIEMENT_SORTIE_RETOURS_EUSKO_BDC,
+        ID_TYPE_PAIEMENT_REGUL_DEPOT_EXCESSIF,
         ID_TYPE_PAIEMENT_REMISE_EUROS_EN_CAISSE,
-        ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_GESTION,
+        ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_DEBIT,
         ID_TYPE_PAIEMENT_RETRAIT_DE_BILLETS,
         ID_TYPE_PAIEMENT_RETRAIT_DU_COMPTE,
     ],
 )
 
+########################################################################
+# Récupération de la liste des types de mot de passe.
+r = requests.get(eusko_web_services + 'passwordType/list',
+                 headers=headers)
+for passwordType in r.json()['result']:
+    add_constant('password_types', passwordType['name'], passwordType['id'])
+
+########################################################################
 # On écrit dans un fichier toutes les constantes nécessaires à l'API,
 # après les avoir triées.
 logger.debug('Constantes :\n%s', constants_by_category)
 constants_file = open('cyclos_constants.yml', 'w')
-constants_file.write('cyclos_constants:\n')
 for category in sorted(constants_by_category.keys()):
-    constants_file.write('\n  ' + category + ':\n')
+    constants_file.write(category + ':\n')
     constants = constants_by_category[category]
     for name in sorted(constants.keys()):
-        constants_file.write('    ' + name + ': ' + constants[name] + '\n')
+        constants_file.write('  ' + name + ': ' + constants[name] + '\n')
 constants_file.close()

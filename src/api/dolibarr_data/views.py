@@ -2,12 +2,74 @@ import logging
 
 from django.conf import settings
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from dolibarr_api import DolibarrAPI
+from dolibarr_data import serializers
 
-log = logging.getLogger()
+log = logging.getLogger('console')
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def login(request):
+    """
+    User login from dolibarr
+    """
+    serializer = serializers.LoginSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    dolibarr = DolibarrAPI()
+    return Response({'auth_token': dolibarr.login(login=request.data['username'],
+                                                  password=request.data['password'])})
+
+
+@api_view(['GET'])
+@permission_classes((AllowAny, ))
+def verify_usergroup(request):
+    """
+    Verify that username is in a usergroup
+    """
+    serializer = serializers.VerifyUsergroupSerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    dolibarr = DolibarrAPI(api_key=request.query_params['api_key'])
+    try:
+        user_id = dolibarr.get(model='users', login=request.query_params['username'])[0]['id']
+    except (KeyError, IndexError):
+        return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    usergroups_res = dolibarr.get(model='users/{}/groups'.format(user_id))
+    usergroups_ids = [item['id']
+                      for item in usergroups_res]
+    try:
+        group_constant_id = str(settings.DOLIBARR_CONSTANTS['groups'][request.query_params['usergroup']])
+    except KeyError:
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    if group_constant_id in usergroups_ids:
+        return Response('OK')
+    else:
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET'])
+def get_usergroups(request):
+    """
+    Get usergroups for a username
+    """
+    serializer = serializers.GetUsergroupsSerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    try:
+        user_id = dolibarr.get(model='users', login=request.query_params['username'])[0]['id']
+    except (KeyError, IndexError):
+        return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(dolibarr.get(model='users/{}/groups'.format(user_id)))
 
 
 @api_view(['GET'])
@@ -35,7 +97,7 @@ def towns_by_zipcode(request):
     """
     search = request.GET.get('zipcode', '')
     if not search:
-        Response({'error': 'Zipcode must not be empty'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Zipcode must not be empty'}, status=status.HTTP_400_BAD_REQUEST)
 
     dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     return Response(dolibarr.get(model='towns', zipcode=search))
@@ -57,3 +119,17 @@ def country_by_id(request, id):
     """
     dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     return Response(dolibarr.get(model='countries', id=id, lang='fr_FR'))
+
+
+@api_view(['GET'])
+def get_bdc_name(request):
+    """
+    Get the bdc name (lastname) for the current user.
+    """
+    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    try:
+        user_data = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
+    except (IndexError, KeyError):
+        return Response({'error': 'Unable to get user data from your user!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(user_data)

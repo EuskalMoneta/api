@@ -6,6 +6,7 @@ from rest_framework import status
 from rest_framework.response import Response
 
 from base_api import BaseAPIView
+from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPIException
 from members.serializers import MemberSerializer, MembersSubscriptionsSerializer
 from members.misc import Member, Subscription
@@ -22,7 +23,6 @@ class MembersAPIView(BaseAPIView):
 
     def create(self, request):
         data = request.data
-        dolibarr_token = request.user.profile.dolibarr_token
         serializer = MemberSerializer(data=data)
         if serializer.is_valid():
             data = Member.validate_data(data)
@@ -32,8 +32,23 @@ class MembersAPIView(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         log.info('posted data: {}'.format(data))
-        response_obj = self.dolibarr.post(model=self.model, data=data, api_key=dolibarr_token)
+        response_obj = self.dolibarr.post(model=self.model, data=data, api_key=request.user.profile.dolibarr_token)
         log.info(response_obj)
+
+        # Cyclos: Register member
+        try:
+            cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+        except CyclosAPIException:
+            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        create_user_data = {
+            'group': str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs']),
+            'name': '{} {}'.format(data['firstname'], data['lastname']),
+            'username': data['login'],
+            'skipActivationEmail': True,
+        }
+        cyclos.post(method='user/register', data=create_user_data)
+
         try:
             sendmail_euskalmoneta(subject="subject", body="body", to_email=data['email'])
         except KeyError:
@@ -58,7 +73,7 @@ class MembersAPIView(BaseAPIView):
             return Response({'error': 'You need to provide a *VALID* ?login parameter! (Format: E12345)'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        elif name and len(name) >= 4:
+        elif name and len(name) >= 3:
             # We want to search in members by name (Firstname and Lastname)
             try:
                 response = self.dolibarr.get(model='members', name=name, api_key=dolibarr_token)
@@ -66,8 +81,8 @@ class MembersAPIView(BaseAPIView):
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(response)
 
-        elif name and len(name) < 4:
-            return Response({'error': 'You need to provide a ?name parameter longer than 3 characters!'},
+        elif name and len(name) < 3:
+            return Response({'error': 'You need to provide a ?name parameter longer than 2 characters!'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         else:
@@ -135,10 +150,10 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             log.critical("model: {}".format(self.model))
             log.critical("data_res_subscription: {}".format(data_res_subscription))
             log.critical(e)
-            return Response({'error': e}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Register new payment
-        payment_account, payment_type = Subscription.account_and_type_from_payment_mode(data['payment_mode'])
+        payment_account, payment_type, payment_label = Subscription.account_and_type_from_payment_mode(data['payment_mode']) # noqa
         if not payment_account or not payment_type:
             log.critical('This payment_mode is invalid!')
             return Response({'error': 'This payment_mode is invalid!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -155,7 +170,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             log.critical("model: {}".format(model_res_payment))
             log.critical("data_res_payment: {}".format(data_res_payment))
             log.critical(e)
-            return Response({'error': e}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Link this new subscription with this new payment
         data_link_sub_payment = {'fk_bank': res_id_payment}
@@ -169,7 +184,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             log.critical("model: {}".format(model_link_sub_payment))
             log.critical("data_link_sub_payment: {}".format(data_link_sub_payment))
             log.critical(e)
-            return Response({'error': e}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         # Link this payment with the related-member
         data_link_payment_member = {'label': '{} {}'.format(member['firstname'], member['lastname']),
@@ -187,7 +202,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             log.critical("model: {}".format(model_link_payment_member))
             log.critical("data_link_payment_member: {}".format(data_link_payment_member))
             log.critical(e)
-            return Response({'error': e}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
         current_member = self.dolibarr.get(model='members', id=member_id, api_key=dolibarr_token)
         res = {'id_subscription': res_id_subscription,
@@ -196,11 +211,60 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                'id_link_payment_member': res_id_link_payment_member,
                'member': current_member}
 
+        # Cyclos: Register member subscription payment
+        try:
+            cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+        except CyclosAPIException:
+            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        member_cyclos_id = cyclos.get_member_id_from_login(current_member['login'])
+
+        if current_member['type'].lower() == 'particulier':
+            member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
+        else:
+            member_name = current_member['company']
+
+        query_data = {}
+        log.critical(data)
+
+        if 'Eusko' in data['payment_mode']:
+            query_data.update(
+                {'type': str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_eusko']),
+                 'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+                 'customValues': [
+                    {'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
+                     'linkedEntityValue': member_cyclos_id}],
+                 'description': 'Cotisation - {} - {}'.format(
+                    current_member['login'], member_name),
+                 })
+        elif 'Euro' in data['payment_mode']:
+            query_data.update(
+                {'type': str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_euro']),
+                 'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+                 'customValues': [
+                    {'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
+                     'linkedEntityValue': member_cyclos_id},
+                    {'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
+                     'enumeratedValues': data['cyclos_id_payment_mode']}],
+                 'description': 'Cotisation - {} - {} - {}'.format(
+                    current_member['login'], member_name, payment_label),
+                 })
+        else:
+            return Response({'error': 'This payment_mode is invalid!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        query_data.update({
+            'amount': data['amount'],
+            'from': 'SYSTEM',
+            'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+        })
+
+        cyclos.post(method='payment/perform', data=query_data)
+
         try:
             sendmail_euskalmoneta(subject="subject", body="body", to_email=current_member['email'])
         except KeyError:
             log.critical("Oops! No mail sent to this member {}, "
-                         "we didn't had a email address !".format(current_member['email']))
+                         "we didn't had a email address !".format(current_member['login']))
 
         return Response(res, status=status.HTTP_201_CREATED)
 
