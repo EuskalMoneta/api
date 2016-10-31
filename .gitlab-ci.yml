@@ -121,7 +121,7 @@ deploy_job_develop:
   stage: deploy
   script:
     - docker login -u $CI_SUPERUSER_USERNAME -p $CI_SUPERUSER_PASSWORD -e dev@meta-it.fr sources.meta-it.fr:4567
-    - cd /home/meta-it/sources/eusko-dev
+    - cd /home/meta-it/sources/eusko-develop
     - docker-compose pull api
     - docker-compose stop
     - docker-compose rm -f api
@@ -131,3 +131,18 @@ deploy_job_develop:
   only:
     - develop
   environment: dev
+
+deploy_job_staging:
+  stage: deploy
+  script:
+    - docker login -u $CI_SUPERUSER_USERNAME -p $CI_SUPERUSER_PASSWORD -e dev@meta-it.fr sources.meta-it.fr:4567
+    - cd /home/meta-it/sources/euskal-moneta
+    - docker-compose pull api
+    - docker-compose stop
+    - docker-compose rm -f api
+    - docker-compose up -d
+  tags:
+    - eusko-integration
+  only:
+    - /^release-.*$/
+  environment: staging
