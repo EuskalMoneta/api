@@ -1020,6 +1020,12 @@ ID_TYPE_PAIEMENT_REGUL_DEPOT_INSUFFISANT = create_payment_transfer_type(
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_BDC,
     ],
+    status_flows=[
+        ID_STATUS_FLOW_VIREMENTS,
+    ],
+    initial_statuses=[
+        ID_STATUS_VIREMENTS_A_FAIRE,
+    ],
 )
 ID_TYPE_PAIEMENT_BANQUE_VERS_CAISSE_EURO_BDC = create_payment_transfer_type(
     name='Paiement de Banque de dépôt vers Caisse € BDC',
@@ -1027,9 +1033,11 @@ ID_TYPE_PAIEMENT_BANQUE_VERS_CAISSE_EURO_BDC = create_payment_transfer_type(
     from_account_type_id=ID_BANQUE_DE_DEPOT,
     to_account_type_id=ID_CAISSE_EURO_BDC,
     status_flows=[
+        ID_STATUS_FLOW_RAPPROCHEMENT,
         ID_STATUS_FLOW_REMISE_A_EM,
     ],
     initial_statuses=[
+        ID_STATUS_A_RAPPROCHER,
         ID_STATUS_A_REMETTRE,
     ],
 )
@@ -1038,6 +1046,12 @@ ID_TYPE_PAIEMENT_CAISSE_EURO_BDC_VERS_BANQUE = create_payment_transfer_type(
     direction='USER_TO_USER',
     from_account_type_id=ID_CAISSE_EURO_BDC,
     to_account_type_id=ID_BANQUE_DE_DEPOT,
+    status_flows=[
+        ID_STATUS_FLOW_RAPPROCHEMENT,
+    ],
+    initial_statuses=[
+        ID_STATUS_A_RAPPROCHER,
+    ],
 )
 ID_TYPE_PAIEMENT_REGUL_DEPOT_EXCESSIF = create_payment_transfer_type(
     name='Régularisation dépôt excessif',
@@ -1046,6 +1060,12 @@ ID_TYPE_PAIEMENT_REGUL_DEPOT_EXCESSIF = create_payment_transfer_type(
     to_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
     custom_fields=[
         ID_CHAMP_PERSO_PAIEMENT_BDC,
+    ],
+    status_flows=[
+        ID_STATUS_FLOW_VIREMENTS,
+    ],
+    initial_statuses=[
+        ID_STATUS_VIREMENTS_A_FAIRE,
     ],
 )
 
