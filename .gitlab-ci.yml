@@ -26,63 +26,11 @@ test_job_develop:
   variables:
     ODOO_CONTAINER_TAG: dev
   script:
-    #~ - docker network create --driver bridge eusko_net
-    #~ - docker login -u $CI_SUPERUSER_USERNAME -p $CI_SUPERUSER_PASSWORD sources.meta-it.fr:4567
     - bash test.sh
   only:
     - develop
   tags:
     - dind
-
-#~ test_job_staging:
-  #~ stage: test
-  #~ variables:
-    #~ ODOO_CONTAINER_TAG: release
-  #~ script:
-    #~ - docker network create --driver bridge bb_net
-    #~ # login as superuser to be able to pull images from other repositories
-    #~ - docker login -u $CI_SUPERUSER_USERNAME -p $CI_SUPERUSER_PASSWORD sources.meta-it.fr:4567
-#~ 
-    #~ # start a postgres database container
-    #~ - docker run --network=bb_net -d -e POSTGRES_USER=odoo -e POSTGRES_PASSWORD=odoo --name bb_db postgres:9.5
-#~ 
-    #~ # start the odoo container
-    #~ - docker run --network=bb_net -d --name bb_odoo -e DB_PORT_5432_TCP_ADDR=bb_db -e DB_PORT_5432_TCP_PORT=5432 -e DB_ENV_POSTGRES_USER=odoo -e DB_ENV_POSTGRES_PASSWORD=odoo sources.meta-it.fr:4567/bigarren-bizi/odoo:$ODOO_CONTAINER_TAG
-#~ 
-    #~ # create a fresh odoo database to perform tests
-    #~ - docker run --network=bb_net --rm -e ODOO_DEMO=1 -e ODOO_ADMIN_PASSWORD=admin -e DATABASE_ADMIN_PASSWORD=odoo -e ODOO_PORT_8069_TCP_ADDR=bb_odoo -e ODOO_PORT_8069_TCP_PORT=8069 sources.meta-it.fr:4567/robin/create_odoo_db:latest bb bigarren_bizi
-#~ 
-    #~ # run tests
-    #~ - docker run --rm --network=bb_net -e ODOO_PORT_8069_TCP_ADDR=bb_odoo -e ODOO_PORT_8069_TCP_PORT=8069 -e ODOO_DATABASE=bb $CONTAINER_TEST_IMAGE python manage.py test
-  #~ only:
-    #~ - /^release-.*$/
-  #~ tags:
-    #~ - dind
-#~ 
-#~ test_job:
-  #~ stage: test
-  #~ variables:
-    #~ ODOO_CONTAINER_TAG: latest
-  #~ script:
-    #~ - docker network create --driver bridge bb_net
-    #~ # login as superuser to be able to pull images from other repositories
-    #~ - docker login -u $CI_SUPERUSER_USERNAME -p $CI_SUPERUSER_PASSWORD sources.meta-it.fr:4567
-#~ 
-    #~ # start a postgres database container
-    #~ - docker run --network=bb_net -d -e POSTGRES_USER=odoo -e POSTGRES_PASSWORD=odoo --name bb_db postgres:9.5
-#~ 
-    #~ # start the odoo container
-    #~ - docker run --network=bb_net -d --name bb_odoo -e DB_PORT_5432_TCP_ADDR=bb_db -e DB_PORT_5432_TCP_PORT=5432 -e DB_ENV_POSTGRES_USER=odoo -e DB_ENV_POSTGRES_PASSWORD=odoo sources.meta-it.fr:4567/bigarren-bizi/odoo:$ODOO_CONTAINER_TAG
-#~ 
-    #~ # create a fresh odoo database to perform tests
-    #~ - docker run --network=bb_net --rm -e ODOO_DEMO=1 -e ODOO_ADMIN_PASSWORD=admin -e DATABASE_ADMIN_PASSWORD=odoo -e ODOO_PORT_8069_TCP_ADDR=bb_odoo -e ODOO_PORT_8069_TCP_PORT=8069 sources.meta-it.fr:4567/robin/create_odoo_db:latest bb bigarren_bizi
-#~ 
-    #~ # run tests
-    #~ - docker run --rm --network=bb_net -e ODOO_PORT_8069_TCP_ADDR=bb_odoo -e ODOO_PORT_8069_TCP_PORT=8069 -e ODOO_DATABASE=bb $CONTAINER_TEST_IMAGE python manage.py test
-  #~ only:
-    #~ - master
-  #~ tags:
-    #~ - dind
 
 release_job:
   stage: release
