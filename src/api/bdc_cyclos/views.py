@@ -651,7 +651,7 @@ def sortie_retour_eusko(request):
                 },
                 {
                     'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                    'linkedEntityValue': payment['porteur']  # ID du porteur
+                    'linkedEntityValue': request.data['porteur']  # ID du porteur
                 },
             ],
             # "Sortie retour d'eusko - Bxxx - Nom du BDC
