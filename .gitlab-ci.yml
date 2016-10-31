@@ -16,7 +16,7 @@ before_script:
 build_job:
   stage: build
   script:
-    - docker build -t $CONTAINER_TEST_IMAGE src/api
+    - docker build -t $CONTAINER_TEST_IMAGE .
     - docker push $CONTAINER_TEST_IMAGE
   tags:
     - dind
