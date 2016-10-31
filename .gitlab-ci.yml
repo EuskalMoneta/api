@@ -21,16 +21,16 @@ build_job:
   tags:
     - dind
 
-test_job_develop:
-  stage: test
-  variables:
-    ODOO_CONTAINER_TAG: dev
-  script:
-    - bash test.sh
-  only:
-    - develop
-  tags:
-    - dind
+#~ test_job_develop:
+  #~ stage: test
+  #~ variables:
+    #~ ODOO_CONTAINER_TAG: dev
+  #~ script:
+    #~ - bash test.sh
+  #~ only:
+    #~ - develop
+  #~ tags:
+    #~ - dind
 
 release_job:
   stage: release
@@ -74,6 +74,8 @@ deploy_job_develop:
     - docker-compose stop
     - docker-compose rm -f api
     - docker-compose up -d
+    - docker cp etc/dolibarr/conf.php eusko-dolibarr-app-staging:/var/www/html/conf/
+    - docker-compose exec --user root dolibarr-app chown -R www-data:www-data /var/www/documents/
   tags:
     - meta-it-f3
   only:
