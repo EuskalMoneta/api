@@ -21,16 +21,16 @@ build_job:
   tags:
     - dind
 
-test_job_develop:
-  stage: test
-  variables:
-    ODOO_CONTAINER_TAG: dev
-  script:
-    - bash test.sh
-  only:
-    - develop
-  tags:
-    - dind
+#~ test_job_develop:
+  #~ stage: test
+  #~ variables:
+    #~ ODOO_CONTAINER_TAG: dev
+  #~ script:
+    #~ - bash test.sh
+  #~ only:
+    #~ - develop
+  #~ tags:
+    #~ - dind
 
 release_job:
   stage: release
