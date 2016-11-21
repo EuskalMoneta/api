@@ -2,6 +2,8 @@
 set -x
 set -e
 
+WORKDIR=$(pwd)
+
 cd /cyclos
 
 PASS=`echo -n admin:admin | base64`
@@ -14,8 +16,10 @@ done
 
 if [ ! -f ./cyclos_constants.yml ]; then
     python setup.py http://cyclos-app:8080/ $PASS
-    python init_static_data.py http://cyclos-app:8080/ $PASS
+    python init_test_data.py http://cyclos-app:8080/ $PASS
 fi
+
+cd ${WORKDIR}
 
 exec "$@"
 
