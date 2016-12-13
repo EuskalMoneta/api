@@ -74,8 +74,8 @@ deploy_job_develop:
     - docker-compose stop
     - docker-compose rm -f api
     - docker-compose up -d
-    - docker cp etc/dolibarr/conf.php eusko-dolibarr-app-staging:/var/www/html/conf/
-    - docker-compose exec --user root dolibarr-app chown -R www-data:www-data /var/www/documents/
+    - docker cp etc/dolibarr/conf.php eusko-dolibarr-app-dev:/var/www/html/conf/
+    - docker exec --user root eusko-dolibarr-app-dev chown -R www-data:www-data /var/www/documents/
   tags:
     - meta-it-f3
   only:
@@ -91,6 +91,8 @@ deploy_job_staging:
     - docker-compose stop
     - docker-compose rm -f api
     - docker-compose up -d
+    - docker cp etc/dolibarr/conf.php eusko-dolibarr-app-staging:/var/www/html/conf/
+    - docker exec --user root eusko-dolibarr-app-staging chown -R www-data:www-data /var/www/documents/
   tags:
     - eusko-integration
   only:
