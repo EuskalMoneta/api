@@ -76,7 +76,7 @@ class BDCAPIView(BaseAPIView):
         # Ajouter l'utilisateur au groupe "Opérateurs BDC"
         try:
             self.dolibarr.get(model='users/{}/setGroup/{}'.format(
-                user_id, str(settings.CYCLOS_CONSTANTS['groups']['operateurs_bdc'])))
+                user_id, str(settings.DOLIBARR_CONSTANTS['groups']['operateurs_bdc'])))
         except (DolibarrAPIException, KeyError):
             return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
 
