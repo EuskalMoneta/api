@@ -6,7 +6,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
-from dolibarr_api import DolibarrAPI
+from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from dolibarr_data import serializers
 
 log = logging.getLogger('console')
@@ -35,9 +35,15 @@ def verify_usergroup(request):
     serializer = serializers.VerifyUsergroupSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    dolibarr = DolibarrAPI(api_key=request.query_params['api_key'])
     try:
-        user_id = dolibarr.get(model='users', login=request.query_params['username'])[0]['id']
+        dolibarr = DolibarrAPI(api_key=request.query_params['api_key'])
+        user_results = dolibarr.get(model='users', login=request.query_params['username'])
+
+        user_id = [item
+                   for item in user_results
+                   if item['login'] == request.query_params['username']][0]['id']
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (KeyError, IndexError):
         return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -63,9 +69,15 @@ def get_usergroups(request):
     serializer = serializers.GetUsergroupsSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     try:
-        user_id = dolibarr.get(model='users', login=request.query_params['username'])[0]['id']
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        user_results = dolibarr.get(model='users', login=request.query_params['username'])
+
+        user_id = [item
+                   for item in user_results
+                   if item['login'] == request.query_params['username']][0]['id']
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (KeyError, IndexError):
         return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -137,9 +149,15 @@ def get_user_data(request):
     serializer = serializers.GetUserDataSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     try:
-        user_data = dolibarr.get(model='users', login=request.query_params['username'])[0]
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        user_results = dolibarr.get(model='users', login=request.query_params['username'])
+
+        user_data = [item
+                     for item in user_results
+                     if item['login'] == request.query_params['username']][0]
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except IndexError:
         return Response({'error': 'Unable to get user data from this user!'}, status=status.HTTP_400_BAD_REQUEST)
 

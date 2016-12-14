@@ -560,9 +560,15 @@ def cash_deposit(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     try:
-        bdc_name = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        user_results = dolibarr.get(model='users', login=request.user.profile.user)
+
+        bdc_name = [item
+                    for item in user_results
+                    if item['login'] == request.user.profile.user][0]['lastname']
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (IndexError, KeyError):
         return Response({'error': 'Unable to get user data from your user!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -619,9 +625,15 @@ def sortie_retour_eusko(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     try:
-        bdc_name = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        user_results = dolibarr.get(model='users', login=request.user.profile.user)
+
+        bdc_name = [item
+                    for item in user_results
+                    if item['login'] == request.user.profile.user][0]['lastname']
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (IndexError, KeyError):
         return Response({'error': 'Unable to get user data from your user!'}, status=status.HTTP_400_BAD_REQUEST)
 
