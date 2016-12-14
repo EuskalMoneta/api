@@ -577,9 +577,15 @@ def cash_deposit(request):
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['euro'])
         description = "Remise d'espèces - {} - {}".format(request.user.profile.user, bdc_name)
     elif request.data['mode'] == 'sortie-caisse-eusko':
+        try:
+            porteur = request.data['porteur']
+        except KeyError:
+            return Response({'error': 'Porteur parameter is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
+
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
         description = 'Sortie caisse eusko - {} - {}'.format(request.user.profile.user, bdc_name)
+
     else:
         return Response({'error': 'Mode parameter is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -592,6 +598,15 @@ def cash_deposit(request):
         'to': 'SYSTEM',  # System account
         'description': description
     }
+
+    if request.data['mode'] == 'sortie-caisse-eusko':
+        cash_deposit_data.update({'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
+                'linkedEntityValue': porteur  # ID du porteur
+            },
+        ]})
+
     cyclos.post(method='payment/perform', data=cash_deposit_data)
 
     for payment in request.data['selected_payments']:
