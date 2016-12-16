@@ -75,7 +75,7 @@ Dans le cas où l'on veut remettre à zéro les bases de données Cyclos et/ou D
 (sudo) rm etc/cyclos/cyclos_constants.yml
 
 # pour Dolibarr
-(sudo) rm -rf data/dolibarr/
+(sudo) rm -rf data/mariadb/
 ```
 Afin de supprimer les données liées au Cyclos et/ou Dolibarr actuels.
 
