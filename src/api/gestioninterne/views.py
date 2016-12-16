@@ -67,7 +67,7 @@ def payments_available_for_entree_coffre(request):
     if query_data['result']['totalCount'] == 0:
         return Response({}, status=status.HTTP_204_NO_CONTENT)
     else:
-        return Response(query_data)
+        return Response(query_data['result']['pageItems'])
 
 
 @api_view(['POST'])
