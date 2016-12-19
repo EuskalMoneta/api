@@ -324,7 +324,6 @@ def payments_available_for_banques(request):
     filtered_data = [
         item
         for item in bank_history_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque'])
     ]
     return Response(filtered_data)
