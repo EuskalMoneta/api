@@ -118,7 +118,6 @@ def entree_coffre(request):
                 'linkedEntityValue': porteur_id  # porteur de l'opération d'origine
             },
         ]
-        operation_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_stock_bdc'])
 
         # Dans le cas d'une sortie retours eusko
         if payment['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc']):
@@ -144,10 +143,9 @@ def entree_coffre(request):
             # Opération de Z12345 - Nom du prestataire" où
             # "Opération" est "Reconversion" ou "Dépôt sur le compte", selon le type de l'opération d'origine.
             description = "Entrée coffre - {} - {}\n{}".format(login_bdc, bdc['name'], payment['description'])
-            operation_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc'])
 
         payment_query_data = {
-            'type': operation_type,
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_coffre']),
             'amount': payment['amount'],  # montant de l'opération d'origine
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
             'from': 'SYSTEM',
