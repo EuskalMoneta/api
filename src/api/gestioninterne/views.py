@@ -303,11 +303,11 @@ def payments_available_for_banques(request):
 
     if request.query_params['mode'] == 'virement':
         bank_history_query.update({'statuses': [
-            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
         ]})
     elif request.query_params['mode'] == 'rapprochement':
         bank_history_query.update({'statuses': [
-            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
         ]})
     else:
         return Response({'error': 'The mode you privded is not supported by this endpoint!'},
@@ -321,7 +321,6 @@ def payments_available_for_banques(request):
     filtered_data = [
         item
         for item in bank_history_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque'])
     ]
     return Response(filtered_data)
