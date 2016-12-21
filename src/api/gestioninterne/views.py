@@ -201,7 +201,6 @@ def payments_available_for_entrees_euro(request):
     filtered_data = [
         item
         for item in query_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['remise_d_euro_en_caisse'])
     ]
     return Response(filtered_data)
@@ -237,7 +236,6 @@ def payments_available_for_entrees_eusko(request):
     filtered_data = [
         item
         for item in query_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
     ]
     return Response(filtered_data)
