@@ -67,6 +67,8 @@ payment_types:
   virement_de_banque_de_depot_vers_compte_debit_euro: -7371965274614743253
   virement_de_banque_de_depot_vers_compte_dedie: -7371965244549972181
   virement_de_compte_dedie_vers_compte_debit_euro: -7371965248844939477
+  de_retours_d_eusko_bdc_vers_stock_de_billets_bdc: -7371965330449318101
+  de_stock_de_billets_bdc_vers_retours_d_eusko_bdc: -7371965360514089173
   virement_entre_comptes_dedies: -7371965253139906773
   virement_inter_adherent: -7371965356219121877
 products:
