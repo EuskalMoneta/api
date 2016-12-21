@@ -616,12 +616,12 @@ def validate_reconversions(request):
     cyclos.post(method='payment/perform', data=numeriques_query)
 
     # 3) Passer chaque opération sélectionnée à l'état "Virements faits" :
-    # for payment in request.data['selected_payments']:
-    #     # Passer l'opération à l'état "Virements faits"
-    #     status_query_data = {
-    #         'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
-    #         'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
-    #     }
-    #     cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+    for payment in request.data['selected_payments']:
+        # Passer l'opération à l'état "Virements faits"
+        status_query_data = {
+            'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+        }
+        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     return Response(request.data['selected_payments'])
