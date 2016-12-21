@@ -85,13 +85,9 @@ def entree_coffre(request):
 
     for payment in request.data['selected_payments']:
         try:
-            bdc = [
-                {'id': value['linkedEntityValue']['id'], 'name': value['linkedEntityValue']['name']}
-                for value in payment['customValues']
-                if value['field']['id'] == str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['bdc']) and
-                value['field']['internalName'] == 'bdc'
-            ][0]
-        except (KeyError, IndexError):
+            bdc = {'id': payment['relatedAccount']['owner']['id'],
+                   'name': str(payment['relatedAccount']['owner']['shortDisplay']).replace('_BDC', '')}
+        except KeyError:
             return Response({'error': 'Unable to get bdc_id from one of your selected_payments!'},
                             status=status.HTTP_400_BAD_REQUEST)
 
@@ -124,7 +120,8 @@ def entree_coffre(request):
         ]
         operation_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_stock_bdc'])
 
-        if payment['mode'] == 'retour-eusko':
+        # Dans le cas d'une sortie retours eusko
+        if payment['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc']):
             try:
                 adherent_id = [
                     value['linkedEntityValue']['id']
@@ -156,7 +153,7 @@ def entree_coffre(request):
             'from': 'SYSTEM',
             'to': 'SYSTEM',
             'customValues': custom_values,
-            'description': description,  # voir explications détaillées ci-dessous
+            'description': description,  # voir explications détaillées ci-dessus
         }
         # Enregistrer l'Entrée coffre dans Cyclos
         cyclos.post(method='payment/perform', data=payment_query_data)
