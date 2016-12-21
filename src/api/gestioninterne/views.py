@@ -435,10 +435,9 @@ def payments_available_depots_retraits(request):
     depots_filtered_data = [
         item
         for item in depots_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['depot_de_billets'])
     ]
-    res.append(depots_filtered_data)
+    res.extend(depots_filtered_data)
 
     retraits_query = {
         'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_des_billets_en_circulation']),
@@ -457,16 +456,11 @@ def payments_available_depots_retraits(request):
     retraits_filtered_data = [
         item
         for item in retraits_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_de_billets'])
     ]
-    res.append(retraits_filtered_data)
+    res.extend(retraits_filtered_data)
 
-    if res:
-        # flatten res (which used to be a list containing 2 lists)
-        return Response(sum(res, []))
-    else:
-        return Response({}, status=status.HTTP_204_NO_CONTENT)
+    return Response(res) if res else Response({}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
