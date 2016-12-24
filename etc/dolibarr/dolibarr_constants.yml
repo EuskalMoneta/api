@@ -2,3 +2,6 @@ groups:
   adherents: 2
   gestion_interne: 4
   operateurs_bdc: 3
+user_statuses:
+  disabled: 0
+  enabled: 1
