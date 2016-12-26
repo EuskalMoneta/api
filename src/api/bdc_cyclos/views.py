@@ -85,6 +85,53 @@ def accounts_system_summaries(request):
         res[filter_key]['type'] = {'name': data['type']['name'], 'id': filter_key}
 
     return Response(res)
+
+
+@api_view(['GET'])
+def accounts_dedicated_summaries(request):
+    """
+    List all accounts_summaries for this BDC user.
+    """
+
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # account/getAccountsSummary
+
+    query_data = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]  # ID de l'utilisateur eusko billet
+    query_data2 = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]  # ID de l'utilisateur eusko numérique
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+    accounts_summaries_data2 = cyclos.post(method='account/getAccountsSummary', data=query_data2)
+
+    res = {}
+    filter_keys = ['compte_dedie']
+    for filter_key in filter_keys:
+        data = [item
+                for item in accounts_summaries_data['result']
+                if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types'][filter_key])][0]
+
+        res[0] = {}
+        res[0]['id_b'] = data['id']
+        res[0]['balance_b'] = float(data['status']['balance'])
+        res[0]['currency_b'] = data['currency']['symbol']
+        res[0]['type_b'] = {'name': data['type']['name'], 'id': filter_key}
+
+    for filter_key in filter_keys:
+        data2 = [item
+                 for item in accounts_summaries_data2['result']
+                 if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types'][filter_key])][0]
+
+        res[0]['id_n'] = data2['id']
+        res[0]['balance_n'] = float(data2['status']['balance'])
+        res[0]['currency_n'] = data2['currency']['symbol']
+        res[0]['type_n'] = {'name': data2['type']['name'], 'id': filter_key}
+
+    return Response(res)
+
+
+@api_view(['GET'])
 def member_account_summary(request):
     """
     Account summary for this member.
