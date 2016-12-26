@@ -50,6 +50,39 @@ def accounts_summaries(request, login_bdc=None):
 
 
 @api_view(['GET'])
+def accounts_bank_summaries(request, bank_id=None):
+    """
+    List all accounts_summaries for this BDC user.
+    """
+
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # account/getAccountsSummary
+    query_data = [cyclos.bank_id, None]  # ID de l'utilisateur Bureau de change
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+
+    # Stock de billets: stock_de_billets_bdc
+    # Caisse euros: caisse_euro_bdc
+    # Caisse eusko: caisse_eusko_bdc
+    # Retour eusko: retours_d_eusko_bdc
+    res = {}
+    filter_keys = ['banque_de_depot']
+
+    for filter_key in filter_keys:
+        data = [item
+                for item in accounts_summaries_data['result']
+                if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types'][filter_key])][0]
+
+        res[filter_key] = {}
+        res[filter_key]['id'] = data['id']
+        res[filter_key]['balance'] = float(data['status']['balance'])
+        res[filter_key]['currency'] = data['currency']['symbol']
+        res[filter_key]['type'] = {'name': data['type']['name'], 'id': filter_key}
+
+    return Response(res)
 
 
 @api_view(['GET'])
