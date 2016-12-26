@@ -562,11 +562,7 @@ def cash_deposit(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        user_results = dolibarr.get(model='users', login=request.user.profile.user)
-
-        bdc_name = [item
-                    for item in user_results
-                    if item['login'] == request.user.profile.user][0]['lastname']
+        bdc_name = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (IndexError, KeyError):
@@ -642,11 +638,7 @@ def sortie_retour_eusko(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        user_results = dolibarr.get(model='users', login=request.user.profile.user)
-
-        bdc_name = [item
-                    for item in user_results
-                    if item['login'] == request.user.profile.user][0]['lastname']
+        bdc_name = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (IndexError, KeyError):
