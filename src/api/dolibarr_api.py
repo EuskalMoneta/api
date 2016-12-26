@@ -94,6 +94,19 @@ class DolibarrAPI(object):
 
         return self._handle_api_response(r)
 
+    def put(self, model, data, id=None, api_key=None):
+        if api_key:
+            self._handle_api_key(api_key)
+
+        if id:
+            query = '{}/{}/{}?api_key={}'.format(self.url, model, id, self.api_key)
+        else:
+            query = '{}/{}?api_key={}'.format(self.url, model, self.api_key)
+
+        r = requests.put(query, json=data, headers={'content-type': 'application/json'})
+
+        return self._handle_api_response(r)
+
     def patch(self, model, data, id=None, api_key=None):
         if api_key:
             self._handle_api_key(api_key)
