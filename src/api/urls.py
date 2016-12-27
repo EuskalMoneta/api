@@ -39,8 +39,11 @@ urlpatterns = [
     url(r'^deposit-banks/$', euskalmoneta_data_views.deposit_banks),
 
     # Cyclos data, data we fetch from/push to its API
+
+    url(r'^accounts-system-summaries/$', bdc_cyclos_views.accounts_system_summaries),
+    url(r'^accounts-dedicated-summaries/$', bdc_cyclos_views.accounts_dedicated_summaries),
     url(r'^accounts-summaries/(?P<login_bdc>[\w\-]+)?/?$', bdc_cyclos_views.accounts_summaries),
-    url(r'^system-accounts-summaries/$', bdc_cyclos_views.system_accounts_summaries),
+    url(r'^accounts-bank-summaries/(?P<bank_id>[\w\-]+)?/?$', bdc_cyclos_views.accounts_bank_summaries),
     url(r'^member-accounts-summaries/$', bdc_cyclos_views.member_account_summary),
     url(r'^accounts-history/$', bdc_cyclos_views.accounts_history),
     url(r'^payments-available-entree-stock/$', bdc_cyclos_views.payments_available_for_entree_stock),
