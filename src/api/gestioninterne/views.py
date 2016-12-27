@@ -86,9 +86,10 @@ def entree_coffre(request):
     for payment in request.data['selected_payments']:
         try:
             bdc = {'id': payment['relatedAccount']['owner']['id'],
-                   'name': str(payment['relatedAccount']['owner']['shortDisplay']).replace('_BDC', '')}
+                   'login': str(payment['relatedAccount']['owner']['shortDisplay']).replace('_BDC', ''),
+                   'name': str(payment['relatedAccount']['owner']['display']).replace(' (BDC)', '')}
         except KeyError:
-            return Response({'error': 'Unable to get bdc_id from one of your selected_payments!'},
+            return Response({'error': 'Unable to get bdc info from one of your selected_payments!'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -103,10 +104,17 @@ def entree_coffre(request):
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Comment construire le champ Description de l'entrée coffre ?
-        # Si l'opération d'origine est une sortie stock BDC, la description doit être :
+        # Il faut reprendre la description de l'opération d'origine,
+        # et remplacer "Sortie stock" ou "Sortie retours eusko" par "Entrée coffre".
+        # Exemple:
         # "Entrée coffre - Bxxx - Nom du BDC'"
-        login_bdc = ''
-        description = "Entrée coffre - {} - {}".format(login_bdc, bdc['name'])
+        try:
+            if 'Sortie stock' in payment['description']:
+                description = payment['description'].replace('Sortie stock', 'Entrée coffre')
+            else:
+                description = 'Entrée coffre - {} - {}'.format(bdc['login'], bdc['name'])
+        except KeyError:
+            description = 'Entrée coffre - {} - {}'.format(bdc['login'], bdc['name'])
 
         custom_values = [
             {
@@ -142,7 +150,14 @@ def entree_coffre(request):
             # "Entrée coffre - Bxxx - Nom du BDC\n
             # Opération de Z12345 - Nom du prestataire" où
             # "Opération" est "Reconversion" ou "Dépôt sur le compte", selon le type de l'opération d'origine.
-            description = "Entrée coffre - {} - {}\n{}".format(login_bdc, bdc['name'], payment['description'])
+            try:
+                if 'Sortie retours eusko' in payment['description']:
+                    description = payment['description'].replace('Sortie retours eusko', 'Entrée coffre')
+                else:
+                    description = "Entrée coffre - {} - {}\n{}".format(
+                        bdc['login'], bdc['name'], payment['description'])
+            except KeyError:
+                description = "Entrée coffre - {} - {}\n{}".format(bdc['login'], bdc['name'], payment['description'])
 
         payment_query_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_coffre']),
