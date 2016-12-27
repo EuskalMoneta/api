@@ -40,6 +40,7 @@ urlpatterns = [
 
     # Cyclos data, data we fetch from/push to its API
     url(r'^accounts-summaries/(?P<login_bdc>[\w\-]+)?/?$', bdc_cyclos_views.accounts_summaries),
+    url(r'^system-accounts-summaries/$', bdc_cyclos_views.system_accounts_summaries),
     url(r'^member-accounts-summaries/$', bdc_cyclos_views.member_account_summary),
     url(r'^accounts-history/$', bdc_cyclos_views.accounts_history),
     url(r'^payments-available-entree-stock/$', bdc_cyclos_views.payments_available_for_entree_stock),
