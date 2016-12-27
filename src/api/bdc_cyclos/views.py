@@ -923,11 +923,10 @@ def retrait_eusko_numerique(request):
 
     try:
         if float(member_account_summary_res['result'][0]['status']['balance']) < float(request.data['amount']):
-            return Response({'error': "This member doesn't have enough money to do this change."})
+            return Response({'error': "error-member-not-enough-money"})
     except (KeyError, IndexError):
         return Response({'error': "Unable to fetch account data!"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    return Response(member_account_summary_res)
 
     # Verify whether or not bdc cash stock has enough money
     bdc_account_summary_query = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
@@ -937,10 +936,8 @@ def retrait_eusko_numerique(request):
         item
         for item in bdc_account_summary_res['result']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types']['stock_de_billets_bdc'])][0]
-
     if float(bdc_account_summary_data['status']['balance']) < float(request.data['amount']):
-        return Response({'error': "This Bureau de change doesn't have enough money to do this change."},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': "error-bureau-not-enough-money"})
 
     # Débit du compte
     debit_compte_data = {
