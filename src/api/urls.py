@@ -39,6 +39,7 @@ urlpatterns = [
     url(r'^deposit-banks/$', euskalmoneta_data_views.deposit_banks),
 
     # Cyclos data, data we fetch from/push to its API
+
     url(r'^accounts-summaries/(?P<login_bdc>[\w\-]+)?/?$', bdc_cyclos_views.accounts_summaries),
     url(r'^system-accounts-summaries/$', bdc_cyclos_views.system_accounts_summaries),
     url(r'^member-accounts-summaries/$', bdc_cyclos_views.member_account_summary),
