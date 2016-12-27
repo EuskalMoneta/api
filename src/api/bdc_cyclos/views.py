@@ -923,8 +923,7 @@ def retrait_eusko_numerique(request):
 
     try:
         if float(member_account_summary_res['result'][0]['status']['balance']) < float(request.data['amount']):
-            return Response({'error': "This member doesn't have enough money to do this change."},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': "This member doesn't have enough money to do this change."})
     except (KeyError, IndexError):
         return Response({'error': "Unable to fetch account data!"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
