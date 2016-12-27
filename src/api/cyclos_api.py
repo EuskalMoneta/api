@@ -24,6 +24,8 @@ class CyclosAPI(object):
         try:
             if self.mode == 'bdc':
                 self._init_bdc()
+            elif self.mode == 'gi':
+                pass
             elif self.mode == 'gi_bdc' and self.login_bdc:
                 self._init_gi_bdc()
         except AttributeError:

@@ -317,9 +317,12 @@ def reconversion(request):
 @api_view(['GET'])
 def accounts_history(request):
     """
-    Accounts history for BDC.
-    Available account types are:
-    ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
+    Accounts history for BDC and system accounts.
+    For a Bureau De Change the available accounts types are:
+    ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc'].
+
+    If your user is 'Gestion Interne' you can request some other accounts:
+    'stock_de_billets' (aka Coffre), and 'compte_de_transit'.
 
     You can also filter out results with the 'filter' query param
     """
@@ -327,25 +330,36 @@ def accounts_history(request):
     serializer = serializers.AccountsHistorySerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
+    # CyclosAPI has 3 modes: gi, gi_bdc, and bdc
     try:
-        login_bdc = request.query_params['login_bdc']
-        cyclos_mode = 'gi_bdc'
-    except KeyError:
         login_bdc = None
-        cyclos_mode = 'bdc'
+        cyclos_mode = request.query_params['cyclos_mode']
+    except KeyError:
+        try:
+            login_bdc = request.query_params['login_bdc']
+            cyclos_mode = 'gi_bdc'
+        except KeyError:
+            login_bdc = None
+            cyclos_mode = 'bdc'
 
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # account/getAccountsSummary
-    query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
+    # If you are a BDC user
+    if cyclos_mode in ['bdc', 'gi_bdc']:
+        query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
+        account_types = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
+
+    # If you are Gestion Interne
+    elif cyclos_mode == 'gi':
+        query_data = ['SYSTEM', None]
+        account_types = ['stock_de_billets', 'compte_de_transit']
+
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
 
     # Available account types verification
-    account_types = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
-
     if request.query_params['account_type'] not in account_types:
         return Response({'error': 'The account type you provided: {}, is not available for this query!'
                          .format(request.query_params['account_type'])},
@@ -357,7 +371,7 @@ def accounts_history(request):
                 if item['type']['id'] ==
                 str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
     except IndexError:
-        return Response({'result': {'pageItems': []}})
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     # account/searchAccountHistory
     search_history_data = {
