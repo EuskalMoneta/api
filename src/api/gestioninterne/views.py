@@ -600,6 +600,29 @@ def validate_reconversions(request):
     serializer = serializers.ValidateReconversionsSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
+    # Verify whether or not dedicated accounts has enough money
+    query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
+    accounts_summaries_billet = cyclos.post(method='account/getAccountsSummary', data=query_data_billet)
+
+    try:
+        if (float(accounts_summaries_billet['result'][0]['status']['balance']) <
+           float(request.data['montant_total_billets'])):
+            return Response({'error': "error-system-not-enough-money-billet"})
+    except (KeyError, IndexError):
+        return Response({'error': "Unable to fetch compte_dedie_eusko_billet account data!"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    query_data_numerique = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]
+    accounts_summaries_numerique = cyclos.post(method='account/getAccountsSummary', data=query_data_numerique)
+
+    try:
+        if (float(accounts_summaries_numerique['result'][0]['status']['balance']) <
+           float(request.data['montant_total_numerique'])):
+            return Response({'error': "error-system-not-enough-money-numerique"})
+    except (KeyError, IndexError):
+        return Response({'error': "Unable to fetch compte_dedie_eusko_numerique account data!"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     # 1) Enregistrer le virement pour les eusko billet
     billets_query = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
