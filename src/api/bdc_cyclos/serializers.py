@@ -12,6 +12,7 @@ class SortieStockBDCSerializer(serializers.Serializer):
     amount = serializers.CharField()
     porteur = serializers.CharField()
     description = serializers.CharField()
+    login_bdc = serializers.CharField(required=False)
 
 
 class ChangeEuroEuskoSerializer(serializers.Serializer):
@@ -32,6 +33,7 @@ class ReconversionSerializer(serializers.Serializer):
 class AccountsHistorySerializer(serializers.Serializer):
 
     account_type = serializers.CharField()
+    login_bdc = serializers.CharField(required=False)
     filter = serializers.CharField(required=False)
     direction = serializers.CharField(required=False)
 
@@ -54,6 +56,13 @@ class CashDepositSerializer(serializers.Serializer):
     deposit_amount = serializers.CharField()
     login_bdc = serializers.CharField()
     mode = serializers.CharField()
+    selected_payments = serializers.ListField()
+
+
+class SortieRetourEuskoSerializer(serializers.Serializer):
+    deposit_amount = serializers.CharField()
+    login_bdc = serializers.CharField()
+    porteur = serializers.CharField()
     selected_payments = serializers.ListField()
 
 

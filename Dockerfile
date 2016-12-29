@@ -1,4 +1,4 @@
-FROM python:3.4
+FROM python:3.5
 
 RUN mkdir -p /usr/src/app /cyclos
 WORKDIR /usr/src/app
@@ -12,12 +12,12 @@ COPY etc/cyclos /cyclos
 COPY etc/dolibarr /dolibarr
 
 RUN apt-get update && apt-get install -y \
-		gcc \
-		gettext \
-		mysql-client libmysqlclient-dev \
-		postgresql-client libpq-dev \
-		sqlite3 \
-	--no-install-recommends && rm -rf /var/lib/apt/lists/*
+        gcc \
+        gettext \
+        mysql-client libmysqlclient-dev \
+        postgresql-client libpq-dev \
+        sqlite3 \
+    --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["/cyclos/setup_cyclos.sh"]
 

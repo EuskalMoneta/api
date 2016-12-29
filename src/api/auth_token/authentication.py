@@ -21,10 +21,23 @@ def authenticate(username, password):
     cyclos_auth_string = b64encode(bytes('{}:{}'.format(username, password), "utf-8"))
 
     if token:
+        try:
+            user_data = dolibarr.get(model='users', login=username, api_key=token)[0]
+        except IndexError:
+            raise AuthenticationFailed()
+
         user, created = User.objects.get_or_create(username=username)
+
         user_profile = user.profile
         user_profile.dolibarr_token = token
         user_profile.cyclos_auth_string = cyclos_auth_string
+
+        try:
+            user_profile.firstname = user_data['firstname']
+            user_profile.lastname = user_data['lastname']
+        except KeyError:
+            raise AuthenticationFailed()
+
         user_profile.save()
 
     return user

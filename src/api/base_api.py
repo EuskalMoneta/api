@@ -3,6 +3,7 @@ import logging
 from rest_framework import viewsets
 from rest_framework.response import Response
 
+from cyclos_api import CyclosAPI
 from dolibarr_api import DolibarrAPI
 from members.serializers import MemberSerializer
 from pagination import CustomPagination
@@ -14,7 +15,13 @@ class BaseAPIView(viewsets.ViewSet):
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
-        self.dolibarr = DolibarrAPI(model=self.model)
+        self.cyclos = CyclosAPI()
+
+        try:
+            if self.model:
+                self.dolibarr = DolibarrAPI(model=self.model)
+        except AttributeError:
+            self.dolibarr = DolibarrAPI()
 
     def list(self, request, *args, **kwargs):
         objects = self.dolibarr.get(model=self.model, api_key=request.user.profile.dolibarr_token)

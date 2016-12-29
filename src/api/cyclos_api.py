@@ -24,6 +24,8 @@ class CyclosAPI(object):
         try:
             if self.mode == 'bdc':
                 self._init_bdc()
+            elif self.mode == 'gi_bdc' and self.login_bdc:
+                self._init_gi_bdc()
         except AttributeError:
             pass
 
@@ -49,12 +51,19 @@ class CyclosAPI(object):
         except (KeyError, IndexError):
             raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
-    def get_member_id_from_login(self, member_login):
+    def _init_gi_bdc(self):
+        self.user_id = self.get_member_id_from_login(self.login_bdc)
+        self.user_bdc_id = self.user_id
+
+    def get_member_id_from_login(self, member_login, auth_string=None):
+        if auth_string:
+            self._handle_auth_string(auth_string)
+
+        query_data = {
+            'keywords': member_login,
+            'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
+        }
         try:
-            query_data = {
-                'keywords': member_login,
-                'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
-            }
             member_login_data = self.post(method='user/search', data=query_data)
             member_cyclos_id = member_login_data['result']['pageItems'][0]['id']
         except CyclosAPIException:

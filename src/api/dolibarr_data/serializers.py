@@ -12,6 +12,11 @@ class GetUsergroupsSerializer(serializers.Serializer):
     username = serializers.CharField()
 
 
+class GetUserDataSerializer(serializers.Serializer):
+
+    username = serializers.CharField()
+
+
 class VerifyUsergroupSerializer(serializers.Serializer):
 
     username = serializers.CharField()

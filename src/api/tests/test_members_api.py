@@ -47,9 +47,9 @@ class TestMembersAPI:
 
     def test_2_post(self, api):
         data = {"login": "E12345", "civility_id": "MR",
-                "lastname": "Le Frioux", "firstname": "Florian",
-                "address": "8 Allée Sagardi Les Vergers Del Hogar",
-                "phone": "0623151353", "email": "florian@lefrioux.fr",
+                "lastname": "Lastname", "firstname": "Firstname",
+                "address": "Full member Address",
+                "phone": "0559520654", "email": "email@valid.net",
                 "options_recevoir_actus": "0", "birth": "01/01/1980",
                 "fk_asso": "809", "fk_asso2": "825",
                 "country_id": "1", "zip": "64600", "town": "Angelu / Anglet"}

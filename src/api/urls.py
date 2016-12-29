@@ -3,13 +3,18 @@
 from django.conf.urls import url
 from rest_framework import routers
 
+from bureauxdechange.views import BDCAPIView
+from members.views import MembersAPIView, MembersSubscriptionsAPIView
+
 from auth_token import views as auth_token_views
 import bdc_cyclos.views as bdc_cyclos_views
 import dolibarr_data.views as dolibarr_data_views
 import euskalmoneta_data.views as euskalmoneta_data_views
-from members.views import MembersAPIView, MembersSubscriptionsAPIView
+import gestioninterne.views as gi_views
+
 
 router = routers.SimpleRouter()
+router.register(r'bdc', BDCAPIView, base_name='bdc')
 router.register(r'members', MembersAPIView, base_name='members')
 router.register(r'members-subscriptions', MembersSubscriptionsAPIView, base_name='members-subscriptions')
 
@@ -25,6 +30,7 @@ urlpatterns = [
     url(r'^countries/$', dolibarr_data_views.countries),
     url(r'^countries/(?P<id>[^/.]+)/$', dolibarr_data_views.country_by_id),
     url(r'^bdc-name/$', dolibarr_data_views.get_bdc_name),
+    url(r'^user-data/$', dolibarr_data_views.get_user_data),
     url(r'^towns/$', dolibarr_data_views.towns_by_zipcode),
 
     # Euskal moneta data (hardcoded data we dont fetch from APIs)
@@ -33,7 +39,7 @@ urlpatterns = [
     url(r'^deposit-banks/$', euskalmoneta_data_views.deposit_banks),
 
     # Cyclos data, data we fetch from/push to its API
-    url(r'^accounts-summaries/$', bdc_cyclos_views.accounts_summaries),
+    url(r'^accounts-summaries/(?P<login_bdc>[\w\-]+)?/?$', bdc_cyclos_views.accounts_summaries),
     url(r'^member-accounts-summaries/$', bdc_cyclos_views.member_account_summary),
     url(r'^accounts-history/$', bdc_cyclos_views.accounts_history),
     url(r'^payments-available-entree-stock/$', bdc_cyclos_views.payments_available_for_entree_stock),
@@ -44,10 +50,26 @@ urlpatterns = [
     url(r'^bank-deposit/$', bdc_cyclos_views.bank_deposit),
     url(r'^cash-deposit/$', bdc_cyclos_views.cash_deposit),
     url(r'^sortie-caisse-eusko/$', bdc_cyclos_views.cash_deposit),
-    url(r'^sortie-retour-eusko/$', bdc_cyclos_views.cash_deposit),
+    url(r'^sortie-retour-eusko/$', bdc_cyclos_views.sortie_retour_eusko),
     url(r'^depot-eusko-numerique/$', bdc_cyclos_views.depot_eusko_numerique),
     url(r'^retrait-eusko-numerique/$', bdc_cyclos_views.retrait_eusko_numerique),
     url(r'^bdc-change-password/$', bdc_cyclos_views.bdc_change_password),
+
+    # Endpoints for Gestion Interne
+    url(r'^sortie-coffre/$', gi_views.sortie_coffre),
+    url(r'^payments-available-entree-coffre/$', gi_views.payments_available_for_entree_coffre),
+    url(r'^entree-coffre/$', gi_views.entree_coffre),
+    url(r'^payments-available-entrees-euro/$', gi_views.payments_available_for_entrees_euro),
+    url(r'^validate-entrees-euro/$', gi_views.validate_history),
+    url(r'^payments-available-entrees-eusko/$', gi_views.payments_available_for_entrees_eusko),
+    url(r'^validate-entrees-eusko/$', gi_views.validate_history),
+    url(r'^payments-available-banques/$', gi_views.payments_available_for_banques),
+    url(r'^validate-banques-rapprochement/$', gi_views.validate_history),
+    url(r'^validate-banques-virement/$', gi_views.validate_banques_virement),
+    url(r'^payments-available-depots-retraits/$', gi_views.payments_available_depots_retraits),
+    url(r'^validate-depots-retraits/$', gi_views.validate_depots_retraits),
+    url(r'^payments-available-reconversions/$', gi_views.payments_available_for_reconversions),
+    url(r'^validate-reconversions/$', gi_views.validate_reconversions),
 ]
 
 urlpatterns += router.urls

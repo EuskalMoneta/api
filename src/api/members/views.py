@@ -37,7 +37,7 @@ class MembersAPIView(BaseAPIView):
 
         # Cyclos: Register member
         try:
-            cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+            self.cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
         except CyclosAPIException:
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -47,7 +47,7 @@ class MembersAPIView(BaseAPIView):
             'username': data['login'],
             'skipActivationEmail': True,
         }
-        cyclos.post(method='user/register', data=create_user_data)
+        self.cyclos.post(method='user/register', data=create_user_data)
 
         try:
             sendmail_euskalmoneta(subject="subject", body="body", to_email=data['email'])
@@ -213,11 +213,11 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
         # Cyclos: Register member subscription payment
         try:
-            cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+            self.cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
         except CyclosAPIException:
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-        member_cyclos_id = cyclos.get_member_id_from_login(current_member['login'])
+        member_cyclos_id = self.cyclos.get_member_id_from_login(current_member['login'])
 
         if current_member['type'].lower() == 'particulier':
             member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
@@ -255,10 +255,10 @@ class MembersSubscriptionsAPIView(BaseAPIView):
         query_data.update({
             'amount': data['amount'],
             'from': 'SYSTEM',
-            'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+            'to': self.cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         })
 
-        cyclos.post(method='payment/perform', data=query_data)
+        self.cyclos.post(method='payment/perform', data=query_data)
 
         try:
             sendmail_euskalmoneta(subject="subject", body="body", to_email=current_member['email'])

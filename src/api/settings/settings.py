@@ -39,7 +39,12 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'kci-=2)4_qh#a3+k#xt!0)_t838t9zjcjpl#&09(&2&kftskr('
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.environ.get('DJANGO_DEBUG')
+# You need to explicitly set DJANGO_DEBUG=True in docker-compose.yml (or environment variable) to have DEBUG on
+DEBUG = os.environ.get('DJANGO_DEBUG', False)
+if DEBUG and DEBUG in [True, 'true', 'True', 'yes', 'Yes']:
+    DEBUG = True
+else:
+    DEBUG = False
 
 if DEBUG:
     EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
@@ -56,9 +61,12 @@ INSTALLED_APPS = [
     'members',
 
     'bdc_cyclos',
+    'bureauxdechange',
 
     'dolibarr_data',
     'euskalmoneta_data',
+
+    'gestioninterne',
 
     'corsheaders',
     'raven.contrib.django.raven_compat',
@@ -159,6 +167,7 @@ STATIC_URL = '/static/'
 API_PUBLIC_URL = os.environ.get('API_PUBLIC_URL')
 DOLIBARR_PUBLIC_URL = os.environ.get('DOLIBARR_PUBLIC_URL')
 BDC_PUBLIC_URL = os.environ.get('BDC_PUBLIC_URL')
+GI_PUBLIC_URL = os.environ.get('GI_PUBLIC_URL')
 
 # APIs URLs
 DOLIBARR_URL = 'http://dolibarr-app/api/index.php'
@@ -176,9 +185,19 @@ if 'https' in BDC_PUBLIC_URL:
 else:
     BDC_CORS_URL = BDC_PUBLIC_URL.replace('http://', '')
 
-CORS_ORIGIN_WHITELIST = (
-    BDC_CORS_URL,
-)
+if 'https' in GI_PUBLIC_URL:
+    GI_CORS_URL = GI_PUBLIC_URL.replace('https://', '')
+else:
+    GI_CORS_URL = GI_PUBLIC_URL.replace('http://', '')
+
+# This is needed for Selenium tests to pass (we don't know the URL inside containers)
+if DEBUG:
+    CORS_ORIGIN_ALLOW_ALL = True
+else:
+    CORS_ORIGIN_WHITELIST = (
+        BDC_CORS_URL,
+        GI_CORS_URL,
+    )
 
 # Raven + Logging
 RAVEN_CONFIG = {

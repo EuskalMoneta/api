@@ -126,10 +126,21 @@ def get_bdc_name(request):
     """
     Get the bdc name (lastname) for the current user.
     """
+    return Response(request.user.profile.lastname)
+
+
+@api_view(['GET'])
+def get_user_data(request):
+    """
+    Get user data for a user.
+    """
+    serializer = serializers.GetUserDataSerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
     dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     try:
-        user_data = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
-    except (IndexError, KeyError):
-        return Response({'error': 'Unable to get user data from your user!'}, status=status.HTTP_400_BAD_REQUEST)
+        user_data = dolibarr.get(model='users', login=request.query_params['username'])[0]
+    except IndexError:
+        return Response({'error': 'Unable to get user data from this user!'}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response(user_data)
