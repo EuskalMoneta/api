@@ -306,7 +306,6 @@ def payments_available_for_banques(request):
     bank_history_query = {
         'account': bank_account_id,  # ID du compte
         'orderBy': 'DATE_DESC',
-        'direction': 'CREDIT',
         'fromNature': 'USER',
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
@@ -332,7 +331,6 @@ def payments_available_for_banques(request):
     filtered_data = [
         item
         for item in bank_history_data['result']['pageItems']
-        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque'])
     ]
     return Response(filtered_data)
 
