@@ -360,7 +360,6 @@ def accounts_history(request):
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
 
     # Available account types verification
-    account_types = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
 
     if request.query_params['account_type'] not in account_types:
         return Response({'error': 'The account type you provided: {}, is not available for this query!'
