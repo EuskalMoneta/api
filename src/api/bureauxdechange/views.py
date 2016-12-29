@@ -111,7 +111,8 @@ class BDCAPIView(BaseAPIView):
         view_all = request.GET.get('view_all', False)
         if view_all and view_all in [True, 'true', 'True', 'yes', 'Yes']:
             # user/search for group = 'bureaux_de_change'
-            query_data = {'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])]}
+            query_data = {'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])],
+                'userStatus': ['ACTIVE', 'DISABLED']}
         else:
             # user/search for group = 'bureaux_de_change'
             query_data = {'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])],
