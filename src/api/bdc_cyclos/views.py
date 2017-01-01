@@ -144,12 +144,12 @@ def entree_stock(request):
             bdc_name = ''
 
         try:
-            if 'Sortie stock' in payment['description']:
-                description = payment['description'].replace('Sortie stock', 'Entrée coffre')
+            if 'Sortie coffre' in payment['description']:
+                description = payment['description'].replace('Sortie coffre', 'Entrée stock')
             else:
-                description = 'Entrée coffre - {} - {}'.format(request.data['login_bdc'], bdc_name)
+                description = 'Entrée stock - {} - {}'.format(request.data['login_bdc'], bdc_name)
         except KeyError:
-            description = 'Entrée coffre - {} - {}'.format(request.data['login_bdc'], bdc_name)
+            description = 'Entrée stock - {} - {}'.format(request.data['login_bdc'], bdc_name)
 
         # payment/perform
         payment_query_data = {
