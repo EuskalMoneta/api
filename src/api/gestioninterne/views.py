@@ -364,8 +364,7 @@ def validate_banques_virement(request):
 
     # Cotisations
     cotisation_query = {
-        'type': str(
-            settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_le_compte_de_debit_en_euro']),
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_debit_euro']),
         'amount': 60,  # montant du virement "Cotisations"
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': user_id,  # ID de l'utilisateur Banque de dépôt
@@ -376,8 +375,7 @@ def validate_banques_virement(request):
 
     # Ventes
     ventes_query = {
-        'type': str(
-            settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_le_compte_de_debit_en_euro']),
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_debit_euro']),
         'amount': 12,  # montant du virement "Ventes"
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': user_id,  # ID de l'utilisateur Banque de dépôt
