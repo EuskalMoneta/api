@@ -63,7 +63,7 @@ def system_accounts_summaries(request):
     query_data = ['SYSTEM', None]
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
 
-    # Stock de billets: stock_de_billets_bdc
+    # Stock de billets: stock_de_billets
     # Compte de transit: compte_de_transit
     res = {}
     filter_keys = ['stock_de_billets', 'compte_de_transit']
@@ -71,6 +71,41 @@ def system_accounts_summaries(request):
         data = [item
                 for item in accounts_summaries_data['result']
                 if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types'][filter_key])][0]
+
+        res[filter_key] = {}
+        res[filter_key]['id'] = data['id']
+        res[filter_key]['balance'] = float(data['status']['balance'])
+        res[filter_key]['currency'] = data['currency']['symbol']
+        res[filter_key]['type'] = {'name': data['type']['name'], 'id': filter_key}
+
+    return Response(res)
+
+
+@api_view(['GET'])
+def dedicated_accounts_summaries(request):
+    """
+    Accounts summaries for dedicated accounts.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    query_data = []
+    # Compte dédié Eusko billet: compte_dedie_eusko_billet
+    # Compte dédié Eusko numérique: compte_dedie_eusko_numerique
+    query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
+    query_data.extend(cyclos.post(method='account/getAccountsSummary', data=query_data_billet)['result'])
+
+    query_data_numerique = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]
+    query_data.extend(cyclos.post(method='account/getAccountsSummary', data=query_data_numerique)['result'])
+
+    res = {}
+    filter_keys = ['compte_dedie_eusko_billet', 'compte_dedie_eusko_numerique']
+    for filter_key in filter_keys:
+        data = [item
+                for item in query_data
+                if item['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users'][filter_key])][0]
 
         res[filter_key] = {}
         res[filter_key]['id'] = data['id']
@@ -867,9 +902,8 @@ def retrait_eusko_numerique(request):
     except (KeyError, IndexError):
         return Response({'error': "Unable to fetch account data!"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
 
-    # Verify whether or not bdc cash stock has enough money
+    # Verify whether or not bdc cash stock have enough money
     bdc_account_summary_query = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
     bdc_account_summary_res = cyclos.post(method='account/getAccountsSummary', data=bdc_account_summary_query)
 
