@@ -13,9 +13,9 @@ services:
 before_script:
   # This code allows to use SSH with public key authentication
   # See https://docs.gitlab.com/ce/ci/ssh_keys/README.html
-  - 'which ssh-agent || ( apt-get update -y && apt-get install openssh-client -y )'
+  - 'which ssh-agent || ( apk add openssh-client )'
   - eval $(ssh-agent -s)
-  - ssh-add <(echo "$SSH_PRIVATE_KEY")
+  - 'ssh-add <(echo "$SSH_PRIVATE_KEY")'
   - mkdir -p ~/.ssh
   - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
   
