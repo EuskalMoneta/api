@@ -143,6 +143,14 @@ def entree_stock(request):
             # TODO ?
             bdc_name = ''
 
+        try:
+            if 'Sortie coffre' in payment['description']:
+                description = payment['description'].replace('Sortie coffre', 'Entrée stock')
+            else:
+                description = 'Entrée stock - {} - {}'.format(request.data['login_bdc'], bdc_name)
+        except KeyError:
+            description = 'Entrée stock - {} - {}'.format(request.data['login_bdc'], bdc_name)
+
         # payment/perform
         payment_query_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_stock_bdc']),
@@ -156,7 +164,7 @@ def entree_stock(request):
                     'linkedEntityValue': porteur  # ID du porteur
                 },
             ],
-            'description': 'Entrée stock - {} - {}'.format(request.data['login_bdc'], bdc_name),
+            'description': description,
         }
         cyclos.post(method='payment/perform', data=payment_query_data)
 
