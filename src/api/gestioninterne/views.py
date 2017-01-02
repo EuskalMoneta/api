@@ -598,7 +598,7 @@ def validate_reconversions(request):
     serializer = serializers.ValidateReconversionsSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    # Verify whether or not dedicated accounts has enough money
+    # Verify whether or not dedicated accounts have enough money
     query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
     accounts_summaries_billet = cyclos.post(method='account/getAccountsSummary', data=query_data_billet)
     try:
@@ -633,14 +633,15 @@ def validate_reconversions(request):
     cyclos.post(method='payment/perform', data=billets_query)
 
     # 2) Passer chaque opération (reconversion d'eusko billet) sélectionnée à l'état "Virements faits" :
-    for payment in request.data['selected_payments'] if request.data['selected_payments'][0]['type']['from']['internalName'] == "compte_des_billets_en_circulation":
+    for payment in request.data['selected_payments']:
+        if request.data['selected_payments'][0]['type']['from']['internalName'] == "compte_des_billets_en_circulation":
 
-        # Passer l'opération à l'état "Virements faits"
-        status_query_data = {
-            'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
-            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
-        }
-        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+            # Passer l'opération à l'état "Virements faits"
+            status_query_data = {
+                'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+                'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+            }
+            cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     # 3) Enregistrer le virement pour les eusko numériques
     numeriques_query = {
@@ -655,13 +656,14 @@ def validate_reconversions(request):
     cyclos.post(method='payment/perform', data=numeriques_query)
 
     # 4) Passer chaque opération (reconversion d'eusko numérique) sélectionnée à l'état "Virements faits" :
-    for payment in request.data['selected_payments'] if request.data['selected_payments'][0]['type']['from']['internalName'] != "compte_des_billets_en_circulation":
+    for payment in request.data['selected_payments']:
+        if request.data['selected_payments'][0]['type']['from']['internalName'] != "compte_des_billets_en_circulation":
 
-        # Passer l'opération à l'état "Virements faits"
-        status_query_data = {
-            'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
-            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
-        }
-        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+            # Passer l'opération à l'état "Virements faits"
+            status_query_data = {
+                'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+                'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+            }
+            cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     return Response(request.data['selected_payments'])
