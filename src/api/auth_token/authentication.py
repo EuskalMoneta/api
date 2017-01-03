@@ -21,9 +21,13 @@ def authenticate(username, password):
     cyclos_auth_string = b64encode(bytes('{}:{}'.format(username, password), "utf-8"))
 
     if token:
+        user_results = dolibarr.get(model='users', login=username, api_key=token)
+
         try:
-            user_data = dolibarr.get(model='users', login=username, api_key=token)[0]
-        except IndexError:
+            user_data = [item
+                         for item in user_results
+                         if item['login'] == username][0]
+        except (KeyError, IndexError):
             raise AuthenticationFailed()
 
         user, created = User.objects.get_or_create(username=username)

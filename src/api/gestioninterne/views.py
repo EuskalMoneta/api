@@ -67,7 +67,7 @@ def payments_available_for_entree_coffre(request):
     if query_data['result']['totalCount'] == 0:
         return Response({}, status=status.HTTP_204_NO_CONTENT)
     else:
-        return Response(query_data)
+        return Response(query_data['result']['pageItems'])
 
 
 @api_view(['POST'])
@@ -85,14 +85,11 @@ def entree_coffre(request):
 
     for payment in request.data['selected_payments']:
         try:
-            bdc = [
-                {'id': value['linkedEntityValue']['id'], 'name': value['linkedEntityValue']['name']}
-                for value in payment['customValues']
-                if value['field']['id'] == str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['bdc']) and
-                value['field']['internalName'] == 'bdc'
-            ][0]
-        except (KeyError, IndexError):
-            return Response({'error': 'Unable to get bdc_id from one of your selected_payments!'},
+            bdc = {'id': payment['relatedAccount']['owner']['id'],
+                   'login': str(payment['relatedAccount']['owner']['shortDisplay']).replace('_BDC', ''),
+                   'name': str(payment['relatedAccount']['owner']['display']).replace(' (BDC)', '')}
+        except KeyError:
+            return Response({'error': 'Unable to get bdc info from one of your selected_payments!'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -107,10 +104,17 @@ def entree_coffre(request):
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Comment construire le champ Description de l'entrée coffre ?
-        # Si l'opération d'origine est une sortie stock BDC, la description doit être :
+        # Il faut reprendre la description de l'opération d'origine,
+        # et remplacer "Sortie stock" ou "Sortie retours eusko" par "Entrée coffre".
+        # Exemple:
         # "Entrée coffre - Bxxx - Nom du BDC'"
-        login_bdc = ''
-        description = "Entrée coffre - {} - {}".format(login_bdc, bdc['name'])
+        try:
+            if 'Sortie stock' in payment['description']:
+                description = payment['description'].replace('Sortie stock', 'Entrée coffre')
+            else:
+                description = 'Entrée coffre - {} - {}'.format(bdc['login'], bdc['name'])
+        except KeyError:
+            description = 'Entrée coffre - {} - {}'.format(bdc['login'], bdc['name'])
 
         custom_values = [
             {
@@ -122,9 +126,9 @@ def entree_coffre(request):
                 'linkedEntityValue': porteur_id  # porteur de l'opération d'origine
             },
         ]
-        operation_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_stock_bdc'])
 
-        if payment['mode'] == 'retour-eusko':
+        # Dans le cas d'une sortie retours eusko
+        if payment['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc']):
             try:
                 adherent_id = [
                     value['linkedEntityValue']['id']
@@ -146,17 +150,23 @@ def entree_coffre(request):
             # "Entrée coffre - Bxxx - Nom du BDC\n
             # Opération de Z12345 - Nom du prestataire" où
             # "Opération" est "Reconversion" ou "Dépôt sur le compte", selon le type de l'opération d'origine.
-            description = "Entrée coffre - {} - {}\n{}".format(login_bdc, bdc['name'], payment['description'])
-            operation_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc'])
+            try:
+                if 'Sortie retours eusko' in payment['description']:
+                    description = payment['description'].replace('Sortie retours eusko', 'Entrée coffre')
+                else:
+                    description = "Entrée coffre - {} - {}\n{}".format(
+                        bdc['login'], bdc['name'], payment['description'])
+            except KeyError:
+                description = "Entrée coffre - {} - {}\n{}".format(bdc['login'], bdc['name'], payment['description'])
 
         payment_query_data = {
-            'type': operation_type,
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_coffre']),
             'amount': payment['amount'],  # montant de l'opération d'origine
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
             'from': 'SYSTEM',
             'to': 'SYSTEM',
             'customValues': custom_values,
-            'description': description,  # voir explications détaillées ci-dessous
+            'description': description,  # voir explications détaillées ci-dessus
         }
         # Enregistrer l'Entrée coffre dans Cyclos
         cyclos.post(method='payment/perform', data=payment_query_data)
@@ -201,7 +211,6 @@ def payments_available_for_entrees_euro(request):
     filtered_data = [
         item
         for item in query_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['remise_d_euro_en_caisse'])
     ]
     return Response(filtered_data)
@@ -237,7 +246,6 @@ def payments_available_for_entrees_eusko(request):
     filtered_data = [
         item
         for item in query_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
     ]
     return Response(filtered_data)
@@ -271,7 +279,7 @@ def validate_history(request):
 def payments_available_for_banques(request):
     """
     payments_available_for_banques:
-    virements & rapprochements
+    virements, rapprochements et historique des banques
     """
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
@@ -298,20 +306,20 @@ def payments_available_for_banques(request):
     bank_history_query = {
         'account': bank_account_id,  # ID du compte
         'orderBy': 'DATE_DESC',
-        'direction': 'CREDIT',
-        'fromNature': 'USER',
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
     }
 
     if request.query_params['mode'] == 'virement':
         bank_history_query.update({'statuses': [
-            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
-        ]})
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
+        ], 'fromNature': 'USER'})
     elif request.query_params['mode'] == 'rapprochement':
         bank_history_query.update({'statuses': [
-            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
-        ]})
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
+        ], 'fromNature': 'USER'})
+    elif request.query_params['mode'] == 'historique':
+        pass
     else:
         return Response({'error': 'The mode you privded is not supported by this endpoint!'},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -324,8 +332,6 @@ def payments_available_for_banques(request):
     filtered_data = [
         item
         for item in bank_history_data['result']['pageItems']
-        for value in item['customValues']
-        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque'])
     ]
     return Response(filtered_data)
 
@@ -359,8 +365,7 @@ def validate_banques_virement(request):
 
     # Cotisations
     cotisation_query = {
-        'type': str(
-            settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_le_compte_de_debit_en_euro']),
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_debit_euro']),
         'amount': 60,  # montant du virement "Cotisations"
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': user_id,  # ID de l'utilisateur Banque de dépôt
@@ -371,8 +376,7 @@ def validate_banques_virement(request):
 
     # Ventes
     ventes_query = {
-        'type': str(
-            settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_le_compte_de_debit_en_euro']),
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_debit_euro']),
         'amount': 12,  # montant du virement "Ventes"
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': user_id,  # ID de l'utilisateur Banque de dépôt
@@ -443,10 +447,9 @@ def payments_available_depots_retraits(request):
     depots_filtered_data = [
         item
         for item in depots_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['depot_de_billets'])
     ]
-    res.append(depots_filtered_data)
+    res.extend(depots_filtered_data)
 
     retraits_query = {
         'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_des_billets_en_circulation']),
@@ -465,16 +468,11 @@ def payments_available_depots_retraits(request):
     retraits_filtered_data = [
         item
         for item in retraits_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_de_billets'])
     ]
-    res.append(retraits_filtered_data)
+    res.extend(retraits_filtered_data)
 
-    if res:
-        # flatten res (which used to be a list containing 2 lists)
-        return Response(sum(res, []))
-    else:
-        return Response({}, status=status.HTTP_204_NO_CONTENT)
+    return Response(res) if res else Response({}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
@@ -557,15 +555,14 @@ def payments_available_for_reconversions(request):
     filtered_billets_data = [
         item
         for item in query_billets_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] ==
         str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko'])
     ]
-    res.append(filtered_billets_data)
+    res.extend(filtered_billets_data)
 
     # Reconversions d'eusko numériques
     query_numeriques = {
-        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_debit_eusko_numerique']),
+        'account': str('-7371965201600299221'),
         'orderBy': 'DATE_DESC',
         'direction': 'CREDIT',
         'statuses': [
@@ -576,20 +573,15 @@ def payments_available_for_reconversions(request):
     }
     query_numeriques_data = cyclos.post(method='account/searchAccountHistory', data=query_numeriques)
 
-    # Il faut filtrer et ne garder que les paiements de type reconversion_billets_versement_des_eusko
+    # Il faut filtrer et ne garder que les paiements de type reconversion_numerique
     filtered_numeriques_data = [
         item
         for item in query_numeriques_data['result']['pageItems']
-        for value in item['customValues']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_numerique'])
     ]
-    res.append(filtered_numeriques_data)
+    res.extend(filtered_numeriques_data)
 
-    if res:
-        # flatten res (which used to be a list containing 2 lists)
-        return Response(sum(res, []))
-    else:
-        return Response({}, status=status.HTTP_204_NO_CONTENT)
+    return Response(res) if res else Response({}, status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
@@ -605,10 +597,33 @@ def validate_reconversions(request):
     serializer = serializers.ValidateReconversionsSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
+    # Verify whether or not dedicated accounts have enough money
+    query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
+    accounts_summaries_billet = cyclos.post(method='account/getAccountsSummary', data=query_data_billet)
+    try:
+        if (float(accounts_summaries_billet['result'][0]['status']['balance']) <
+           float(request.data['montant_total_billets'])):
+            return Response({'error': "error-system-not-enough-money-billet"})
+    except (KeyError, IndexError):
+        return Response({'error': "Unable to fetch compte_dedie_eusko_billet account data!"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    query_data_numerique = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]
+    accounts_summaries_numerique = cyclos.post(method='account/getAccountsSummary', data=query_data_numerique)
+
+    try:
+        if (float(accounts_summaries_numerique['result'][0]['status']['balance']) <
+           float(request.data['montant_total_numerique'])):
+            return Response({'error': "error-system-not-enough-money-numerique"})
+    except (KeyError, IndexError):
+        return Response({'error': "Unable to fetch compte_dedie_eusko_numerique account data!"},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     # 1) Enregistrer le virement pour les eusko billet
     billets_query = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
-        'amount': request.data['montant_total_billets'],  # montant total des reconversions billet sélectionnées
+        # montant total des reconversions billet sélectionnées
+        'amount': float(request.data['montant_total_billets']),
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
         'to': 'SYSTEM',
@@ -616,10 +631,22 @@ def validate_reconversions(request):
     }
     cyclos.post(method='payment/perform', data=billets_query)
 
-    # 2) Enregistrer le virement pour les eusko numériques
+    # 2) Passer chaque opération (reconversion d'eusko billet) sélectionnée à l'état "Virements faits" :
+    for payment in request.data['selected_payments']:
+        if request.data['selected_payments'][0]['type']['from']['internalName'] == "compte_des_billets_en_circulation":
+
+            # Passer l'opération à l'état "Virements faits"
+            status_query_data = {
+                'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+                'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+            }
+            cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+
+    # 3) Enregistrer le virement pour les eusko numériques
     numeriques_query = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
-        'amount': request.data['montant_total_numerique'],  # montant total des reconversions numériques sélectionnées
+        # montant total des reconversions numériques sélectionnées
+        'amount': float(request.data['montant_total_numerique']),
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
         'to': 'SYSTEM',
@@ -627,13 +654,15 @@ def validate_reconversions(request):
     }
     cyclos.post(method='payment/perform', data=numeriques_query)
 
-    # 3) Passer chaque opération sélectionnée à l'état "Virements faits" :
+    # 4) Passer chaque opération (reconversion d'eusko numérique) sélectionnée à l'état "Virements faits" :
     for payment in request.data['selected_payments']:
-        # Passer l'opération à l'état "Virements faits"
-        status_query_data = {
-            'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
-            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
-        }
-        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+        if request.data['selected_payments'][0]['type']['from']['internalName'] != "compte_des_billets_en_circulation":
+
+            # Passer l'opération à l'état "Virements faits"
+            status_query_data = {
+                'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+                'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+            }
+            cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     return Response(request.data['selected_payments'])

@@ -76,7 +76,7 @@ class BDCAPIView(BaseAPIView):
         # Ajouter l'utilisateur au groupe "Opérateurs BDC"
         try:
             self.dolibarr.get(model='users/{}/setGroup/{}'.format(
-                user_id, str(settings.CYCLOS_CONSTANTS['groups']['operateurs_bdc'])))
+                user_id, str(settings.DOLIBARR_CONSTANTS['groups']['operateurs_bdc'])))
         except (DolibarrAPIException, KeyError):
             return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -111,10 +111,12 @@ class BDCAPIView(BaseAPIView):
         view_all = request.GET.get('view_all', False)
         if view_all and view_all in [True, 'true', 'True', 'yes', 'Yes']:
             # user/search for group = 'bureaux_de_change'
-            query_data = {'groups': []}
+            query_data = {'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])],
+                'userStatus': ['ACTIVE', 'DISABLED']}
         else:
             # user/search for group = 'bureaux_de_change'
-            query_data = {'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])]}
+            query_data = {'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])],
+                'userStatus': ['ACTIVE']}
 
         data = self.cyclos.post(method='user/search', data=query_data,
                                 auth_string=request.user.profile.cyclos_auth_string)
@@ -138,8 +140,8 @@ class BDCAPIView(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         # Désactiver l'utilisateur Opérateur BDC
-        # TODO: il faut une constante pour le statut
-        self.dolibarr.post(model='users/{}'.format(operator_bdc_id), data={"statut": "0"})
+        self.dolibarr.put(model='users/{}'.format(operator_bdc_id),
+                          data={'statut': str(settings.DOLIBARR_CONSTANTS['user_statuses']['disabled'])})
 
         # Récupérer l'opérateur BDC correspondant au bureau de change
         bdc_operator_cyclos_query = {
@@ -162,13 +164,13 @@ class BDCAPIView(BaseAPIView):
         self.cyclos.post(method='userStatus/changeStatus', data=deactivate_operator_bdc_data)
 
         # Récupérer l'utilisateur bureau de change
-        bdc_operator_cyclos_query = {
-            'groups': [str(settings.CYCLOS_CONSTANTS['groups']['operateurs_bdc'])],
+        bdc_user_cyclos_query = {
+            'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])],
             'keywords': pk,  # par exemple B003
         }
         try:
             bdc_cyclos_id = self.cyclos.post(
-                method='user/search', data=bdc_operator_cyclos_query)['result']['pageItems'][0]['id']
+                method='user/search', data=bdc_user_cyclos_query)['result']['pageItems'][0]['id']
         except (KeyError, IndexError):
                     return Response({'error': 'Unable to get bdc_cyclos_id data!'},
                                     status=status.HTTP_400_BAD_REQUEST)

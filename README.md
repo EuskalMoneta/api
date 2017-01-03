@@ -13,7 +13,7 @@
   - Branche utilisée: develop
 
 
-### Front BDC
+### Comment ça marche ?
 
 La méthode que j'utilise pour travailler dans cet environnement:
 
@@ -65,3 +65,48 @@ Pour corriger les problèmes de droit sur dolibarr :
 ```
 docker-compose exec dolibarr-app chown -hR www-data:www-data /var/www/documents
 ```
+
+### En cas de problème
+
+Dans le cas où l'on veut remettre à zéro les bases de données Cyclos et/ou Dolibarr, il faudra effectuer depuis le dossier de l'api:
+```
+# pour Cyclos
+(sudo) rm -rf data/cyclos/
+(sudo) rm etc/cyclos/cyclos_constants.yml
+
+# pour Dolibarr
+(sudo) rm -rf data/mariadb/
+```
+Afin de supprimer les données liées au Cyclos et/ou Dolibarr actuels.
+
+
+Puis, stopper toute la pile API (Cyclos + Dolibarr, et leurs bases de données…):
+```
+docker-compose stop
+```
+
+La relancer:
+```
+docker-compose up -d
+```
+
+Il est possible de jeter un oeil aux logs des restauration pour s'assurer de leur bon fonctionnement:
+```
+# pour Cyclos
+docker-compose logs -f cyclos-db
+
+# pour Dolibarr
+docker-compose logs -f dolibarr-db
+```
+
+Pour Cyclos, une fois le restore terminé, il faudra redémarrer `cyclos-app`:
+```
+docker-compose restart cyclos-app
+```
+
+L'entrypoint de l'API devrait maintenant pouvoir se connecter à `cyclos-app`, et ainsi lancer les scripts d'init de Cyclos.
+```
+docker-compose logs -f api
+```
+
+Une fois ces scripts passés: l'API démarre enfin Django, et le développement peut commencer.

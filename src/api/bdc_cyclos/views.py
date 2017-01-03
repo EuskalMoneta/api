@@ -50,6 +50,112 @@ def accounts_summaries(request, login_bdc=None):
 
 
 @api_view(['GET'])
+def system_accounts_summaries(request):
+    """
+    List all system_accounts_summaries.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # account/getAccountsSummary
+    query_data = ['SYSTEM', None]
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+
+    # Stock de billets: stock_de_billets
+    # Compte de transit: compte_de_transit
+    res = {}
+    filter_keys = ['stock_de_billets', 'compte_de_transit']
+    for filter_key in filter_keys:
+        data = [item
+                for item in accounts_summaries_data['result']
+                if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types'][filter_key])][0]
+
+        res[filter_key] = {}
+        res[filter_key]['id'] = data['id']
+        res[filter_key]['balance'] = float(data['status']['balance'])
+        res[filter_key]['currency'] = data['currency']['symbol']
+        res[filter_key]['type'] = {'name': data['type']['name'], 'id': filter_key}
+
+    return Response(res)
+
+
+@api_view(['GET'])
+def dedicated_accounts_summaries(request):
+    """
+    Accounts summaries for dedicated accounts.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    query_data = []
+    # Compte dédié Eusko billet: compte_dedie_eusko_billet
+    # Compte dédié Eusko numérique: compte_dedie_eusko_numerique
+    query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
+    query_data.extend(cyclos.post(method='account/getAccountsSummary', data=query_data_billet)['result'])
+
+    query_data_numerique = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]
+    query_data.extend(cyclos.post(method='account/getAccountsSummary', data=query_data_numerique)['result'])
+
+    res = {}
+    filter_keys = ['compte_dedie_eusko_billet', 'compte_dedie_eusko_numerique']
+    for filter_key in filter_keys:
+        data = [item
+                for item in query_data
+                if item['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users'][filter_key])][0]
+
+        res[filter_key] = {}
+        res[filter_key]['id'] = data['id']
+        res[filter_key]['balance'] = float(data['status']['balance'])
+        res[filter_key]['currency'] = data['currency']['symbol']
+        res[filter_key]['type'] = {'name': data['type']['name'], 'id': filter_key}
+
+    return Response(res)
+
+
+@api_view(['GET'])
+def deposit_banks_summaries(request):
+    """
+    Accounts summaries for deposit banks.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # user/search for group = 'Banques de dépot'
+    banks_data = cyclos.post(method='user/search',
+                             data={'groups': [settings.CYCLOS_CONSTANTS['groups']['banques_de_depot']]})
+    bank_names = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
+                  for item in banks_data['result']['pageItems']]
+
+    res = {}
+    for bank in bank_names:
+        bank_user_query = {
+            'keywords': bank['shortLabel'],  # shortLabel = shortDisplay from Cyclos
+        }
+        try:
+            bank_user_data = cyclos.post(method='user/search', data=bank_user_query)['result']['pageItems'][0]
+
+            bank_account_query = [bank_user_data['id'], None]
+            bank_data = cyclos.post(method='account/getAccountsSummary', data=bank_account_query)['result'][0]
+        except (KeyError, IndexError):
+                    return Response({'error': 'Unable to get bank data for one of the depositbank!'},
+                                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        res[bank['shortLabel']] = bank
+        res[bank['shortLabel']]['balance'] = float(bank_data['status']['balance'])
+        res[bank['shortLabel']]['currency'] = bank_data['currency']['symbol']
+        res[bank['shortLabel']]['type'] = {'name': bank_data['type']['name'],
+                                           'id': bank_data['type']['id']}
+
+    return Response(res)
+
+
+@api_view(['GET'])
 def member_account_summary(request):
     """
     Account summary for this member.
@@ -111,6 +217,14 @@ def entree_stock(request):
             # TODO ?
             bdc_name = ''
 
+        try:
+            if 'Sortie coffre' in payment['description']:
+                description = payment['description'].replace('Sortie coffre', 'Entrée stock')
+            else:
+                description = 'Entrée stock - {} - {}'.format(request.data['login_bdc'], bdc_name)
+        except KeyError:
+            description = 'Entrée stock - {} - {}'.format(request.data['login_bdc'], bdc_name)
+
         # payment/perform
         payment_query_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_stock_bdc']),
@@ -124,7 +238,7 @@ def entree_stock(request):
                     'linkedEntityValue': porteur  # ID du porteur
                 },
             ],
-            'description': 'Entrée stock - {} - {}'.format(request.data['login_bdc'], bdc_name),
+            'description': description,
         }
         cyclos.post(method='payment/perform', data=payment_query_data)
 
@@ -285,9 +399,12 @@ def reconversion(request):
 @api_view(['GET'])
 def accounts_history(request):
     """
-    Accounts history for BDC.
-    Available account types are:
-    ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
+    Accounts history for BDC and system accounts.
+    For a Bureau De Change the available accounts types are:
+    ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc'].
+
+    If your user is 'Gestion Interne' you can request some other accounts:
+    'stock_de_billets' (aka Coffre), and 'compte_de_transit'.
 
     You can also filter out results with the 'filter' query param
     """
@@ -295,37 +412,55 @@ def accounts_history(request):
     serializer = serializers.AccountsHistorySerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
+    # CyclosAPI has 3 modes: gi, gi_bdc, and bdc
     try:
-        login_bdc = request.query_params['login_bdc']
-        cyclos_mode = 'gi_bdc'
-    except KeyError:
         login_bdc = None
-        cyclos_mode = 'bdc'
+        cyclos_mode = request.query_params['cyclos_mode']
+    except KeyError:
+        try:
+            login_bdc = request.query_params['login_bdc']
+            cyclos_mode = 'gi_bdc'
+        except KeyError:
+            login_bdc = None
+            cyclos_mode = 'bdc'
 
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # account/getAccountsSummary
-    query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
-    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+    # If you are a BDC user
+    if cyclos_mode in ['bdc', 'gi_bdc']:
+        query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
+        account_types = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
+
+    # If you are Gestion Interne
+    elif cyclos_mode == 'gi':
+        query_data = ['SYSTEM', None]
+        account_types = ['stock_de_billets', 'compte_de_transit',
+                         'compte_dedie_eusko_billet', 'compte_dedie_eusko_numerique']
 
     # Available account types verification
-    account_types = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
-
     if request.query_params['account_type'] not in account_types:
         return Response({'error': 'The account type you provided: {}, is not available for this query!'
                          .format(request.query_params['account_type'])},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    if 'compte_dedie' in request.query_params['account_type']:
+        query_data = [str(settings.CYCLOS_CONSTANTS['users'][request.query_params['account_type']]), None]
+
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+
     try:
-        data = [item
-                for item in accounts_summaries_data['result']
-                if item['type']['id'] ==
-                str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
+        if 'compte_dedie' in request.query_params['account_type']:
+            data = accounts_summaries_data['result'][0]
+        else:
+            data = [item
+                    for item in accounts_summaries_data['result']
+                    if item['type']['id'] ==
+                    str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
     except IndexError:
-        return Response({'result': {'pageItems': []}})
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
     # account/searchAccountHistory
     search_history_data = {
@@ -560,9 +695,11 @@ def cash_deposit(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         bdc_name = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (IndexError, KeyError):
         return Response({'error': 'Unable to get user data from your user!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -571,9 +708,15 @@ def cash_deposit(request):
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['euro'])
         description = "Remise d'espèces - {} - {}".format(request.user.profile.user, bdc_name)
     elif request.data['mode'] == 'sortie-caisse-eusko':
+        try:
+            porteur = request.data['porteur']
+        except KeyError:
+            return Response({'error': 'Porteur parameter is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
+
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
         description = 'Sortie caisse eusko - {} - {}'.format(request.user.profile.user, bdc_name)
+
     else:
         return Response({'error': 'Mode parameter is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -586,6 +729,15 @@ def cash_deposit(request):
         'to': 'SYSTEM',  # System account
         'description': description
     }
+
+    if request.data['mode'] == 'sortie-caisse-eusko':
+        cash_deposit_data.update({'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
+                'linkedEntityValue': porteur  # ID du porteur
+            },
+        ]})
+
     cyclos.post(method='payment/perform', data=cash_deposit_data)
 
     for payment in request.data['selected_payments']:
@@ -619,9 +771,11 @@ def sortie_retour_eusko(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         bdc_name = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (IndexError, KeyError):
         return Response({'error': 'Unable to get user data from your user!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -789,14 +943,12 @@ def retrait_eusko_numerique(request):
 
     try:
         if float(member_account_summary_res['result'][0]['status']['balance']) < float(request.data['amount']):
-            return Response({'error': "This member doesn't have enough money to do this change."},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': "error-member-not-enough-money"})
     except (KeyError, IndexError):
         return Response({'error': "Unable to fetch account data!"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    return Response(member_account_summary_res)
 
-    # Verify whether or not bdc cash stock has enough money
+    # Verify whether or not bdc cash stock have enough money
     bdc_account_summary_query = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
     bdc_account_summary_res = cyclos.post(method='account/getAccountsSummary', data=bdc_account_summary_query)
 
@@ -806,8 +958,7 @@ def retrait_eusko_numerique(request):
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types']['stock_de_billets_bdc'])][0]
 
     if float(bdc_account_summary_data['status']['balance']) < float(request.data['amount']):
-        return Response({'error': "This Bureau de change doesn't have enough money to do this change."},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        return Response({'error': "error-bureau-not-enough-money"})
 
     # Débit du compte
     debit_compte_data = {

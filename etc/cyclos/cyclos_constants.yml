@@ -42,6 +42,8 @@ payment_types:
   cotisation_en_euro: -7371965162945593557
   cotisation_en_eusko: -7371965167240560853
   credit_du_compte: -7371965240255004885
+  de_retours_d_eusko_bdc_vers_stock_de_billets_bdc: -7371965330449318101
+  de_stock_de_billets_bdc_vers_retours_d_eusko_bdc: -7371965360514089173
   depot_de_billets: -7371965235960037589
   depot_en_banque: -7371965283204677845
   entree_coffre: -7371965223075135701
