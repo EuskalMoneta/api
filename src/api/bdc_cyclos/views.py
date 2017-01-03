@@ -437,22 +437,28 @@ def accounts_history(request):
     # If you are Gestion Interne
     elif cyclos_mode == 'gi':
         query_data = ['SYSTEM', None]
-        account_types = ['stock_de_billets', 'compte_de_transit']
-
-    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+        account_types = ['stock_de_billets', 'compte_de_transit',
+                         'compte_dedie_eusko_billet', 'compte_dedie_eusko_numerique']
 
     # Available account types verification
-
     if request.query_params['account_type'] not in account_types:
         return Response({'error': 'The account type you provided: {}, is not available for this query!'
                          .format(request.query_params['account_type'])},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    if 'compte_dedie' in request.query_params['account_type']:
+        query_data = [str(settings.CYCLOS_CONSTANTS['users'][request.query_params['account_type']]), None]
+
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+
     try:
-        data = [item
-                for item in accounts_summaries_data['result']
-                if item['type']['id'] ==
-                str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
+        if 'compte_dedie' in request.query_params['account_type']:
+            data = accounts_summaries_data['result'][0]
+        else:
+            data = [item
+                    for item in accounts_summaries_data['result']
+                    if item['type']['id'] ==
+                    str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
     except IndexError:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
