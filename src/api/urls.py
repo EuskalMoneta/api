@@ -60,6 +60,7 @@ urlpatterns = [
     url(r'^bdc-change-password/$', bdc_cyclos_views.bdc_change_password),
 
     # Endpoints for Gestion Interne
+    url(r'^banks-history/$', gi_views.payments_available_for_banques),
     url(r'^sortie-coffre/$', gi_views.sortie_coffre),
     url(r'^payments-available-entree-coffre/$', gi_views.payments_available_for_entree_coffre),
     url(r'^entree-coffre/$', gi_views.entree_coffre),
