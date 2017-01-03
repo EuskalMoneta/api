@@ -117,6 +117,45 @@ def dedicated_accounts_summaries(request):
 
 
 @api_view(['GET'])
+def deposit_banks_summaries(request):
+    """
+    Accounts summaries for deposit banks.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # user/search for group = 'Banques de dépot'
+    banks_data = cyclos.post(method='user/search',
+                             data={'groups': [settings.CYCLOS_CONSTANTS['groups']['banques_de_depot']]})
+    bank_names = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
+                  for item in banks_data['result']['pageItems']]
+
+    res = {}
+    for bank in bank_names:
+        bank_user_query = {
+            'keywords': bank['shortLabel'],  # shortLabel = shortDisplay from Cyclos
+        }
+        try:
+            bank_user_data = cyclos.post(method='user/search', data=bank_user_query)['result']['pageItems'][0]
+
+            bank_account_query = [bank_user_data['id'], None]
+            bank_data = cyclos.post(method='account/getAccountsSummary', data=bank_account_query)['result'][0]
+        except (KeyError, IndexError):
+                    return Response({'error': 'Unable to get bank data for one of the depositbank!'},
+                                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        res[bank['shortLabel']] = bank
+        res[bank['shortLabel']]['balance'] = float(bank_data['status']['balance'])
+        res[bank['shortLabel']]['currency'] = bank_data['currency']['symbol']
+        res[bank['shortLabel']]['type'] = {'name': bank_data['type']['name'],
+                                           'id': bank_data['type']['id']}
+
+    return Response(res)
+
+
+@api_view(['GET'])
 def member_account_summary(request):
     """
     Account summary for this member.

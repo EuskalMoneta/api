@@ -49,7 +49,7 @@ def deposit_banks(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # user/search for group = 'Porteurs'
+    # user/search for group = 'Banques de dépot'
     banks_data = cyclos.post(method='user/search',
                              data={'groups': [settings.CYCLOS_CONSTANTS['groups']['banques_de_depot']]})
     res = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
