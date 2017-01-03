@@ -42,6 +42,8 @@ urlpatterns = [
 
     url(r'^accounts-summaries/(?P<login_bdc>[\w\-]+)?/?$', bdc_cyclos_views.accounts_summaries),
     url(r'^system-accounts-summaries/$', bdc_cyclos_views.system_accounts_summaries),
+    url(r'^dedicated-accounts-summaries/$', bdc_cyclos_views.dedicated_accounts_summaries),
+    url(r'^deposit-banks-summaries/$', bdc_cyclos_views.deposit_banks_summaries),
     url(r'^member-accounts-summaries/$', bdc_cyclos_views.member_account_summary),
     url(r'^accounts-history/$', bdc_cyclos_views.accounts_history),
     url(r'^payments-available-entree-stock/$', bdc_cyclos_views.payments_available_for_entree_stock),
@@ -58,6 +60,7 @@ urlpatterns = [
     url(r'^bdc-change-password/$', bdc_cyclos_views.bdc_change_password),
 
     # Endpoints for Gestion Interne
+    url(r'^banks-history/$', gi_views.payments_available_for_banques),
     url(r'^sortie-coffre/$', gi_views.sortie_coffre),
     url(r'^payments-available-entree-coffre/$', gi_views.payments_available_for_entree_coffre),
     url(r'^entree-coffre/$', gi_views.entree_coffre),

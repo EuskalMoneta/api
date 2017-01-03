@@ -279,7 +279,7 @@ def validate_history(request):
 def payments_available_for_banques(request):
     """
     payments_available_for_banques:
-    virements & rapprochements
+    virements, rapprochements et historique des banques
     """
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
@@ -306,7 +306,6 @@ def payments_available_for_banques(request):
     bank_history_query = {
         'account': bank_account_id,  # ID du compte
         'orderBy': 'DATE_DESC',
-        'fromNature': 'USER',
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
     }
@@ -314,11 +313,13 @@ def payments_available_for_banques(request):
     if request.query_params['mode'] == 'virement':
         bank_history_query.update({'statuses': [
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
-        ]})
+        ], 'fromNature': 'USER'})
     elif request.query_params['mode'] == 'rapprochement':
         bank_history_query.update({'statuses': [
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
-        ]})
+        ], 'fromNature': 'USER'})
+    elif request.query_params['mode'] == 'historique':
+        pass
     else:
         return Response({'error': 'The mode you privded is not supported by this endpoint!'},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -364,8 +365,7 @@ def validate_banques_virement(request):
 
     # Cotisations
     cotisation_query = {
-        'type': str(
-            settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_le_compte_de_debit_en_euro']),
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_debit_euro']),
         'amount': 60,  # montant du virement "Cotisations"
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': user_id,  # ID de l'utilisateur Banque de dépôt
@@ -376,8 +376,7 @@ def validate_banques_virement(request):
 
     # Ventes
     ventes_query = {
-        'type': str(
-            settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_le_compte_de_debit_en_euro']),
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_debit_euro']),
         'amount': 12,  # montant du virement "Ventes"
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': user_id,  # ID de l'utilisateur Banque de dépôt
@@ -598,7 +597,7 @@ def validate_reconversions(request):
     serializer = serializers.ValidateReconversionsSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    # Verify whether or not dedicated accounts has enough money
+    # Verify whether or not dedicated accounts have enough money
     query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
     accounts_summaries_billet = cyclos.post(method='account/getAccountsSummary', data=query_data_billet)
     try:
@@ -633,14 +632,15 @@ def validate_reconversions(request):
     cyclos.post(method='payment/perform', data=billets_query)
 
     # 2) Passer chaque opération (reconversion d'eusko billet) sélectionnée à l'état "Virements faits" :
-    for payment in request.data['selected_payments'] if request.data['selected_payments'][0]['type']['from']['internalName'] == "compte_des_billets_en_circulation":
+    for payment in request.data['selected_payments']:
+        if request.data['selected_payments'][0]['type']['from']['internalName'] == "compte_des_billets_en_circulation":
 
-        # Passer l'opération à l'état "Virements faits"
-        status_query_data = {
-            'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
-            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
-        }
-        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+            # Passer l'opération à l'état "Virements faits"
+            status_query_data = {
+                'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+                'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+            }
+            cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     # 3) Enregistrer le virement pour les eusko numériques
     numeriques_query = {
@@ -655,13 +655,14 @@ def validate_reconversions(request):
     cyclos.post(method='payment/perform', data=numeriques_query)
 
     # 4) Passer chaque opération (reconversion d'eusko numérique) sélectionnée à l'état "Virements faits" :
-    for payment in request.data['selected_payments'] if request.data['selected_payments'][0]['type']['from']['internalName'] != "compte_des_billets_en_circulation":
+    for payment in request.data['selected_payments']:
+        if request.data['selected_payments'][0]['type']['from']['internalName'] != "compte_des_billets_en_circulation":
 
-        # Passer l'opération à l'état "Virements faits"
-        status_query_data = {
-            'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
-            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
-        }
-        cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+            # Passer l'opération à l'état "Virements faits"
+            status_query_data = {
+                'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+                'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+            }
+            cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     return Response(request.data['selected_payments'])

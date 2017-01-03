@@ -1,4 +1,29 @@
-image: gitlab/dind
+image: docker:latest
+
+# When using dind, it's wise to use the overlayfs driver for
+# improved performance.
+variables:
+  DOCKER_DRIVER: overlay
+  CONTAINER_TEST_IMAGE: sources.meta-it.fr:4567/euskal-moneta/api:$CI_BUILD_REF_NAME
+  CONTAINER_RELEASE_IMAGE: sources.meta-it.fr:4567/euskal-moneta/api
+
+services:
+  - docker:dind
+
+before_script:
+  # This code allows to use SSH with public key authentication
+  # See https://docs.gitlab.com/ce/ci/ssh_keys/README.html
+  - 'which ssh-agent || ( apk --update --no-cache add openssh-client )'
+  - eval $(ssh-agent -s)
+  - echo "$SSH_PRIVATE_KEY" > /tmp/ssh_key
+  - chmod 600 /tmp/ssh_key
+  - ssh-add /tmp/ssh_key
+  - rm /tmp/ssh_key
+  - mkdir -p ~/.ssh
+  - '[[ -f /.dockerenv ]] && echo -e "Host *\n\tStrictHostKeyChecking no\n\n" > ~/.ssh/config'
+  
+  - docker info
+  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN sources.meta-it.fr:4567
 
 stages:
   - build
@@ -6,20 +31,13 @@ stages:
   - release
   - deploy
 
-variables:
-  CONTAINER_TEST_IMAGE: sources.meta-it.fr:4567/euskal-moneta/api:$CI_BUILD_REF_NAME
-  CONTAINER_RELEASE_IMAGE: sources.meta-it.fr:4567/euskal-moneta/api
-
-before_script:
-  - docker login -u gitlab-ci-token -p $CI_BUILD_TOKEN -e dev@meta-it.fr sources.meta-it.fr:4567
-
 build_job:
   stage: build
   script:
     - docker build -t $CONTAINER_TEST_IMAGE .
     - docker push $CONTAINER_TEST_IMAGE
   tags:
-    - dind
+    - docker
 
 #~ test_job_develop:
   #~ stage: test
@@ -30,7 +48,7 @@ build_job:
   #~ only:
     #~ - develop
   #~ tags:
-    #~ - dind
+    #~ - docker
 
 release_job:
   stage: release
@@ -41,7 +59,7 @@ release_job:
   only:
     - master
   tags:
-    - dind
+    - docker
 
 release_job_staging:
   stage: release
@@ -52,7 +70,7 @@ release_job_staging:
   only:
     - /^release-.*$/
   tags:
-    - dind
+    - docker
 
 release_job_develop:
   stage: release
@@ -63,38 +81,42 @@ release_job_develop:
   only:
     - develop
   tags:
-    - dind
+    - docker
 
 deploy_job_develop:
   stage: deploy
   script:
-    - docker login -u $CI_SUPERUSER_USERNAME -p $CI_SUPERUSER_PASSWORD -e dev@meta-it.fr sources.meta-it.fr:4567
+    # Update build repository
     - cd /home/meta-it/sources/eusko-develop
+    - git pull
+    # Restart stack
     - docker-compose pull api
     - docker-compose stop
     - docker-compose rm -f api
     - docker-compose up -d
     - docker cp etc/dolibarr/conf.php eusko-dolibarr-app-dev:/var/www/html/conf/
-    - docker-compose exec --user root dolibarr-app chown -R www-data:www-data /var/www/documents/
-  tags:
-    - meta-it-f3
+    - docker exec --user root eusko-dolibarr-app-dev chown -R www-data:www-data /var/www/documents/
   only:
     - develop
+  tags:
+    - meta-it-f3
   environment: dev
 
 deploy_job_staging:
   stage: deploy
   script:
-    - docker login -u $CI_SUPERUSER_USERNAME -p $CI_SUPERUSER_PASSWORD -e dev@meta-it.fr sources.meta-it.fr:4567
+    # Update build repository
     - cd /home/meta-it/sources/euskal-moneta
+    - git pull
+    # Restart stack
     - docker-compose pull api
     - docker-compose stop
     - docker-compose rm -f api
     - docker-compose up -d
     - docker cp etc/dolibarr/conf.php eusko-dolibarr-app-staging:/var/www/html/conf/
-    - docker-compose exec --user root dolibarr-app chown -R www-data:www-data /var/www/documents/
-  tags:
-    - eusko-integration
+    - docker exec --user root eusko-dolibarr-app-staging chown -R www-data:www-data /var/www/documents/
   only:
     - /^release-.*$/
+  tags:
+    - eusko-integration
   environment: staging

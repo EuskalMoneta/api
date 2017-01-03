@@ -63,7 +63,7 @@ def system_accounts_summaries(request):
     query_data = ['SYSTEM', None]
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
 
-    # Stock de billets: stock_de_billets_bdc
+    # Stock de billets: stock_de_billets
     # Compte de transit: compte_de_transit
     res = {}
     filter_keys = ['stock_de_billets', 'compte_de_transit']
@@ -77,6 +77,80 @@ def system_accounts_summaries(request):
         res[filter_key]['balance'] = float(data['status']['balance'])
         res[filter_key]['currency'] = data['currency']['symbol']
         res[filter_key]['type'] = {'name': data['type']['name'], 'id': filter_key}
+
+    return Response(res)
+
+
+@api_view(['GET'])
+def dedicated_accounts_summaries(request):
+    """
+    Accounts summaries for dedicated accounts.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    query_data = []
+    # Compte dédié Eusko billet: compte_dedie_eusko_billet
+    # Compte dédié Eusko numérique: compte_dedie_eusko_numerique
+    query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
+    query_data.extend(cyclos.post(method='account/getAccountsSummary', data=query_data_billet)['result'])
+
+    query_data_numerique = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]
+    query_data.extend(cyclos.post(method='account/getAccountsSummary', data=query_data_numerique)['result'])
+
+    res = {}
+    filter_keys = ['compte_dedie_eusko_billet', 'compte_dedie_eusko_numerique']
+    for filter_key in filter_keys:
+        data = [item
+                for item in query_data
+                if item['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users'][filter_key])][0]
+
+        res[filter_key] = {}
+        res[filter_key]['id'] = data['id']
+        res[filter_key]['balance'] = float(data['status']['balance'])
+        res[filter_key]['currency'] = data['currency']['symbol']
+        res[filter_key]['type'] = {'name': data['type']['name'], 'id': filter_key}
+
+    return Response(res)
+
+
+@api_view(['GET'])
+def deposit_banks_summaries(request):
+    """
+    Accounts summaries for deposit banks.
+    """
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # user/search for group = 'Banques de dépot'
+    banks_data = cyclos.post(method='user/search',
+                             data={'groups': [settings.CYCLOS_CONSTANTS['groups']['banques_de_depot']]})
+    bank_names = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
+                  for item in banks_data['result']['pageItems']]
+
+    res = {}
+    for bank in bank_names:
+        bank_user_query = {
+            'keywords': bank['shortLabel'],  # shortLabel = shortDisplay from Cyclos
+        }
+        try:
+            bank_user_data = cyclos.post(method='user/search', data=bank_user_query)['result']['pageItems'][0]
+
+            bank_account_query = [bank_user_data['id'], None]
+            bank_data = cyclos.post(method='account/getAccountsSummary', data=bank_account_query)['result'][0]
+        except (KeyError, IndexError):
+                    return Response({'error': 'Unable to get bank data for one of the depositbank!'},
+                                    status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        res[bank['shortLabel']] = bank
+        res[bank['shortLabel']]['balance'] = float(bank_data['status']['balance'])
+        res[bank['shortLabel']]['currency'] = bank_data['currency']['symbol']
+        res[bank['shortLabel']]['type'] = {'name': bank_data['type']['name'],
+                                           'id': bank_data['type']['id']}
 
     return Response(res)
 
@@ -363,22 +437,28 @@ def accounts_history(request):
     # If you are Gestion Interne
     elif cyclos_mode == 'gi':
         query_data = ['SYSTEM', None]
-        account_types = ['stock_de_billets', 'compte_de_transit']
-
-    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+        account_types = ['stock_de_billets', 'compte_de_transit',
+                         'compte_dedie_eusko_billet', 'compte_dedie_eusko_numerique']
 
     # Available account types verification
-
     if request.query_params['account_type'] not in account_types:
         return Response({'error': 'The account type you provided: {}, is not available for this query!'
                          .format(request.query_params['account_type'])},
                         status=status.HTTP_400_BAD_REQUEST)
 
+    if 'compte_dedie' in request.query_params['account_type']:
+        query_data = [str(settings.CYCLOS_CONSTANTS['users'][request.query_params['account_type']]), None]
+
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+
     try:
-        data = [item
-                for item in accounts_summaries_data['result']
-                if item['type']['id'] ==
-                str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
+        if 'compte_dedie' in request.query_params['account_type']:
+            data = accounts_summaries_data['result'][0]
+        else:
+            data = [item
+                    for item in accounts_summaries_data['result']
+                    if item['type']['id'] ==
+                    str(settings.CYCLOS_CONSTANTS['account_types'][request.query_params['account_type']])][0]
     except IndexError:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -867,9 +947,8 @@ def retrait_eusko_numerique(request):
     except (KeyError, IndexError):
         return Response({'error': "Unable to fetch account data!"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-    
 
-    # Verify whether or not bdc cash stock has enough money
+    # Verify whether or not bdc cash stock have enough money
     bdc_account_summary_query = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
     bdc_account_summary_res = cyclos.post(method='account/getAccountsSummary', data=bdc_account_summary_query)
 
