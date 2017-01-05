@@ -1,3 +1,5 @@
+import logging
+
 from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -5,6 +7,8 @@ from rest_framework.response import Response
 
 from cyclos_api import CyclosAPI, CyclosAPIException
 from gestioninterne import serializers
+
+log = logging.getLogger()
 
 
 @api_view(['POST'])
@@ -65,7 +69,7 @@ def payments_available_for_entree_coffre(request):
     }
     query_data = cyclos.post(method='account/searchAccountHistory', data=entree_coffre_query)
     if query_data['result']['totalCount'] == 0:
-        return Response({}, status=status.HTTP_204_NO_CONTENT)
+        return Response(status=status.HTTP_204_NO_CONTENT)
     else:
         return Response(query_data['result']['pageItems'])
 
@@ -469,7 +473,7 @@ def payments_available_depots_retraits(request):
     ]
     res.extend(retraits_filtered_data)
 
-    return Response(res) if res else Response({}, status=status.HTTP_204_NO_CONTENT)
+    return Response(res) if res else Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
@@ -578,7 +582,7 @@ def payments_available_for_reconversions(request):
     ]
     res.extend(filtered_numeriques_data)
 
-    return Response(res) if res else Response({}, status=status.HTTP_204_NO_CONTENT)
+    return Response(res) if res else Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
