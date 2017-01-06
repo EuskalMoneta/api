@@ -57,7 +57,7 @@ urlpatterns = [
     url(r'^sortie-retour-eusko/$', bdc_cyclos_views.sortie_retour_eusko),
     url(r'^depot-eusko-numerique/$', bdc_cyclos_views.depot_eusko_numerique),
     url(r'^retrait-eusko-numerique/$', bdc_cyclos_views.retrait_eusko_numerique),
-    url(r'^bdc-change-password/$', bdc_cyclos_views.bdc_change_password),
+    url(r'^change-password/$', bdc_cyclos_views.change_password),
 
     # Endpoints for Gestion Interne
     url(r'^banks-history/$', gi_views.payments_available_for_banques),

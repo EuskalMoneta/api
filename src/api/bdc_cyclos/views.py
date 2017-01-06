@@ -1045,21 +1045,26 @@ def payments_available_for_entree_stock(request):
 
 
 @api_view(['POST'])
-def bdc_change_password(request):
+def change_password(request):
     """
-    bdc_change_password
+    change_password
     """
-    try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
     serializer = serializers.ChangePasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
+    try:
+        cyclos_mode = request.data['cyclos_mode']
+    except KeyError:
+        cyclos_mode = 'bdc'
+
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
     # password/change
     change_password_data = {
-        'user': cyclos.user_id,  # ID de l'utilisateur Bureau de change
+        'user': cyclos.user_id,  # ID de l'utilisateur
         'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
         'oldPassword': request.data['old_password'],  # saisi par l'utilisateur
         'newPassword': request.data['new_password'],  # saisi par l'utilisateur
