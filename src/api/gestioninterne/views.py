@@ -565,7 +565,7 @@ def payments_available_for_reconversions(request):
 
     # Reconversions d'eusko numériques
     query_numeriques = {
-        'account': str('-7371965201600299221'),
+        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_debit_eusko_numerique']),
         'orderBy': 'DATE_DESC',
         'direction': 'CREDIT',
         'statuses': [
