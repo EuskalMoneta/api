@@ -23,6 +23,10 @@ class PaymentsAvailableBanqueSerializer(serializers.Serializer):
 class ValidateBanquesVirementsSerializer(serializers.Serializer):
 
     bank_name = serializers.CharField()
+    montant_total_cotisations = serializers.CharField()
+    montant_total_ventes = serializers.CharField()
+    montant_total_billet = serializers.CharField()
+    montant_total_numerique = serializers.CharField()
     selected_payments = serializers.ListField()
 
 
