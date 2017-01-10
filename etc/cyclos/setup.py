@@ -1,18 +1,19 @@
 # coding: utf-8
 from __future__ import unicode_literals
+
 import argparse
 import logging
+
 import requests
-
 from slugify import slugify
-
-logging.basicConfig()
-logger = logging.getLogger(__name__)
 
 try:
     stringType = basestring
 except NameError:  # Python 3, basestring causes NameError
     stringType = str
+
+logging.basicConfig()
+logger = logging.getLogger(__name__)
 
 
 def check_request_status(r):
