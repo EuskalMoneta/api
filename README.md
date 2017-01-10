@@ -111,7 +111,7 @@ docker-compose logs -f api
 
 Une fois ces scripts passés: l'API démarre enfin Django, et le développement peut commencer.
 
-## Comment initier le circuit Euskal Moneta ?
+## Comment initier le circuit Euskal Moneta ?
 
 Afin d'effectuer les différentes opérations de nos applications, nous avons besoin avant toute chose d'initier les flux d'Eusko, en commencant par l'impression des billets Eusko.
 
