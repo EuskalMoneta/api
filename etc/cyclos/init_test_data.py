@@ -1,8 +1,12 @@
 # coding: utf-8
 from __future__ import unicode_literals
+
 import argparse
+import base64
 import logging
+
 import requests
+import yaml  # PyYAML
 
 logging.basicConfig()
 logger = logging.getLogger(__name__)
@@ -252,3 +256,36 @@ for login, name in porteurs.items():
         name=name,
         login=login,
     )
+
+# Récupération des constantes
+
+logger.info('Récupération des constantes depuis le YAML...')
+CYCLOS_CONSTANTS = None
+with open("/cyclos/cyclos_constants.yml", 'r') as cyclos_stream:
+    try:
+        CYCLOS_CONSTANTS = yaml.load(cyclos_stream)
+    except yaml.YAMLError as exc:
+        assert False, exc
+
+# Impression billets eusko
+logger.info('Impression billets eusko...')
+logger.debug(str(CYCLOS_CONSTANTS['payment_types']['impression_de_billets_d_eusko']) + "\r\n" +
+             str(CYCLOS_CONSTANTS['currencies']['eusko']) + "\r\n" +
+             str(CYCLOS_CONSTANTS['account_types']['compte_de_debit_eusko_billet']) + "\r\n" +
+             str(CYCLOS_CONSTANTS['account_types']['stock_de_billets']))
+
+r = requests.post(eusko_web_services + 'payment/perform',
+                  headers={'Authorization': 'Basic {}'.format(base64.standard_b64encode(b'demo:demo').decode('utf-8'))},  # noqa
+                  json={
+                      'type': CYCLOS_CONSTANTS['payment_types']['impression_de_billets_d_eusko'],
+                      'amount': float(126500.00),
+                      'currency': CYCLOS_CONSTANTS['currencies']['eusko'],
+                      # 'from': 'SYSTEM',
+                      # 'to': 'SYSTEM',
+                      'from': CYCLOS_CONSTANTS['account_types']['compte_de_debit_eusko_billet'],
+                      'to': CYCLOS_CONSTANTS['account_types']['stock_de_billets'],
+                  })
+
+logger.info('Impression billets eusko... Terminé !')
+logger.debug(r.json())
+logger.info('Fin du script !')
