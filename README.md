@@ -13,7 +13,7 @@
   - Branche utilisée: develop
 
 
-### Comment ça marche ?
+## Comment ça marche ?
 
 La méthode que j'utilise pour travailler dans cet environnement:
 
@@ -110,3 +110,32 @@ docker-compose logs -f api
 ```
 
 Une fois ces scripts passés: l'API démarre enfin Django, et le développement peut commencer.
+
+## Comment initier le circuit Euskal Moneta ?
+
+Afin d'effectuer les différentes opérations de nos applications, nous avons besoin avant toute chose d'initier les flux d'Eusko, en commencant par l'impression des billets Eusko.
+
+Pour cela, rendez-vous dans [l'interface d'administration de Cyclos](http://localhost:8081/global/#login).
+
+Connectez-vous avec les identifiants Gestion interne (demo/demo), puis dans `Banking > System payment > Between system accounts`.
+
+Rentrer dans le formulaire:
+```
+From account: Compte de débit eusko billet
+Montant: 126,500 EUS.
+```
+
+Vous pouvez désormais aller dans l'application Gestion interne et sortir ces nouveaux billets du Coffre:
+
+1. Se connecter avec les identifiants notés ci-dessus
+2. Dans `Coffre > Sortie`, mettre un certain montant, 500 par exemple vers un bureau de change donné, comme Euskal Moneta (B001).
+
+Vous pouvez maintenant déclarer une entrée stock dans l'application Bureau de change en se connectant avec le compte B001:
+`Gestion > Stock de billets > Entrée`, sélectionner la liste correspondante à votre Sortie coffre.... Et voilà !
+
+Une fois ceci fait, vous avez accès à toutes les actions possibles dans l'application BDC (sauf cotisation en Eusko, il faudra faire un change en premier lieu):
+
+* Change
+* Cotisation Eusko
+* Reconversions
+* Sortie stock, etc...
