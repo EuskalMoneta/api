@@ -15,6 +15,7 @@ services:
       - DOLIBARR_PUBLIC_URL=http://localhost:8080
       - BDC_PUBLIC_URL=http://localhost:8001
       - GI_PUBLIC_URL=http://localhost:8002
+      - CEL_PUBLIC_URL=http://localhost:8003
       - RAVEN_CONFIG_DSN=http://46498c24303d4b27828e5e47ce927818:6177efcf6d1d47508f1c22332c8dddaf@sentry:9000/2
     depends_on:
       - dolibarr-app
@@ -84,66 +85,66 @@ services:
     networks:
       - eusko_net
 
-  sentry-redis:
-    image: redis
-    networks:
-      - eusko_net
+  # sentry-redis:
+  #   image: redis
+  #   networks:
+  #     - eusko_net
 
-  sentry-postgres:
-    image: postgres
-    environment:
-      - POSTGRES_PASSWORD=sentry
-      - POSTGRES_USER=sentry
-    volumes:
-      - ./data/postgresql:/var/lib/postgresql/data
-    networks:
-      - eusko_net
+  # sentry-postgres:
+  #   image: postgres
+  #   environment:
+  #     - POSTGRES_PASSWORD=sentry
+  #     - POSTGRES_USER=sentry
+  #   volumes:
+  #     - ./data/postgresql:/var/lib/postgresql/data
+  #   networks:
+  #     - eusko_net
 
-  sentry:
-    image: sentry
-    environment:
-      - SENTRY_SECRET_KEY="x4^nd^1k9k8=8#sa1$gu72p-g15a(ft8(d@jy@^d$ec!oe!"
-      - SENTRY_POSTGRES_HOST=sentry-postgres
-      - SENTRY_DB_USER=sentry
-      - SENTRY_DB_PASSWORD=sentry
-      - SENTRY_REDIS_HOST=sentry-redis
-    ports:
-      - 9000:9000
-    links:
-      - sentry-redis:redis
-      - sentry-postgres:postgres
-    networks:
-      - eusko_net
+  # sentry:
+  #   image: sentry
+  #   environment:
+  #     - SENTRY_SECRET_KEY="x4^nd^1k9k8=8#sa1$gu72p-g15a(ft8(d@jy@^d$ec!oe!"
+  #     - SENTRY_POSTGRES_HOST=sentry-postgres
+  #     - SENTRY_DB_USER=sentry
+  #     - SENTRY_DB_PASSWORD=sentry
+  #     - SENTRY_REDIS_HOST=sentry-redis
+  #   ports:
+  #     - 9000:9000
+  #   links:
+  #     - sentry-redis:redis
+  #     - sentry-postgres:postgres
+  #   networks:
+  #     - eusko_net
 
-  sentry-cron:
-    image: sentry
-    environment:
-      - SENTRY_SECRET_KEY="x4^nd^1k9k8=8#sa1$gu72p-g15a(ft8(d@jy@^d$ec!oe!"
-      - SENTRY_POSTGRES_HOST=sentry-postgres
-      - SENTRY_DB_USER=sentry
-      - SENTRY_DB_PASSWORD=sentry
-      - SENTRY_REDIS_HOST=sentry-redis
-    links:
-      - sentry-redis:redis
-      - sentry-postgres:postgres
-    networks:
-      - eusko_net
-    command: sentry run cron
+  # sentry-cron:
+  #   image: sentry
+  #   environment:
+  #     - SENTRY_SECRET_KEY="x4^nd^1k9k8=8#sa1$gu72p-g15a(ft8(d@jy@^d$ec!oe!"
+  #     - SENTRY_POSTGRES_HOST=sentry-postgres
+  #     - SENTRY_DB_USER=sentry
+  #     - SENTRY_DB_PASSWORD=sentry
+  #     - SENTRY_REDIS_HOST=sentry-redis
+  #   links:
+  #     - sentry-redis:redis
+  #     - sentry-postgres:postgres
+  #   networks:
+  #     - eusko_net
+  #   command: sentry run cron
 
-  sentry-worker:
-    image: sentry
-    environment:
-      - SENTRY_SECRET_KEY="x4^nd^1k9k8=8#sa1$gu72p-g15a(ft8(d@jy@^d$ec!oe!"
-      - SENTRY_POSTGRES_HOST=sentry-postgres
-      - SENTRY_DB_USER=sentry
-      - SENTRY_DB_PASSWORD=sentry
-      - SENTRY_REDIS_HOST=sentry-redis
-    links:
-      - sentry-redis:redis
-      - sentry-postgres:postgres
-    networks:
-      - eusko_net
-    command: sentry run worker
+  # sentry-worker:
+  #   image: sentry
+  #   environment:
+  #     - SENTRY_SECRET_KEY="x4^nd^1k9k8=8#sa1$gu72p-g15a(ft8(d@jy@^d$ec!oe!"
+  #     - SENTRY_POSTGRES_HOST=sentry-postgres
+  #     - SENTRY_DB_USER=sentry
+  #     - SENTRY_DB_PASSWORD=sentry
+  #     - SENTRY_REDIS_HOST=sentry-redis
+  #   links:
+  #     - sentry-redis:redis
+  #     - sentry-postgres:postgres
+  #   networks:
+  #     - eusko_net
+  #   command: sentry run worker
 
 networks:
   eusko_net:
