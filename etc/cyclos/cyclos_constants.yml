@@ -73,6 +73,13 @@ payment_types:
   virement_inter_adherent: -7371965356219121877
 products:
   foulard: -7371965201600299221
+system_accounts:
+  compte_de_debit_euro: -7371965197305331925
+  compte_de_debit_eusko_billet: -7371965214485201109
+  compte_de_debit_eusko_numerique: -7371965201600299221
+  compte_de_transit: -7371965223075135701
+  compte_des_billets_en_circulation: -7371965193010364629
+  stock_de_billets: -7371965218780168405
 transaction_custom_fields:
   adherent: -7371965223075135701
   adherent_facultatif: -7371965193010364629
