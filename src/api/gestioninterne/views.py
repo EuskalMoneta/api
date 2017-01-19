@@ -636,7 +636,8 @@ def validate_reconversions(request):
 
     # 2) Passer chaque opération (reconversion d'eusko billet) sélectionnée à l'état "Virements faits" :
     for payment in request.data['selected_payments']:
-        if request.data['selected_payments'][0]['type']['from']['internalName'] == "compte_des_billets_en_circulation":
+        if (payment['type']['id'] ==
+           str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko'])):
 
             # Passer l'opération à l'état "Virements faits"
             status_query_data = {
@@ -659,7 +660,7 @@ def validate_reconversions(request):
 
     # 4) Passer chaque opération (reconversion d'eusko numérique) sélectionnée à l'état "Virements faits" :
     for payment in request.data['selected_payments']:
-        if request.data['selected_payments'][0]['type']['from']['internalName'] != "compte_des_billets_en_circulation":
+        if payment['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_numerique']):
 
             # Passer l'opération à l'état "Virements faits"
             status_query_data = {
