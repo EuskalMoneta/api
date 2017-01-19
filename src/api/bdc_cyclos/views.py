@@ -1019,7 +1019,7 @@ def payments_available_for_entree_stock(request):
 
     # account/searchAccountHistory
     search_history_data = {
-        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_transit']),
+        'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_transit']),
         'orderBy': 'DATE_DESC',
         'direction': 'CREDIT',
         'fromNature': 'SYSTEM',

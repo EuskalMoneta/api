@@ -57,7 +57,7 @@ def payments_available_for_entree_coffre(request):
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     entree_coffre_query = {
-        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_transit']),
+        'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_transit']),
         'orderBy': 'DATE_DESC',
         'direction': 'CREDIT',
         'fromNature': 'USER',
@@ -196,7 +196,7 @@ def payments_available_for_entrees_euro(request):
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     query = {
-        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_debit_euro']),
+        'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_euro']),
         'orderBy': 'DATE_DESC',
         'direction': 'CREDIT',
         'fromNature': 'USER',
@@ -231,7 +231,7 @@ def payments_available_for_entrees_eusko(request):
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     query = {
-        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_des_billets_en_circulation']),
+        'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation']),
         'orderBy': 'DATE_DESC',
         'direction': 'CREDIT',
         'fromNature': 'USER',
@@ -434,7 +434,7 @@ def payments_available_depots_retraits(request):
     res = []
 
     depots_query = {
-        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_des_billets_en_circulation']),
+        'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation']),
         'orderBy': 'DATE_DESC',
         'direction': 'DEBIT',
         'toNature': 'USER',
@@ -455,7 +455,7 @@ def payments_available_depots_retraits(request):
     res.extend(depots_filtered_data)
 
     retraits_query = {
-        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_des_billets_en_circulation']),
+        'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation']),
         'orderBy': 'DATE_DESC',
         'direction': 'CREDIT',
         'fromNature': 'USER',
@@ -543,7 +543,7 @@ def payments_available_for_reconversions(request):
 
     # Reconversions d'eusko billets
     query_billets = {
-        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_des_billets_en_circulation']),
+        'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation']),
         'orderBy': 'DATE_DESC',
         'direction': 'DEBIT',
         'statuses': [
@@ -565,7 +565,7 @@ def payments_available_for_reconversions(request):
 
     # Reconversions d'eusko numériques
     query_numeriques = {
-        'account': str(settings.CYCLOS_CONSTANTS['account_types']['compte_de_debit_eusko_numerique']),
+        'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_eusko_numerique']),
         'orderBy': 'DATE_DESC',
         'direction': 'CREDIT',
         'statuses': [
