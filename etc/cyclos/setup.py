@@ -71,6 +71,13 @@ r = requests.post(global_web_services + 'network/search',
                   headers=headers, json={})
 check_request_status(r)
 
+networks = r.json()['result']['pageItems']
+for network in networks:
+    if network['internalName'] == 'eusko':
+        logger.info(networks)
+        raise Exception('Cyclos est déjà configuré, utilisez le fichier cyclos_constants.yml.sample '
+                        'ou supprimez la base...')
+
 # On force une mise à jour de la license pour pouvoir créer des
 # utilisateurs tout de suite après la fin du paramétrage.
 # Sans ça Cyclos dit que la création d'utilisateurs est désactivée car
