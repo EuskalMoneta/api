@@ -63,6 +63,8 @@ INSTALLED_APPS = [
     'bdc_cyclos',
     'bureauxdechange',
 
+    'cel',
+
     'dolibarr_data',
     'euskalmoneta_data',
 

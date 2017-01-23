@@ -8,6 +8,7 @@ from members.views import MembersAPIView, MembersSubscriptionsAPIView
 
 from auth_token import views as auth_token_views
 import bdc_cyclos.views as bdc_cyclos_views
+import cel.views as cel_views
 import dolibarr_data.views as dolibarr_data_views
 import euskalmoneta_data.views as euskalmoneta_data_views
 import gestioninterne.views as gi_views
@@ -39,7 +40,6 @@ urlpatterns = [
     url(r'^deposit-banks/$', euskalmoneta_data_views.deposit_banks),
 
     # Cyclos data, data we fetch from/push to its API
-
     url(r'^accounts-summaries/(?P<login_bdc>[\w\-]+)?/?$', bdc_cyclos_views.accounts_summaries),
     url(r'^system-accounts-summaries/$', bdc_cyclos_views.system_accounts_summaries),
     url(r'^dedicated-accounts-summaries/$', bdc_cyclos_views.dedicated_accounts_summaries),
@@ -75,6 +75,9 @@ urlpatterns = [
     url(r'^validate-depots-retraits/$', gi_views.validate_depots_retraits),
     url(r'^payments-available-reconversions/$', gi_views.payments_available_for_reconversions),
     url(r'^validate-reconversions/$', gi_views.validate_reconversions),
+
+    # Endpoints for Compte en Ligne
+    url(r'^first-connection/$', cel_views.first_connection),
 ]
 
 urlpatterns += router.urls
