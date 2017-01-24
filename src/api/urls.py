@@ -31,6 +31,7 @@ urlpatterns = [
     url(r'^countries/$', dolibarr_data_views.countries),
     url(r'^countries/(?P<id>[^/.]+)/$', dolibarr_data_views.country_by_id),
     url(r'^bdc-name/$', dolibarr_data_views.get_bdc_name),
+    url(r'^member-name/$', dolibarr_data_views.get_member_name),
     url(r'^user-data/$', dolibarr_data_views.get_user_data),
     url(r'^towns/$', dolibarr_data_views.towns_by_zipcode),
 
@@ -78,6 +79,7 @@ urlpatterns = [
 
     # Endpoints for Compte en Ligne
     url(r'^first-connection/$', cel_views.first_connection),
+    url(r'^lost-password/$', cel_views.lost_password),
 ]
 
 urlpatterns += router.urls

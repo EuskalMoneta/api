@@ -28,3 +28,22 @@ def first_connection(request):
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (KeyError, IndexError):
         return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def lost_password(request):
+    """
+    User login from dolibarr
+    """
+    serializer = serializers.LostPasswordSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    try:
+        dolibarr = DolibarrAPI()
+        # request.data['login']
+        # request.data['email']
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    except (KeyError, IndexError):
+        return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
