@@ -18,17 +18,19 @@ class Member:
             return False
 
     @staticmethod
-    def validate_data(data):
+    def validate_data(data, mode='create'):
         """
         1. Dolibarr.llx_adherent.fk_adherent_type : typeid in the Dolibarr API = "3" (particulier)
         2. Dolibarr.llx_adherent.morphy = "phy" (personne physique)
         3. Dolibarr.llx_adherent.statut = "1" (1 = actif, 0 = brouillon, -1 = résilié)
         4. Dolibarr.llx_adherent.public = "0" (données privées)
         """
-        data['typeid'] = "3"
-        data['morphy'] = "phy"
-        data['statut'] = "1"
-        data['public'] = "0"
+        if mode == 'create':
+            data['typeid'] = "3"
+            data['morphy'] = "phy"
+            data['statut'] = "1"
+            data['public'] = "0"
+
         data['birth'] = Member.validate_birthdate(data['birth'])
         data = Member.validate_options(data)
         data = Member.validate_phones(data)
@@ -78,13 +80,16 @@ class Member:
         2. 'phone_mobile' named "Téléphone mobile"
         3. 'phone_perso' named "Téléphone personnel"
         """
-        if data['phone']:
-            if data['phone'].startswith(('06', '07')):
-                data['phone_mobile'] = data['phone']
-            else:
-                data['phone_perso'] = data['phone']
+        try:
+            if data['phone']:
+                if data['phone'].startswith(('06', '07')):
+                    data['phone_mobile'] = data['phone']
+                else:
+                    data['phone_perso'] = data['phone']
 
-            del data['phone']
+                del data['phone']
+        except KeyError:
+            pass
 
         return data
 
