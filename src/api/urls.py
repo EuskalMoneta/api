@@ -80,6 +80,8 @@ urlpatterns = [
     # Endpoints for Compte en Ligne
     url(r'^first-connection/$', cel_views.first_connection),
     url(r'^lost-password/$', cel_views.lost_password),
+    url(r'^payments-available-history-adherent/$', cel_views.payments_available_for_adherents),
+    url(r'^account-summary-adherents/$', cel_views.account_summary_for_adherents),
 ]
 
 urlpatterns += router.urls
