@@ -20,11 +20,7 @@ RUN apt-get update && apt-get install -y \
     --no-install-recommends 
 
 # libjpeg, needed for Pillow ; xvfb for wkhtmltopdf
-RUN apt-get install -y libfreetype6-dev wget xvfb && \
-    cd /tmp && \
-    wget https://bitbucket.org/wkhtmltopdf/wkhtmltopdf/downloads/wkhtmltox-0.13.0-alpha-7b36694_linux-jessie-amd64.deb && \
-    dpkg --force-depends -i /tmp/wkhtmltox-0.13.0-alpha-7b36694_linux-jessie-amd64.deb && \
-    apt-get install -fy && \
+RUN apt-get install -y libfreetype6-dev wget xvfb wkhtmltopdf && \
     rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["/cyclos/setup_cyclos.sh"]

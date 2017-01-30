@@ -1,14 +1,18 @@
 import logging
 
-from django.conf import settings
+# from django.conf import settings
+
 from rest_framework import status
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from drf_pdf.renderer import PDFRenderer
+from wkhtmltopdf import views as wkhtmltopdf_views
+
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from dolibarr_data import serializers
-from wkhtmltopdf import views as wkhtmltopdf_views
+
 
 log = logging.getLogger()
 
@@ -82,12 +86,13 @@ def payments_available_for_adherents(request):
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
     }
-    accounts_summaries_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
-    return Response(accounts_summaries_res)
+    accounts_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+    return Response(accounts_history_res)
 
 
 @api_view(['GET'])
-def payments_available_for_adherents_to_pdf(request):
+@renderer_classes((PDFRenderer, ))
+def export_history_adherent_pdf(request):
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='cel')
     except CyclosAPIException:
@@ -103,14 +108,17 @@ def payments_available_for_adherents_to_pdf(request):
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
     }
-    accounts_summaries_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+    accounts_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
     context = {
-        # 'report': report,
-        # 'mode': email_type,
-        # 'static_base_url': settings.STATIC_URL_BASE,
-        # 'img_max_width': settings.REPORT_IMG_MAX_WIDTH,
+        'account_history': accounts_history_res['result'],
     }
 
-    response = wkhtmltopdf_views.PDFTemplateResponse(
-        request=request, context=context, template="'report/report_summary.html'")
-    return Response(response)
+    response = wkhtmltopdf_views.PDFTemplateResponse(request=request, context=context, template="summary/summary.html")
+    pdf_content = response.rendered_content
+
+    headers = {
+        'Content-Disposition': 'filename="pdf_id.pdf"',
+        'Content-Length': len(pdf_content),
+    }
+
+    return Response(pdf_content, headers=headers)
