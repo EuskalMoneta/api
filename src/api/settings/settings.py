@@ -71,6 +71,7 @@ INSTALLED_APPS = [
     'gestioninterne',
 
     'corsheaders',
+    'wkhtmltopdf',
     'raven.contrib.django.raven_compat',
     'rest_framework.authtoken',
     'rest_framework',
