@@ -8,6 +8,7 @@ from rest_framework.response import Response
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from dolibarr_data import serializers
+from wkhtmltopdf import views as wkhtmltopdf_views
 
 log = logging.getLogger()
 
@@ -83,3 +84,33 @@ def payments_available_for_adherents(request):
     }
     accounts_summaries_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
     return Response(accounts_summaries_res)
+
+
+@api_view(['GET'])
+def payments_available_for_adherents_to_pdf(request):
+    try:
+        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    query_data = [cyclos.user_id, None]
+
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+
+    search_history_data = {
+        'account': accounts_summaries_data['result'][0]['status']['accountId'],
+        'orderBy': 'DATE_DESC',
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+    }
+    accounts_summaries_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+    context = {
+        # 'report': report,
+        # 'mode': email_type,
+        # 'static_base_url': settings.STATIC_URL_BASE,
+        # 'img_max_width': settings.REPORT_IMG_MAX_WIDTH,
+    }
+
+    response = wkhtmltopdf_views.PDFTemplateResponse(
+        request=request, context=context, template="'report/report_summary.html'")
+    return Response(response)
