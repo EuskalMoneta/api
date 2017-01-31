@@ -622,51 +622,53 @@ def validate_reconversions(request):
         return Response({'error': "Unable to fetch compte_dedie_eusko_numerique account data!"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    # 1) Enregistrer le virement pour les eusko billet
-    billets_query = {
-        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
-        # montant total des reconversions billet sélectionnées
-        'amount': float(request.data['montant_total_billets']),
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
-        'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
-        'to': 'SYSTEM',
-        'description': 'Reconversions - Remboursement des prestataires + commission pour Euskal Moneta.',
-    }
-    cyclos.post(method='payment/perform', data=billets_query)
+    if float(request.data['montant_total_billets']) > float(0):
+        # 1) Enregistrer le virement pour les eusko billet
+        billets_query = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
+            # montant total des reconversions billet sélectionnées
+            'amount': float(request.data['montant_total_billets']),
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
+            'to': 'SYSTEM',
+            'description': 'Reconversions - Remboursement des prestataires + commission pour Euskal Moneta.',
+        }
+        cyclos.post(method='payment/perform', data=billets_query)
 
-    # 2) Passer chaque opération (reconversion d'eusko billet) sélectionnée à l'état "Virements faits" :
-    for payment in request.data['selected_payments']:
-        if (payment['type']['id'] ==
-           str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko'])):
+        # 2) Passer chaque opération (reconversion d'eusko billet) sélectionnée à l'état "Virements faits" :
+        for payment in request.data['selected_payments']:
+            if (payment['type']['id'] ==
+               str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko'])):
 
-            # Passer l'opération à l'état "Virements faits"
-            status_query_data = {
-                'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
-                'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
-            }
-            cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+                # Passer l'opération à l'état "Virements faits"
+                status_query_data = {
+                    'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+                    'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+                }
+                cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
-    # 3) Enregistrer le virement pour les eusko numériques
-    numeriques_query = {
-        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
-        # montant total des reconversions numériques sélectionnées
-        'amount': float(request.data['montant_total_numerique']),
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
-        'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
-        'to': 'SYSTEM',
-        'description': 'Reconversions - Remboursement des prestataires + commission pour Euskal Moneta.',
-    }
-    cyclos.post(method='payment/perform', data=numeriques_query)
+    if float(request.data['montant_total_numerique']) > float(0):
+        # 3) Enregistrer le virement pour les eusko numériques
+        numeriques_query = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
+            # montant total des reconversions numériques sélectionnées
+            'amount': float(request.data['montant_total_numerique']),
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+            'to': 'SYSTEM',
+            'description': 'Reconversions - Remboursement des prestataires + commission pour Euskal Moneta.',
+        }
+        cyclos.post(method='payment/perform', data=numeriques_query)
 
-    # 4) Passer chaque opération (reconversion d'eusko numérique) sélectionnée à l'état "Virements faits" :
-    for payment in request.data['selected_payments']:
-        if payment['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_numerique']):
+        # 4) Passer chaque opération (reconversion d'eusko numérique) sélectionnée à l'état "Virements faits" :
+        for payment in request.data['selected_payments']:
+            if payment['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_numerique']):
 
-            # Passer l'opération à l'état "Virements faits"
-            status_query_data = {
-                'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
-                'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
-            }
-            cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
+                # Passer l'opération à l'état "Virements faits"
+                status_query_data = {
+                    'transfer': payment['id'],  # ID de l'opération d'origine (récupéré dans l'historique)
+                    'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_faits'])
+                }
+                cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     return Response(request.data['selected_payments'])
