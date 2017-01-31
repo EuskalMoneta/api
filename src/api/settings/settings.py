@@ -63,6 +63,8 @@ INSTALLED_APPS = [
     'bdc_cyclos',
     'bureauxdechange',
 
+    'cel',
+
     'dolibarr_data',
     'euskalmoneta_data',
 
@@ -168,6 +170,7 @@ API_PUBLIC_URL = os.environ.get('API_PUBLIC_URL')
 DOLIBARR_PUBLIC_URL = os.environ.get('DOLIBARR_PUBLIC_URL')
 BDC_PUBLIC_URL = os.environ.get('BDC_PUBLIC_URL')
 GI_PUBLIC_URL = os.environ.get('GI_PUBLIC_URL')
+CEL_PUBLIC_URL = os.environ.get('CEL_PUBLIC_URL')
 
 # APIs URLs
 DOLIBARR_URL = 'http://dolibarr-app/api/index.php'
@@ -190,6 +193,11 @@ if 'https' in GI_PUBLIC_URL:
 else:
     GI_CORS_URL = GI_PUBLIC_URL.replace('http://', '')
 
+if 'https' in CEL_PUBLIC_URL:
+    CEL_CORS_URL = CEL_PUBLIC_URL.replace('https://', '')
+else:
+    CEL_CORS_URL = CEL_PUBLIC_URL.replace('http://', '')
+
 # This is needed for Selenium tests to pass (we don't know the URL inside containers)
 if DEBUG:
     CORS_ORIGIN_ALLOW_ALL = True
@@ -197,6 +205,7 @@ else:
     CORS_ORIGIN_WHITELIST = (
         BDC_CORS_URL,
         GI_CORS_URL,
+        CEL_CORS_URL,
     )
 
 # Raven + Logging

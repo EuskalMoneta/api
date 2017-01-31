@@ -1,4 +1,4 @@
-image: docker:latest
+image: docker:1.12
 
 # When using dind, it's wise to use the overlayfs driver for
 # improved performance.
@@ -8,7 +8,7 @@ variables:
   CONTAINER_RELEASE_IMAGE: sources.meta-it.fr:4567/euskal-moneta/api
 
 services:
-  - docker:dind
+  - docker:1.12-dind
 
 before_script:
   # This code allows to use SSH with public key authentication

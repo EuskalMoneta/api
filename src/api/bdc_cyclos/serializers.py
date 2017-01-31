@@ -89,6 +89,7 @@ class PaymentsAvailableEntreeStockSerializer(serializers.Serializer):
 
 
 class ChangePasswordSerializer(serializers.Serializer):
+    cyclos_mode = serializers.CharField(required=False)
     old_password = serializers.CharField()
     new_password = serializers.CharField()
     confirm_password = serializers.CharField()

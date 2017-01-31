@@ -98,8 +98,17 @@ class MembersAPIView(BaseAPIView):
         pass
 
     def partial_update(self, request, pk=None):
-        # return Response(self.dolibarr.patch(model=self.model, api_key=dolibarr_token))
-        pass
+        data = request.data
+        serializer = MemberSerializer(data=data)
+        if serializer.is_valid():
+            data = Member.validate_data(data, mode='update')
+        else:
+            log.critical(serializer.errors)
+            return Response({'error': 'Oops! Something is wrong in your request data: {}'.format(serializer.errors)},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        return Response(self.dolibarr.patch(model='members/{}'.format(pk), data=data,
+                                            api_key=request.user.profile.dolibarr_token))
 
 
 class MembersSubscriptionsAPIView(BaseAPIView):

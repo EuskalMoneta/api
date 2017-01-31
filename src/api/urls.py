@@ -8,6 +8,7 @@ from members.views import MembersAPIView, MembersSubscriptionsAPIView
 
 from auth_token import views as auth_token_views
 import bdc_cyclos.views as bdc_cyclos_views
+import cel.views as cel_views
 import dolibarr_data.views as dolibarr_data_views
 import euskalmoneta_data.views as euskalmoneta_data_views
 import gestioninterne.views as gi_views
@@ -30,6 +31,7 @@ urlpatterns = [
     url(r'^countries/$', dolibarr_data_views.countries),
     url(r'^countries/(?P<id>[^/.]+)/$', dolibarr_data_views.country_by_id),
     url(r'^bdc-name/$', dolibarr_data_views.get_bdc_name),
+    url(r'^member-name/$', dolibarr_data_views.get_member_name),
     url(r'^user-data/$', dolibarr_data_views.get_user_data),
     url(r'^towns/$', dolibarr_data_views.towns_by_zipcode),
 
@@ -39,7 +41,6 @@ urlpatterns = [
     url(r'^deposit-banks/$', euskalmoneta_data_views.deposit_banks),
 
     # Cyclos data, data we fetch from/push to its API
-
     url(r'^accounts-summaries/(?P<login_bdc>[\w\-]+)?/?$', bdc_cyclos_views.accounts_summaries),
     url(r'^system-accounts-summaries/$', bdc_cyclos_views.system_accounts_summaries),
     url(r'^dedicated-accounts-summaries/$', bdc_cyclos_views.dedicated_accounts_summaries),
@@ -57,7 +58,7 @@ urlpatterns = [
     url(r'^sortie-retour-eusko/$', bdc_cyclos_views.sortie_retour_eusko),
     url(r'^depot-eusko-numerique/$', bdc_cyclos_views.depot_eusko_numerique),
     url(r'^retrait-eusko-numerique/$', bdc_cyclos_views.retrait_eusko_numerique),
-    url(r'^bdc-change-password/$', bdc_cyclos_views.bdc_change_password),
+    url(r'^change-password/$', bdc_cyclos_views.change_password),
 
     # Endpoints for Gestion Interne
     url(r'^banks-history/$', gi_views.payments_available_for_banques),
@@ -75,6 +76,12 @@ urlpatterns = [
     url(r'^validate-depots-retraits/$', gi_views.validate_depots_retraits),
     url(r'^payments-available-reconversions/$', gi_views.payments_available_for_reconversions),
     url(r'^validate-reconversions/$', gi_views.validate_reconversions),
+
+    # Endpoints for Compte en Ligne
+    url(r'^first-connection/$', cel_views.first_connection),
+    url(r'^lost-password/$', cel_views.lost_password),
+    url(r'^payments-available-history-adherent/$', cel_views.payments_available_for_adherents),
+    url(r'^account-summary-adherents/$', cel_views.account_summary_for_adherents),
 ]
 
 urlpatterns += router.urls

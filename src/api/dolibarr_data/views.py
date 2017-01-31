@@ -142,6 +142,14 @@ def get_bdc_name(request):
 
 
 @api_view(['GET'])
+def get_member_name(request):
+    """
+    Get the member name (firstname + lastname) for the current user.
+    """
+    return Response('{} {}'.format(request.user.profile.firstname, request.user.profile.lastname))
+
+
+@api_view(['GET'])
 def get_user_data(request):
     """
     Get user data for a user.
