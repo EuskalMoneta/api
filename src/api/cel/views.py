@@ -109,12 +109,19 @@ def export_history_adherent_pdf(request):
     query_data = [cyclos.user_id, None]
 
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+    begin_date = request.query_params['begin']
+    end_date = request.query_params['end']
 
     search_history_data = {
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
         'orderBy': 'DATE_DESC',
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
+        'period':
+        {
+            'begin': begin_date,
+            'end': end_date,
+        },
     }
     accounts_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
     context = {
