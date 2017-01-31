@@ -1,3 +1,4 @@
+from datetime import datetime
 import logging
 
 # from django.conf import settings
@@ -9,9 +10,9 @@ from rest_framework.response import Response
 from drf_pdf.renderer import PDFRenderer
 from wkhtmltopdf import views as wkhtmltopdf_views
 
+from cel import serializers
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
-from dolibarr_data import serializers
 
 
 log = logging.getLogger()
@@ -71,6 +72,10 @@ def account_summary_for_adherents(request):
 
 @api_view(['GET'])
 def payments_available_for_adherents(request):
+
+    serializer = serializers.HistorySerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)
+
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='cel')
     except CyclosAPIException:
@@ -79,9 +84,9 @@ def payments_available_for_adherents(request):
     query_data = [cyclos.user_id, None]
 
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
-    begin_date = request.query_params['begin']
-    end_date = request.query_params['end']
-
+    begin_date = datetime.strptime(request.query_params['begin'], '%Y-%m-%d')
+    end_date = datetime.strptime(
+        request.query_params['end'], '%Y-%m-%d').replace(hour=23, minute=59, second=59)
     search_history_data = {
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
         'orderBy': 'DATE_DESC',
@@ -89,8 +94,8 @@ def payments_available_for_adherents(request):
         'currentpage': 0,
         'period':
         {
-            'begin': begin_date,
-            'end': end_date,
+            'begin': begin_date.isoformat(),
+            'end': end_date.isoformat(),
         },
     }
 
@@ -101,6 +106,10 @@ def payments_available_for_adherents(request):
 @api_view(['GET'])
 @renderer_classes((PDFRenderer, ))
 def export_history_adherent_pdf(request):
+
+    serializer = serializers.HistorySerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)
+
     try:
         cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='cel')
     except CyclosAPIException:
