@@ -74,6 +74,23 @@ def first_connection(request):
 
 @api_view(['POST'])
 @permission_classes((AllowAny, ))
+def validate_first_connection(request):
+    """
+    validate_first_connection
+    """
+    serializer = serializers.ValidTokenSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    try:
+        token_data = jwt.decode(request.data['token'], settings.JWT_SECRET, algorithms=['HS256'])
+    except jwt.InvalidTokenError:
+        return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(token_data)
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
 def lost_password(request):
     """
     User login from dolibarr
@@ -82,13 +99,23 @@ def lost_password(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
-        dolibarr = DolibarrAPI()
+        pass
+        # dolibarr = DolibarrAPI()
         # request.data['login']
         # request.data['email']
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (KeyError, IndexError):
         return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def validate_lost_password(request):
+    """
+    validate_lost_password
+    """
+    pass
 
 
 @api_view(['GET'])
