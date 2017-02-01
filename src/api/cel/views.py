@@ -1,5 +1,6 @@
 from datetime import datetime, timedelta
 import logging
+from uuid import uuid4
 
 from django.conf import settings
 from drf_pdf.renderer import PDFRenderer
@@ -45,14 +46,14 @@ def first_connection(request):
 
             if response[0]['email'] == request.data['email']:
                 # We got a match!
+
                 # We need to mail a token etc...
-
                 payload = {'login': request.data['login'],
-                           'iss': 'first-connection',
-                           'iat': datetime.utcnow(), 'nbf': datetime.utcnow(),
-                           'exp': datetime.utcnow() + timedelta(hours=1)}
+                           'aud': 'member', 'iss': 'first-connection',
+                           'jti': str(uuid4()), 'iat': datetime.utcnow(),
+                           'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
-                jwt_token = jwt.encode(payload, settings.JWT_SECRET, algorithm='HS256')
+                jwt_token = jwt.encode(payload, settings.JWT_SECRET)
                 confirm_url = '{}/valide-premiere-connexion?token={}'.format(settings.CEL_PUBLIC_URL,
                                                                              jwt_token.decode("utf-8"))
 
@@ -82,8 +83,9 @@ def validate_first_connection(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
-        token_data = jwt.decode(request.data['token'], settings.JWT_SECRET, algorithms=['HS256'])
-    except jwt.InvalidTokenError:
+        token_data = jwt.decode(request.data['token'], settings.JWT_SECRET,
+                                issuer='first-connection', audience='member')
+    except jwt.InvalidTokenError as e:
         return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
 
     return Response(token_data)
