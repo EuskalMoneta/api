@@ -5,6 +5,10 @@ from django.core import mail
 log = logging.getLogger()
 
 
+class EuskalMonetaAPIException(Exception):
+    pass
+
+
 def sendmail_euskalmoneta(subject, body, to_email, from_email=None):
     if from_email is None:
         from_email = 'contact@euskalmoneta.org'

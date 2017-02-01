@@ -1,3 +1,4 @@
+import base64
 from datetime import datetime, timedelta
 import logging
 from uuid import uuid4
@@ -15,7 +16,7 @@ from cel import serializers
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from members.misc import Member
-from misc import sendmail_euskalmoneta
+from misc import EuskalMonetaAPIException, sendmail_euskalmoneta
 
 
 log = logging.getLogger()
@@ -32,24 +33,21 @@ def first_connection(request):
 
     try:
         dolibarr = DolibarrAPI()
-        dolibarr_token = dolibarr.login(login=settings.DOLIBARR_ANONYMOUS_LOGIN,
-                                        password=settings.DOLIBARR_ANONYMOUS_PASSWORD)
+        dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                                        password=settings.APPS_ANONYMOUS_PASSWORD)
 
         valid_login = Member.validate_num_adherent(request.data['login'])
 
         if valid_login:
             # We want to search in members by login (N° Adhérent)
-            try:
-                response = dolibarr.get(model='members', login=request.data['login'], api_key=dolibarr_token)
-            except DolibarrAPIException:
-                return Response(status=status.HTTP_204_NO_CONTENT)
+            response = dolibarr.get(model='members', login=request.data['login'], api_key=dolibarr_token)
 
             if response[0]['email'] == request.data['email']:
                 # We got a match!
 
                 # We need to mail a token etc...
                 payload = {'login': request.data['login'],
-                           'aud': 'member', 'iss': 'first-connection',
+                           'aud': 'guest', 'iss': 'first-connection',
                            'jti': str(uuid4()), 'iat': datetime.utcnow(),
                            'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
@@ -61,16 +59,14 @@ def first_connection(request):
                                       to_email=request.data['email'])
                 return Response({'member': 'OK'})
             else:
-                return Response({'member': None})
+                return Response(status=status.HTTP_204_NO_CONTENT)
 
         else:
             return Response({'error': 'You need to provide a *VALID* login parameter! (Format: E12345)'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-    except DolibarrAPIException:
-        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
-    except (KeyError, IndexError):
-        return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
+    except (DolibarrAPIException, KeyError, IndexError):
+        return Response({'error': 'Unable to get user data for this login!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -81,14 +77,59 @@ def validate_first_connection(request):
     """
     serializer = serializers.ValidTokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+    # new_password
+    # confirm_password
 
     try:
         token_data = jwt.decode(request.data['token'], settings.JWT_SECRET,
-                                issuer='first-connection', audience='member')
-    except jwt.InvalidTokenError as e:
+                                issuer='first-connection', audience='guest')
+    except jwt.InvalidTokenError:
         return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(token_data)
+    try:
+        dolibarr = DolibarrAPI()
+        dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                                        password=settings.APPS_ANONYMOUS_PASSWORD)
+
+        # 1) Dans Dolibarr, créer un utilisateur lié à l'adhérent
+        member = dolibarr.get(model='members', login=token_data['login'], api_key=dolibarr_token)
+
+        user_data = {'fk_member': member[0]['id'], 'statut': '1', 'public': '0', 'employee': '0',
+                     'email': member[0]['email'], 'login': member[0]['login'],
+                     'firstname': member[0]['firstname'], 'lastname': member[0]['lastname']}
+        user_obj = dolibarr.post(model='users', data=user_data, api_key=dolibarr_token)
+
+        # 2) Dans Dolibarr, ajouter ce nouvel utilisateur dans le groupe "Adhérents"
+        # TODO: Comment retrouver l'id du group "Adhérents" ?
+        user_group_model = 'users/{}/setGroup/{}'.format(user_obj['id'],
+                                                         settings.DOLIBARR_CONSTANTS['groups']['adherents'])
+        user_group_res = dolibarr.get(model=user_group_model, api_key=dolibarr_token)
+        if not user_group_res == 1:
+            raise EuskalMonetaAPIException
+
+        # 3) Dans Cyclos, activer l'utilisateur
+        # TODO
+        cyclos_auth_string = b'{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN, settings.APPS_ANONYMOUS_PASSWORD)
+        cyclos_auth_string = base64.standard_b64encode(cyclos_auth_string).decode('utf-8')
+
+        cyclos = CyclosAPI(auth_string=cyclos_auth_string, mode='cel')
+
+        active_user_data = {}
+        # cyclos.post(method='user/active', data=active_user_data)
+
+        # 4) Dans Cyclos, initialiser le mot de passe d'un utilisateur
+        password_data = {
+            'user': cyclos.user_id,  # ID de l'utilisateur
+            'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+            'newPassword': request.data['new_password'],  # saisi par l'utilisateur
+            'confirmNewPassword': request.data['confirm_password'],  # saisi par l'utilisateur
+        }
+        cyclos.post(method='password/change', data=password_data)
+
+        return Response()
+
+    except (EuskalMonetaAPIException, DolibarrAPIException, CyclosAPIException, KeyError, IndexError):
+        return Response({'error': 'Unable to get user data for this login!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -117,7 +158,16 @@ def validate_lost_password(request):
     """
     validate_lost_password
     """
-    pass
+    serializer = serializers.ValidTokenSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    try:
+        token_data = jwt.decode(request.data['token'], settings.JWT_SECRET,
+                                issuer='lost-password', audience='member')
+    except jwt.InvalidTokenError:
+        return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(token_data)
 
 
 @api_view(['GET'])
