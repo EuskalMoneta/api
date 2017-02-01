@@ -1,18 +1,20 @@
-from datetime import datetime
+from datetime import datetime, timedelta
 import logging
 
-# from django.conf import settings
-
+from django.conf import settings
+from drf_pdf.renderer import PDFRenderer
+import jwt
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from drf_pdf.renderer import PDFRenderer
 from wkhtmltopdf import views as wkhtmltopdf_views
 
 from cel import serializers
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
+from members.misc import Member
+from misc import sendmail_euskalmoneta
 
 
 log = logging.getLogger()
@@ -22,15 +24,48 @@ log = logging.getLogger()
 @permission_classes((AllowAny, ))
 def first_connection(request):
     """
-    User login from dolibarr
+    First connection
     """
     serializer = serializers.FirstConnectionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
         dolibarr = DolibarrAPI()
-        # request.data['login']
-        # request.data['email']
+        dolibarr_token = dolibarr.login(login=settings.DOLIBARR_ANONYMOUS_LOGIN,
+                                        password=settings.DOLIBARR_ANONYMOUS_PASSWORD)
+
+        valid_login = Member.validate_num_adherent(request.data['login'])
+
+        if valid_login:
+            # We want to search in members by login (N° Adhérent)
+            try:
+                response = dolibarr.get(model='members', login=request.data['login'], api_key=dolibarr_token)
+            except DolibarrAPIException:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+            if response[0]['email'] == request.data['email']:
+                # We got a match!
+                # We need to mail a token etc...
+
+                payload = {'login': request.data['login'],
+                           'iss': 'first-connection',
+                           'iat': datetime.utcnow(), 'nbf': datetime.utcnow(),
+                           'exp': datetime.utcnow() + timedelta(hours=1)}
+
+                jwt_token = jwt.encode(payload, settings.JWT_SECRET, algorithm='HS256')
+                confirm_url = '{}/valide-premiere-connexion?token={}'.format(settings.CEL_PUBLIC_URL,
+                                                                             jwt_token.decode("utf-8"))
+
+                sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
+                                      to_email=request.data['email'])
+                return Response({'member': 'OK'})
+            else:
+                return Response({'member': None})
+
+        else:
+            return Response({'error': 'You need to provide a *VALID* login parameter! (Format: E12345)'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (KeyError, IndexError):

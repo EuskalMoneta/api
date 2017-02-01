@@ -284,3 +284,8 @@ REST_FRAMEWORK = {
 
 WKHTMLTOPDF_DEBUG = True
 WKHTMLTOPDF_CMD = 'xvfb-run /usr/bin/wkhtmltopdf'
+
+DOLIBARR_ANONYMOUS_LOGIN = 'anonyme'
+DOLIBARR_ANONYMOUS_PASSWORD = 'anonyme'
+
+JWT_SECRET = 'secret'

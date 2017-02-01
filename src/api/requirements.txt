@@ -9,6 +9,7 @@ markdown       # Markdown support for the browsable API.
 pytest
 pytest-django
 python-slugify
+PyJWT
 PyYAML
 raven
 requests
