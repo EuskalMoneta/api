@@ -1798,6 +1798,14 @@ ID_GROUPE_PORTEURS = create_member_group(
         ID_PRODUIT_UTILISATEURS_BASIQUES_SANS_COMPTE,
     ]
 )
+# Adhérents sans compte.
+ID_GROUPE_ADHERENTS_SANS_COMPTE = create_member_group(
+    name='Adhérents sans compte',
+    initial_user_status='DISABLED',
+    products=[
+        ID_PRODUIT_UTILISATEURS_BASIQUES_SANS_COMPTE,
+    ]
+)
 
 all_user_groups = [
     ID_GROUPE_BUREAUX_DE_CHANGE,
@@ -1806,6 +1814,7 @@ all_user_groups = [
     ID_GROUPE_ADHERENTS_PRESTATAIRES,
     ID_GROUPE_ADHERENTS_UTILISATEURS,
     ID_GROUPE_PORTEURS,
+    ID_GROUPE_ADHERENTS_SANS_COMPTE,
 ]
 
 # Définition des permissions.

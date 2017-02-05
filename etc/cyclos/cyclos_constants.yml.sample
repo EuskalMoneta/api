@@ -17,6 +17,7 @@ currencies:
   eusko: -7371965214485201109
 groups:
   adherents_prestataires: -7371965175830495445
+  adherents_sans_compte: -7371965188715397333
   adherents_utilisateurs: -7371965180125462741
   banques_de_depot: -7371965201600299221
   bureaux_de_change: -7371965197305331925

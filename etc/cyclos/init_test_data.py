@@ -234,12 +234,8 @@ adherents = {
     'Z00069': 'Reform-Club',
 }
 for login, name in adherents.items():
-    if login[0] == 'E':
-        group = 'Adhérents utilisateurs'
-    elif login[0] == 'Z':
-        group = 'Adhérents prestataires'
     create_user(
-        group=group,
+        group='Adhérents sans compte',
         name=name,
         login=login,
     )
