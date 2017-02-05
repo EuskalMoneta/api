@@ -16,15 +16,16 @@ currencies:
   euro: -7371965218780168405
   eusko: -7371965214485201109
 groups:
-  adherents_prestataires: -7371965175830495445
-  adherents_sans_compte: -7371965188715397333
-  adherents_utilisateurs: -7371965180125462741
-  banques_de_depot: -7371965201600299221
-  bureaux_de_change: -7371965197305331925
-  comptes_dedies: -7371965205895266517
+  adherents_prestataires: -7371965180125462741
+  adherents_sans_compte: -7371965158650626261
+  adherents_utilisateurs: -7371965184420430037
+  anonyme: -7371965197305331925
+  banques_de_depot: -7371965205895266517
+  bureaux_de_change: -7371965201600299221
+  comptes_dedies: -7371965175830495445
   gestion_interne: -7371965223075135701
   operateurs_bdc: -7371965193010364629
-  porteurs: -7371965184420430037
+  porteurs: -7371965188715397333
 password_types:
   login_password: -7371965214485201109
   one_time_password: -7371965193010364629

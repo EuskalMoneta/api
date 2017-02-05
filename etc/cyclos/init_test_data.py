@@ -172,6 +172,13 @@ for login, name in bureaux_de_change.items():
         }
     )
 
+create_user(
+    group='Anonyme',
+    name='Anonyme',
+    login='anonyme',
+    password='anonyme',
+)
+
 adherents = {
     'E00007': 'Créttine Agnès',
     'E00010': 'Malik Alberto',

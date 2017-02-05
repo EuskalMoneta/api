@@ -1507,6 +1507,7 @@ def set_admin_group_permissions(
         blocked_users_manage=False,
         disabled_users='NONE',
         removed_users='NONE',
+        user_password_actions=[],
         access_user_accounts=[],
         payments_as_user_to_user=[],
         payments_as_user_to_system=[],
@@ -1569,6 +1570,12 @@ def set_admin_group_permissions(
     product['blockedUsersManage'] = blocked_users_manage
     product['disabledUsers'] = disabled_users
     product['removedUsers'] = removed_users
+    # Actions possibles sur les mots de passe des autres utilisateurs :
+    # le principe est le même que pour les 'passwordActions' sauf que
+    # l'on n'active que l'action 'Change'.
+    for password_action in product['userPasswordActions']:
+        if password_action['passwordType']['internalName'] in user_password_actions:
+            password_action['change'] = True
     product['userAccountsAccess'] = access_user_accounts
     product['userPaymentsAsUser'] = payments_as_user_to_user
     product['systemPaymentsAsUser'] = payments_as_user_to_system
@@ -1640,6 +1647,15 @@ ID_GROUPE_GESTION_INTERNE = create_admin_group(
 # et lié à l'utilisateur "Bureau de change" correspondant.
 ID_GROUPE_OPERATEURS_BDC = create_admin_group(
     name='Opérateurs BDC',
+)
+
+# Anonyme :
+# Ce groupe ne va contenir qu'un utilisateur : l'utilisateur "anonyme"
+# que l'API va utiliser à chaque fois qu'elle devra faire des requêtes
+# sans qu'un "vrai" utilisateur ne soit authentifié (par exemple, lors
+# de la 1ère connexion d'un adhérent à l'application Compte en ligne).
+ID_GROUPE_ANONYME = create_admin_group(
+    name='Anonyme',
 )
 
 # Bureaux de change :
@@ -1852,6 +1868,9 @@ set_admin_group_permissions(
     blocked_users_manage=True,
     disabled_users='MANAGE',
     removed_users='MANAGE',
+    user_password_actions=[
+        'login',
+    ],
     access_user_accounts=all_user_accounts,
     payments_as_user_to_user=all_user_to_user_payments,
     payments_as_user_to_system=all_user_to_system_payments,
@@ -1923,6 +1942,31 @@ set_admin_group_permissions(
         ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DE_DEBIT,
         ID_TYPE_PAIEMENT_RETRAIT_DE_BILLETS,
         ID_TYPE_PAIEMENT_RETRAIT_DU_COMPTE,
+    ],
+)
+# Permissions pour le groupe "Anonyme":
+set_admin_group_permissions(
+    group_id=ID_GROUPE_ANONYME,
+    my_profile_fields=[
+        'FULL_NAME',
+        'LOGIN_NAME',
+    ],
+    passwords=[
+        'login',
+    ],
+    accessible_user_groups=[
+        ID_GROUPE_ADHERENTS_PRESTATAIRES,
+        ID_GROUPE_ADHERENTS_UTILISATEURS,
+        ID_GROUPE_ADHERENTS_SANS_COMPTE,
+    ],
+    user_profile_fields=[
+        'FULL_NAME',
+        'LOGIN_NAME',
+    ],
+    change_group='MANAGE',
+    disabled_users='MANAGE',
+    user_password_actions=[
+        'login',
     ],
 )
 
