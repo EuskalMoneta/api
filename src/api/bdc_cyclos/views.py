@@ -20,7 +20,7 @@ def accounts_summaries(request, login_bdc=None):
     cyclos_mode = 'gi_bdc' if login_bdc else 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -55,7 +55,7 @@ def system_accounts_summaries(request):
     List all system_accounts_summaries.
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='gi_bdc')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -87,7 +87,7 @@ def dedicated_accounts_summaries(request):
     Accounts summaries for dedicated accounts.
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='gi_bdc')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -122,7 +122,7 @@ def deposit_banks_summaries(request):
     Accounts summaries for deposit banks.
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='gi_bdc')
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='gi_bdc')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -161,7 +161,7 @@ def member_account_summary(request):
     Account summary for this member.
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -191,7 +191,7 @@ def entree_stock(request):
         cyclos_mode = 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -268,7 +268,7 @@ def sortie_stock(request):
         cyclos_mode = 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -297,7 +297,7 @@ def change_euro_eusko(request):
     Change d'€ en eusko pour un adhérent via un BDC.
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -351,7 +351,7 @@ def reconversion(request):
     Reconversion eusko en euros pour un adhérent (prestataire) via un BDC.
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -425,7 +425,7 @@ def accounts_history(request):
             cyclos_mode = 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -500,7 +500,7 @@ def bank_deposit(request):
         cyclos_mode = 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -691,7 +691,7 @@ def cash_deposit(request):
         cyclos_mode = 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -767,7 +767,7 @@ def sortie_retour_eusko(request):
         cyclos_mode = 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -831,7 +831,7 @@ def depot_eusko_numerique(request):
     depot-eusko-numerique
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -901,7 +901,7 @@ def retrait_eusko_numerique(request):
     Retrait eusko: numerique vers billets
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1013,7 +1013,7 @@ def payments_available_for_entree_stock(request):
         cyclos_mode = 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode, login_bdc=login_bdc)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode=cyclos_mode, login_bdc=login_bdc)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1058,7 +1058,7 @@ def change_password(request):
         cyclos_mode = 'bdc'
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode=cyclos_mode)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode=cyclos_mode)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 

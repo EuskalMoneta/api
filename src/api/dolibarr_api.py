@@ -43,7 +43,7 @@ class DolibarrAPI(object):
 
     def login(self, login=None, password=None):
         """ Login function for Dolibarr API users. """
-        r = requests.get('{}/login?login={}&password={}'.format(self.url, login, password),
+        r = requests.get('{}/login?login={}&password={}&reset=1'.format(self.url, login, password),
                          headers={'content-type': 'application/json'})
 
         json_response = r.json()

@@ -1,10 +1,11 @@
 import logging
+import socket
 
 from django.conf import settings
 from rest_framework.exceptions import APIException
 import requests
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 class CyclosAPIException(APIException):
@@ -22,7 +23,9 @@ class CyclosAPI(object):
             self.url = settings.CYCLOS_URL
 
         try:
-            if self.mode == 'bdc':
+            if self.mode == 'login':
+                pass
+            elif self.mode == 'bdc':
                 self._init_bdc()
             elif self.mode == 'cel':
                 self._init_cel()
@@ -72,9 +75,28 @@ class CyclosAPI(object):
         # user/load for this ID to get field BDC ID
         self.user_bdc_id = self.get_bdc_id_from_operator_id(self.user_id)
 
-    def get_member_id_from_login(self, member_login, auth_string=None):
-        if auth_string:
-            self._handle_auth_string(auth_string)
+    def login(self, auth_string):
+        """Login function to get Cyclos token."""
+        r = requests.post('{}/login/login'.format(self.url),
+                          headers=self._handle_auth_headers(auth_string=auth_string))
+
+        json_response = r.json()
+
+        if r.status_code == requests.codes.ok:
+            try:
+                token = json_response['result']['sessionToken']
+            except KeyError:
+                message = 'Cyclos API Exception: {}'.format(json_response)
+                raise CyclosAPIException(status_code=r.status_code, detail=message)
+        else:
+            message = 'Cyclos API Exception: {}'.format(json_response)
+            raise CyclosAPIException(status_code=r.status_code, detail=message)
+
+        return token
+
+    def get_member_id_from_login(self, member_login, token=None):
+        if token:
+            self._handle_token(token)
 
         query_data = {
             'keywords': member_login,
@@ -108,13 +130,31 @@ class CyclosAPI(object):
         except (KeyError, IndexError):
             raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
-    def _handle_auth_string(self, auth_string):
-        log.debug(auth_string)
-        self.auth_string = auth_string
-        return auth_string
+    def _handle_token(self, token):
+        log.debug(token)
+        self.token = token
+        return token
 
-    def _handle_auth_headers(self, headers):
-        headers.update({'Authorization': 'Basic {}'.format(self.auth_string)})
+    def _handle_auth_headers(self, headers=None, token=None, auth_string=None):
+        headers = headers if isinstance(headers, dict) else {}
+
+        # remote_addr = [
+        #     l
+        #     for l in ([ip for ip in socket.gethostbyname_ex(socket.gethostname())[2]
+        #                if not ip.startswith("127.")][:1],
+        #               [[(s.connect((self.url, 53)), s.getsockname()[0], s.close())
+        #                 for s in [socket.socket(socket.AF_INET, socket.SOCK_DGRAM)]][0][1]]) if l][0][0]
+
+        if auth_string:
+            headers.update({'Authorization': 'Basic {}'.format(auth_string)})
+        elif token:
+            headers.update({'Authorization': 'Session-Token {}'.format(token)})
+        else:
+            try:
+                headers.update({'Authorization': 'Session-Token {}'.format(self.token)})
+            except AttributeError:
+                raise CyclosAPIException(detail='Unable to read to Cyclos token!')
+
         return headers
 
     def _handle_api_response(self, api_response):
@@ -132,9 +172,9 @@ class CyclosAPI(object):
         log.info("response_data for {} - {}: {}".format(api_response.request.method, api_response.url, response_data))
         return response_data
 
-    def get(self, method, id=None, auth_string=None, **kwargs):
-        if auth_string:
-            self._handle_auth_string(auth_string)
+    def get(self, method, id=None, token=None, **kwargs):
+        if token:
+            self._handle_token(token)
 
         if id:
             query = '{}/{}/{}'.format(self.url, method, id)
@@ -148,9 +188,9 @@ class CyclosAPI(object):
 
         return self._handle_api_response(r)
 
-    def post(self, method, data, id=None, auth_string=None):
-        if auth_string:
-            self._handle_auth_string(auth_string)
+    def post(self, method, data, id=None, token=None):
+        if token:
+            self._handle_token(token)
 
         if id:
             query = '{}/{}/{}'.format(self.url, method, id)
@@ -158,12 +198,19 @@ class CyclosAPI(object):
             query = '{}/{}'.format(self.url, method)
 
         r = requests.post(query, json=data, headers=self._handle_auth_headers({'content-type': 'application/json'}))
+        log.critical(r.request.headers)
+        log.critical(r.request.headers)
+        log.critical(r.request.headers)
+        log.critical(r.request.headers)
+        log.critical(r.request.headers)
+        log.critical(r.request.headers)
+        log.critical(r.request.headers)
 
         return self._handle_api_response(r)
 
-    def patch(self, method, data, id=None, auth_string=None):
-        if auth_string:
-            self._handle_auth_string(auth_string)
+    def patch(self, method, data, id=None, token=None):
+        if token:
+            self._handle_token(token)
 
         if id:
             query = '{}/{}/{}'.format(self.url, method, id)
@@ -174,9 +221,9 @@ class CyclosAPI(object):
 
         return self._handle_api_response(r)
 
-    def delete(self, method, id=None, auth_string=None):
-        if auth_string:
-            self._handle_auth_string(auth_string)
+    def delete(self, method, id=None, token=None):
+        if token:
+            self._handle_token(token)
 
         if id:
             query = '{}/{}/{}'.format(self.url, method, id)

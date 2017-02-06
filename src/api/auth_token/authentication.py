@@ -4,10 +4,11 @@ import logging
 from django.contrib.auth.models import User
 from rest_framework.exceptions import AuthenticationFailed
 
+from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 
 
-log = logging.getLogger()
+log = logging.getLogger(__name__)
 
 
 def authenticate(username, password):
@@ -18,7 +19,12 @@ def authenticate(username, password):
     except DolibarrAPIException:
         raise AuthenticationFailed()
 
-    cyclos_auth_string = b64encode(bytes('{}:{}'.format(username, password), "utf-8"))
+    try:
+        cyclos = CyclosAPI(mode='login')
+        cyclos_token = cyclos.login(
+            auth_string=b64encode(bytes('{}:{}'.format(username, password), 'utf-8')).decode('ascii'))
+    except CyclosAPIException:
+        raise AuthenticationFailed()
 
     if token:
         user_results = dolibarr.get(model='users', login=username, api_key=token)
@@ -33,8 +39,8 @@ def authenticate(username, password):
         user, created = User.objects.get_or_create(username=username)
 
         user_profile = user.profile
+        user_profile.cyclos_token = cyclos_token
         user_profile.dolibarr_token = token
-        user_profile.cyclos_auth_string = cyclos_auth_string
 
         try:
             user_profile.firstname = user_data['firstname']
