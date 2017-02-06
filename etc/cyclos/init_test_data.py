@@ -281,12 +281,10 @@ r = requests.post(eusko_web_services + 'payment/perform',
                   headers={'Authorization': 'Basic {}'.format(base64.standard_b64encode(b'demo:demo').decode('utf-8'))},  # noqa
                   json={
                       'type': CYCLOS_CONSTANTS['payment_types']['impression_de_billets_d_eusko'],
-                      'amount': float(126500.00),
+                      'amount': 126500,
                       'currency': CYCLOS_CONSTANTS['currencies']['eusko'],
-                      # 'from': 'SYSTEM',
-                      # 'to': 'SYSTEM',
-                      'from': CYCLOS_CONSTANTS['account_types']['compte_de_debit_eusko_billet'],
-                      'to': CYCLOS_CONSTANTS['account_types']['stock_de_billets'],
+                      'from': 'SYSTEM',
+                      'to': 'SYSTEM',
                   })
 
 logger.info('Impression billets eusko... Terminé !')
