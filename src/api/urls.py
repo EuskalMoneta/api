@@ -32,7 +32,7 @@ urlpatterns = [
     url(r'^countries/(?P<id>[^/.]+)/$', dolibarr_data_views.country_by_id),
     url(r'^bdc-name/$', dolibarr_data_views.get_bdc_name),
     url(r'^member-name/$', dolibarr_data_views.get_member_name),
-    url(r'^user-data/payments_available_for_adherents_to_pdf$', dolibarr_data_views.get_user_data),
+    url(r'^user-data/$', dolibarr_data_views.get_user_data),
     url(r'^towns/$', dolibarr_data_views.towns_by_zipcode),
 
     # Euskal moneta data (hardcoded data we dont fetch from APIs)
