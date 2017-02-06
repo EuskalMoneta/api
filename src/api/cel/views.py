@@ -195,12 +195,13 @@ def payments_available_for_adherents(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    query_data = [cyclos.user_id, request.query_params['end']]
-
-    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
     begin_date = datetime.strptime(request.query_params['begin'], '%Y-%m-%d')
     end_date = datetime.strptime(
         request.query_params['end'], '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+
+    query_data = [cyclos.user_id, end_date.isoformat()]
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+
     search_history_data = {
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
         'orderBy': 'DATE_DESC',
