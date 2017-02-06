@@ -72,7 +72,7 @@ INSTALLED_APPS = [
 
     'corsheaders',
     'wkhtmltopdf',
-    'raven.contrib.django.raven_compat',
+    # 'raven.contrib.django.raven_compat',
     'rest_framework.authtoken',
     'rest_framework',
 
@@ -238,7 +238,8 @@ LOGGING = {
     'handlers': {
         'sentry': {
             'level': 'WARNING',
-            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
+            'class': 'logging.NullHandler',
+            # 'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
         },
         'console': {
             'level': 'DEBUG',
