@@ -33,7 +33,7 @@ class BDCAPIView(BaseAPIView):
 
         try:
             bdc_id = self.cyclos.post(method='user/register', data=bdc_query_data,
-                                      auth_string=request.user.profile.cyclos_auth_string)['result']['user']['id']
+                                      token=request.user.profile.cyclos_token)['result']['user']['id']
         except (CyclosAPIException, KeyError):
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -95,7 +95,7 @@ class BDCAPIView(BaseAPIView):
                 return Response(self.cyclos.post(
                     method='user/load',
                     data=self.cyclos.get_member_id_from_login(
-                        pk, auth_string=request.user.profile.cyclos_auth_string)))
+                        pk, token=request.user.profile.cyclos_token)))
             except CyclosAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -112,14 +112,14 @@ class BDCAPIView(BaseAPIView):
         if view_all and view_all in [True, 'true', 'True', 'yes', 'Yes']:
             # user/search for group = 'bureaux_de_change'
             query_data = {'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])],
-                'userStatus': ['ACTIVE', 'DISABLED']}
+                          'userStatus': ['ACTIVE', 'DISABLED']}
         else:
             # user/search for group = 'bureaux_de_change'
             query_data = {'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])],
-                'userStatus': ['ACTIVE']}
+                          'userStatus': ['ACTIVE']}
 
         data = self.cyclos.post(method='user/search', data=query_data,
-                                auth_string=request.user.profile.cyclos_auth_string)
+                                token=request.user.profile.cyclos_token)
         objects = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
                    for item in data['result']['pageItems']]
 
@@ -150,7 +150,7 @@ class BDCAPIView(BaseAPIView):
         }
         try:
             bdc_operator_cyclos_id = self.cyclos.post(
-                auth_string=request.user.profile.cyclos_auth_string,
+                token=request.user.profile.cyclos_token,
                 method='user/search', data=bdc_operator_cyclos_query)['result']['pageItems'][0]['id']
         except (KeyError, IndexError):
                     return Response({'error': 'Unable to get bdc_operator_cyclos_id data!'},
