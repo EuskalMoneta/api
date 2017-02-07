@@ -41,10 +41,15 @@ class DolibarrAPI(object):
         log.info("response_data for {} - {}: {}".format(api_response.request.method, api_response.url, response_data))
         return response_data
 
-    def login(self, login=None, password=None):
-        """ Login function for Dolibarr API users. """
-        r = requests.get('{}/login?login={}&password={}&reset=1'.format(self.url, login, password),
-                         headers={'content-type': 'application/json'})
+    def login(self, login=None, password=None, reset=None):
+        """ Login function for Dolibarr API users.
+        """
+        query = '{}/login?login={}&password={}'.format(self.url, login, password)
+
+        if reset:
+            query = '{}&reset=1'.format(query)
+
+        r = requests.get(query, headers={'Content-Type': 'application/json'})
 
         json_response = r.json()
         if r.status_code == requests.codes.ok:
@@ -77,7 +82,7 @@ class DolibarrAPI(object):
         for key, value in kwargs.items():
             query = "{}&{}={}".format(query, key, value)
 
-        r = requests.get(query, headers={'content-type': 'application/json'})
+        r = requests.get(query, headers={'Content-Type': 'application/json'})
 
         return self._handle_api_response(r)
 
@@ -90,7 +95,7 @@ class DolibarrAPI(object):
         else:
             query = '{}/{}?api_key={}'.format(self.url, model, self.api_key)
 
-        r = requests.post(query, json=data, headers={'content-type': 'application/json'})
+        r = requests.post(query, json=data, headers={'Content-Type': 'application/json'})
 
         return self._handle_api_response(r)
 
@@ -103,7 +108,7 @@ class DolibarrAPI(object):
         else:
             query = '{}/{}?api_key={}'.format(self.url, model, self.api_key)
 
-        r = requests.put(query, json=data, headers={'content-type': 'application/json'})
+        r = requests.put(query, json=data, headers={'Content-Type': 'application/json'})
 
         return self._handle_api_response(r)
 
@@ -116,7 +121,7 @@ class DolibarrAPI(object):
         else:
             query = '{}/{}?api_key={}'.format(self.url, model, self.api_key)
 
-        r = requests.patch(query, json=data, headers={'content-type': 'application/json'})
+        r = requests.patch(query, json=data, headers={'Content-Type': 'application/json'})
 
         return self._handle_api_response(r)
 
@@ -129,6 +134,6 @@ class DolibarrAPI(object):
         else:
             query = '{}/{}?api_key={}'.format(self.url, model, self.api_key)
 
-        r = requests.delete(query, headers={'content-type': 'application/json'})
+        r = requests.delete(query, headers={'Content-Type': 'application/json'})
 
         return self._handle_api_response(r)

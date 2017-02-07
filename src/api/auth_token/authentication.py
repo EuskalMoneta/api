@@ -15,7 +15,7 @@ def authenticate(username, password):
     user = None
     try:
         dolibarr = DolibarrAPI()
-        token = dolibarr.login(login=username, password=password)
+        token = dolibarr.login(login=username, password=password, reset=True)
     except DolibarrAPIException:
         raise AuthenticationFailed()
 
