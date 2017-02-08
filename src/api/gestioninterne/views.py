@@ -17,7 +17,7 @@ def sortie_coffre(request):
     sortie_coffre
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -52,7 +52,7 @@ def payments_available_for_entree_coffre(request):
     payments_available_for_entree_coffre
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -80,7 +80,7 @@ def entree_coffre(request):
     entree_coffre
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -191,7 +191,7 @@ def payments_available_for_entrees_euro(request):
     payments_available_for_entrees_euro
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -226,7 +226,7 @@ def payments_available_for_entrees_eusko(request):
     payments_available_for_entrees_eusko
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -261,7 +261,7 @@ def validate_history(request):
     validate_history
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -286,7 +286,7 @@ def payments_available_for_banques(request):
     virements, rapprochements et historique des banques
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -346,7 +346,7 @@ def validate_banques_virement(request):
     validate_banques_virement
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -427,7 +427,7 @@ def payments_available_depots_retraits(request):
     payments_available_depots_retraits
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -484,7 +484,7 @@ def validate_depots_retraits(request):
     validate_depots_retraits
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -535,7 +535,7 @@ def payments_available_for_reconversions(request):
     payments_available_for_reconversions
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -593,7 +593,7 @@ def validate_reconversions(request):
     validate_reconversions
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 

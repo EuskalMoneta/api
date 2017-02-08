@@ -37,7 +37,7 @@ class MembersAPIView(BaseAPIView):
 
         # Cyclos: Register member
         try:
-            self.cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+            self.cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
         except CyclosAPIException:
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -222,7 +222,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
         # Cyclos: Register member subscription payment
         try:
-            self.cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+            self.cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
         except CyclosAPIException:
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 

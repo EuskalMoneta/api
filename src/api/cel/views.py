@@ -174,7 +174,7 @@ def validate_lost_password(request):
 def account_summary_for_adherents(request):
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='cel')
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -191,7 +191,7 @@ def payments_available_for_adherents(request):
     serializer.is_valid(raise_exception=True)
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='cel')
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -226,7 +226,7 @@ def export_history_adherent_pdf(request):
     serializer.is_valid(raise_exception=True)
 
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='cel')
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 

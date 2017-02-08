@@ -23,16 +23,16 @@ services:
     networks:
       - eusko_net
 
-  selenium:
-    image: selenium/standalone-firefox-debug
-    container_name: eusko_selenium
-    depends_on:
-      - api
-    ports:
-      - 4444:4444
-      - 5900:5900
-    networks:
-      - eusko_net
+  # selenium:
+  #   image: selenium/standalone-firefox-debug
+  #   container_name: eusko_selenium
+  #   depends_on:
+  #     - api
+  #   ports:
+  #     - 4444:4444
+  #     - 5900:5900
+  #   networks:
+  #     - eusko_net
 
   dolibarr-app:
     image: euskalmoneta/dolibarr:custom
