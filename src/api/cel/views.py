@@ -263,30 +263,3 @@ def export_history_adherent_pdf(request):
     }
 
     return Response(pdf_content, headers=headers)
-
-
-    search_history_data = {
-        'account': accounts_summaries_data['result'][0]['status']['accountId'],
-        'orderBy': 'DATE_DESC',
-        'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
-        'period':
-        {
-            'begin': begin_date,
-            'end': end_date,
-        },
-    }
-    accounts_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
-    context = {
-        'account_history': accounts_history_res['result'],
-    }
-
-    response = wkhtmltopdf_views.PDFTemplateResponse(request=request, context=context, template="summary/summary.html")
-    pdf_content = response.rendered_content
-
-    headers = {
-        'Content-Disposition': 'filename="pdf_id.pdf"',
-        'Content-Length': len(pdf_content),
-    }
-
-    return Response(pdf_content, headers=headers)
