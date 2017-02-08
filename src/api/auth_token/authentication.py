@@ -1,7 +1,10 @@
 from base64 import b64encode
 import logging
 
+from django import forms
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.validators import validate_email
 from rest_framework.exceptions import AuthenticationFailed
 
 from cyclos_api import CyclosAPI, CyclosAPIException
@@ -15,8 +18,30 @@ def authenticate(username, password):
     user = None
     try:
         dolibarr = DolibarrAPI()
-        token = dolibarr.login(login=username, password=password, reset=True)
-    except DolibarrAPIException:
+
+        try:
+            # validate (or not) the fact that our "username" variable is an email
+            validate_email(username)
+
+            # we detected that our "username" variable is an email, we try to connect to dolibarr with it
+            dolibarr_anonymous_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                                                      password=settings.APPS_ANONYMOUS_PASSWORD,
+                                                      reset=True)
+            user_results = dolibarr.get(model='members', email=username, api_key=dolibarr_anonymous_token)
+            user_data = [item
+                         for item in user_results
+                         if item['email'] == username][0]
+            if not user_data:
+                raise AuthenticationFailed()
+
+            token = dolibarr.login(login=user_data['login'], password=password, reset=True)
+
+            # Cyclos needs the real 'username', we save it for later
+            username = user_data['login']
+        except forms.ValidationError:
+            # we detected that our "username" variable is NOT an email
+            token = dolibarr.login(login=username, password=password, reset=True)
+    except (DolibarrAPIException, KeyError, IndexError):
         raise AuthenticationFailed()
 
     try:
