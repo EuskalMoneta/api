@@ -42,7 +42,7 @@ class MembersAPIView(BaseAPIView):
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
         create_user_data = {
-            'group': str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs']),
+            'group': str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte']),
             'name': '{} {}'.format(data['firstname'], data['lastname']),
             'username': data['login'],
             'skipActivationEmail': True,

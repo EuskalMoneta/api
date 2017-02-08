@@ -17,7 +17,11 @@ RUN apt-get update && apt-get install -y \
         mysql-client libmysqlclient-dev \
         postgresql-client libpq-dev \
         sqlite3 \
-    --no-install-recommends && rm -rf /var/lib/apt/lists/*
+    --no-install-recommends 
+
+# libjpeg, needed for Pillow ; xvfb for wkhtmltopdf
+RUN apt-get install -y libfreetype6-dev wget xvfb wkhtmltopdf && \
+    rm -rf /var/lib/apt/lists/*
 
 ENTRYPOINT ["/cyclos/setup_cyclos.sh"]
 

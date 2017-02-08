@@ -71,7 +71,8 @@ INSTALLED_APPS = [
     'gestioninterne',
 
     'corsheaders',
-    'raven.contrib.django.raven_compat',
+    'wkhtmltopdf',
+    # 'raven.contrib.django.raven_compat',
     'rest_framework.authtoken',
     'rest_framework',
 
@@ -163,6 +164,9 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.9/howto/static-files/
 
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
 
 # Public URLs
@@ -234,7 +238,8 @@ LOGGING = {
     'handlers': {
         'sentry': {
             'level': 'WARNING',
-            'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
+            'class': 'logging.NullHandler',
+            # 'class': 'raven.contrib.django.raven_compat.handlers.SentryHandler',
         },
         'console': {
             'level': 'DEBUG',
@@ -277,3 +282,11 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 100,
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
 }
+
+WKHTMLTOPDF_DEBUG = True
+WKHTMLTOPDF_CMD = 'xvfb-run /usr/bin/wkhtmltopdf'
+
+APPS_ANONYMOUS_LOGIN = 'anonyme'
+APPS_ANONYMOUS_PASSWORD = 'anonyme'
+
+JWT_SECRET = 'secret'

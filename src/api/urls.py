@@ -79,9 +79,13 @@ urlpatterns = [
 
     # Endpoints for Compte en Ligne
     url(r'^first-connection/$', cel_views.first_connection),
+    url(r'^validate-first-connection/$', cel_views.validate_first_connection),
     url(r'^lost-password/$', cel_views.lost_password),
+    url(r'^validate-lost-password/$', cel_views.validate_lost_password),
+
     url(r'^payments-available-history-adherent/$', cel_views.payments_available_for_adherents),
     url(r'^account-summary-adherents/$', cel_views.account_summary_for_adherents),
+    url(r'^export-history-adherent-pdf/$', cel_views.export_history_adherent_pdf),
 ]
 
 urlpatterns += router.urls

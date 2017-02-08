@@ -44,16 +44,7 @@ class CyclosAPI(object):
             raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
         # user/load for this ID to get field BDC ID
-        try:
-            self.user_data = self.post(method='user/load', data=self.user_id)
-            self.user_bdc_id = [item['linkedEntityValue']['id']
-                                for item in self.user_data['result']['customValues']
-                                if item['field']['id'] ==
-                                str(settings.CYCLOS_CONSTANTS['user_custom_fields']['bdc'])][0]
-        except CyclosAPIException:
-            raise CyclosAPIException(detail='Unable to connect to Cyclos!')
-        except (KeyError, IndexError):
-            raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
+        self.user_bdc_id = self.get_bdc_id_from_operator_id(self.user_id)
 
     def _init_cel(self):
         try:
@@ -75,8 +66,11 @@ class CyclosAPI(object):
             raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
     def _init_gi_bdc(self):
+        # get ID for login_bdc
         self.user_id = self.get_member_id_from_login(self.login_bdc)
-        self.user_bdc_id = self.user_id
+
+        # user/load for this ID to get field BDC ID
+        self.user_bdc_id = self.get_bdc_id_from_operator_id(self.user_id)
 
     def get_member_id_from_login(self, member_login, auth_string=None):
         if auth_string:
@@ -87,14 +81,32 @@ class CyclosAPI(object):
             'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
         }
         try:
-            member_login_data = self.post(method='user/search', data=query_data)
-            member_cyclos_id = member_login_data['result']['pageItems'][0]['id']
+            member_login_search = self.post(method='user/search', data=query_data)
+            member_login_data = [user
+                                 for user in member_login_search['result']['pageItems']
+                                 if user['shortDisplay'] == member_login]
+            member_cyclos_id = member_login_data[0]['id']
         except CyclosAPIException:
             raise CyclosAPIException(detail='Unable to connect to Cyclos!')
         except (KeyError, IndexError):
             raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
         return member_cyclos_id
+
+    def get_bdc_id_from_operator_id(self, operator_id):
+        """
+        user/load for this ID to get field BDC ID
+        """
+        try:
+            self.user_data = self.post(method='user/load', data=operator_id)
+            return [item['linkedEntityValue']['id']
+                    for item in self.user_data['result']['customValues']
+                    if item['field']['id'] ==
+                    str(settings.CYCLOS_CONSTANTS['user_custom_fields']['bdc'])][0]
+        except CyclosAPIException:
+            raise CyclosAPIException(detail='Unable to connect to Cyclos!')
+        except (KeyError, IndexError):
+            raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
     def _handle_auth_string(self, auth_string):
         log.debug(auth_string)
