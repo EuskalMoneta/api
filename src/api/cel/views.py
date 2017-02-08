@@ -233,8 +233,37 @@ def export_history_adherent_pdf(request):
     query_data = [cyclos.user_id, None]
 
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
-    begin_date = request.query_params['begin']
-    end_date = request.query_params['end']
+    begin_date = datetime.strptime(request.query_params['begin'], '%Y-%m-%d')
+    end_date = datetime.strptime(
+        request.query_params['end'], '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+
+    search_history_data = {
+        'account': accounts_summaries_data['result'][0]['status']['accountId'],
+        'orderBy': 'DATE_DESC',
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+        'period':
+        {
+            'begin': begin_date.isoformat(),
+            'end': end_date.isoformat(),
+        },
+        'description': request.query_params['description']
+    }
+    accounts_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+    context = {
+        'account_history': accounts_history_res['result'],
+    }
+
+    response = wkhtmltopdf_views.PDFTemplateResponse(request=request, context=context, template="summary/summary.html")
+    pdf_content = response.rendered_content
+
+    headers = {
+        'Content-Disposition': 'filename="pdf_id.pdf"',
+        'Content-Length': len(pdf_content),
+    }
+
+    return Response(pdf_content, headers=headers)
+
 
     search_history_data = {
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
