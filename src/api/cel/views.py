@@ -261,6 +261,10 @@ def export_history_adherent_pdf(request):
     accounts_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
     context = {
         'account_history': accounts_history_res['result'],
+        'period': {
+            'begin': datetime.date(begin_date),
+            'end': datetime.date(end_date),
+        },
     }
 
     response = wkhtmltopdf_views.PDFTemplateResponse(request=request, context=context, template="summary/summary.html")
