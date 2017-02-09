@@ -86,6 +86,7 @@ urlpatterns = [
     url(r'^payments-available-history-adherent/$', cel_views.payments_available_for_adherents),
     url(r'^account-summary-adherents/$', cel_views.account_summary_for_adherents),
     url(r'^export-history-adherent-pdf/$', cel_views.export_history_adherent_pdf),
+    #url(r'^export-history-adherent-csv/$', cel_views.export_history_adherent_csv),
 ]
 
 urlpatterns += router.urls
