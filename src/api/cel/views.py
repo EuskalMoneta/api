@@ -218,6 +218,10 @@ def payments_available_for_adherents(request):
             'end': end_date.isoformat(),
         },
     }
+    try:
+        search_history_data.update({'description': request.query_params['description']})
+    except KeyError:
+        pass
 
     accounts_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
     return Response([accounts_history_res, accounts_summaries_data['result'][0]['status']['balance']])
