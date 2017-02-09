@@ -4,8 +4,8 @@ image: docker:1.12
 # improved performance.
 variables:
   DOCKER_DRIVER: overlay
-  CONTAINER_TEST_IMAGE: sources.meta-it.fr:4567/euskal-moneta/api:$CI_BUILD_REF_NAME
   CONTAINER_RELEASE_IMAGE: sources.meta-it.fr:4567/euskal-moneta/api
+  CONTAINER_TEST_IMAGE: sources.meta-it.fr:4567/euskal-moneta/api:$CI_BUILD_REF_NAME
 
 services:
   - docker:1.12-dind
@@ -60,6 +60,7 @@ release_job:
     - master
   tags:
     - docker
+  environment: production
 
 release_job_staging:
   stage: release
@@ -71,6 +72,7 @@ release_job_staging:
     - /^release-.*$/
   tags:
     - docker
+  environment: staging
 
 release_job_develop:
   stage: release
@@ -82,6 +84,7 @@ release_job_develop:
     - develop
   tags:
     - docker
+  environment: dev
 
 deploy_job_develop:
   stage: deploy

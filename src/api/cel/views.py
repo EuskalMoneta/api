@@ -41,8 +41,11 @@ def first_connection(request):
         if valid_login:
             # We want to search in members by login (N° Adhérent)
             response = dolibarr.get(model='members', login=request.data['login'], api_key=dolibarr_token)
+            user_data = [item
+                         for item in response
+                         if item['login'] == request.data['login']][0]
 
-            if response[0]['email'] == request.data['email']:
+            if user_data['email'] == request.data['email']:
                 # We got a match!
 
                 # We need to mail a token etc...
