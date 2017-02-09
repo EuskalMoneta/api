@@ -17,6 +17,7 @@ class HistorySerializer(serializers.Serializer):
 
     begin = serializers.DateField(format='iso-8601')
     end = serializers.DateField(format='iso-8601')
+    description = serializers.CharField(required=False)
 
 
 class ValidTokenSerializer(serializers.Serializer):
