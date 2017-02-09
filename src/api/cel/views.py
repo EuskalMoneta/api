@@ -1,4 +1,4 @@
-import base64
+from base64 import b64encode
 from datetime import datetime, timedelta
 import logging
 from uuid import uuid4
@@ -41,8 +41,11 @@ def first_connection(request):
         if valid_login:
             # We want to search in members by login (N° Adhérent)
             response = dolibarr.get(model='members', login=request.data['login'], api_key=dolibarr_token)
+            user_data = [item
+                         for item in response
+                         if item['login'] == request.data['login']][0]
 
-            if response[0]['email'] == request.data['email']:
+            if user_data['email'] == request.data['email']:
                 # We got a match!
 
                 # We need to mail a token etc...
@@ -109,24 +112,29 @@ def validate_first_connection(request):
 
         # 3) Dans Cyclos, activer l'utilisateur
         # TODO
-        cyclos_auth_string = b'{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN, settings.APPS_ANONYMOUS_PASSWORD)
-        cyclos_auth_string = base64.standard_b64encode(cyclos_auth_string).decode('utf-8')
+        cyclos = CyclosAPI(mode='login')
+        cyclos_token = cyclos.login(
+            auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                       settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
 
-        cyclos = CyclosAPI(auth_string=cyclos_auth_string, mode='cel')
+        cyclos_user_id = cyclos.get_member_id_from_login(member_login=token_data['login'], token=cyclos_token)
 
-        active_user_data = {}
-        # cyclos.post(method='user/active', data=active_user_data)
+        active_user_data = {
+            'user': cyclos_user_id,  # ID de l'utilisateur
+            'status': 'ACTIVE'
+        }
+        cyclos.post(method='userStatus/changeStatus', data=active_user_data, token=cyclos_token)
 
         # 4) Dans Cyclos, initialiser le mot de passe d'un utilisateur
         password_data = {
-            'user': cyclos.user_id,  # ID de l'utilisateur
+            'user': cyclos_user_id,  # ID de l'utilisateur
             'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
             'newPassword': request.data['new_password'],  # saisi par l'utilisateur
             'confirmNewPassword': request.data['confirm_password'],  # saisi par l'utilisateur
         }
-        cyclos.post(method='password/change', data=password_data)
+        cyclos.post(method='password/change', data=password_data, token=cyclos_token)
 
-        return Response()
+        return Response({'status': 'success'})
 
     except (EuskalMonetaAPIException, DolibarrAPIException, CyclosAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to get user data for this login!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -233,8 +241,9 @@ def export_history_adherent_pdf(request):
     query_data = [cyclos.user_id, None]
 
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
-    begin_date = request.query_params['begin']
-    end_date = request.query_params['end']
+    begin_date = datetime.strptime(request.query_params['begin'], '%Y-%m-%d')
+    end_date = datetime.strptime(
+        request.query_params['end'], '%Y-%m-%d').replace(hour=23, minute=59, second=59)
 
     search_history_data = {
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
@@ -243,9 +252,10 @@ def export_history_adherent_pdf(request):
         'currentpage': 0,
         'period':
         {
-            'begin': begin_date,
-            'end': end_date,
+            'begin': begin_date.isoformat(),
+            'end': end_date.isoformat(),
         },
+        'description': request.query_params['description']
     }
     accounts_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
     context = {
