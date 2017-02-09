@@ -8,30 +8,48 @@
     </head>
     <body>
         <table>
-        <th>
-            <td>
-                Date
-            </td>
-            <td>
-                Libellé
-            </td>
-            <td>
-                Montant
-            </td>
-        </th>
-        {% for item in account_history|get_item:'pageItems' %}
-        <tr>
-            <td>
-                {{ item|get_item:'date' }}
-            </td>
-            <td>
-                {{ item|get_item:'description' }}
-            </td>
-            <td>
-                {{ item|get_item:'amount' }}
-            </td>
-        </tr>
-        {% endfor %}
+            <caption>Historique du {{ period|get_item:'begin' }} au {{ period|get_item:'end' }}</caption>
+            <th>
+                <td>
+                    Date
+                </td>
+                <td>
+                    Libellé
+                </td>
+                <td>
+                    Débit
+                </td>
+                <td>
+                    Crédit
+                </td>
+                <td>
+                    Solde
+                </td>
+            </th>
+            {% for item in account_history|get_item:'pageItems' %}
+            <tr>
+                <td></td>
+                <td>
+                    {{ item|get_item:'date' }}
+                </td>
+                <td>
+                    {{ item|get_item:'description' }}
+                </td>
+                <td>
+                {% if item|get_item:'amount' < "0" %}
+                    {{ item|get_item:'amount' }}
+                {% endif %}
+                </td>
+                <td>
+                {% if item|get_item:'amount' > "0" %}
+                    {{ item|get_item:'amount' }}
+                {% endif %}
+                </td>
+                <td>
+                    {{ item|get_item:'solde' }}
+                </td>
+            </tr>
+            {% endfor %}
         </table>
     </body>
 </html>
