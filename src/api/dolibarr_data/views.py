@@ -42,14 +42,18 @@ def login(request):
             if not user_data:
                 raise AuthenticationFailed()
 
+            login = user_data['login']
+
             token = dolibarr.login(login=user_data['login'], password=request.data['password'])
         except forms.ValidationError:
             # we detected that our "username" variable is NOT an email
+            login = request.data['username']
+
             token = dolibarr.login(login=request.data['username'], password=request.data['password'])
     except (DolibarrAPIException, KeyError, IndexError):
         raise AuthenticationFailed()
 
-    return Response({'auth_token': token})
+    return Response({'auth_token': token, 'login': login})
 
 
 @api_view(['GET'])
