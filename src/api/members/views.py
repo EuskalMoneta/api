@@ -1,7 +1,9 @@
 import logging
 
 import arrow
+from django import forms
 from django.conf import settings
+from django.core.validators import validate_email
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -56,6 +58,7 @@ class MembersAPIView(BaseAPIView):
         return Response(response_obj, status=status.HTTP_201_CREATED)
 
     def list(self, request):
+        email = request.GET.get('email', '')
         login = request.GET.get('login', '')
         name = request.GET.get('name', '')
         valid_login = Member.validate_num_adherent(login)
@@ -85,6 +88,17 @@ class MembersAPIView(BaseAPIView):
             return Response({'error': 'You need to provide a ?name parameter longer than 2 characters!'},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        elif email:
+            try:
+                validate_email(email)
+                user_results = self.dolibarr.get(model='members', email=email, api_key=dolibarr_token)
+                user_data = [item
+                             for item in user_results
+                             if item['email'] == email][0]
+                return Response(user_data)
+            except forms.ValidationError:
+                return Response({'error': 'You need to provide a *VALID* ?email parameter! (Format: E12345)'},
+                                status=status.HTTP_400_BAD_REQUEST)
         else:
             objects = self.dolibarr.get(model=self.model, api_key=dolibarr_token)
             paginator = CustomPagination()
