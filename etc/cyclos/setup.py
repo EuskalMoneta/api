@@ -1375,6 +1375,41 @@ ID_CHAMP_PERSO_UTILISATEUR_BDC = create_user_custom_field_linked_user(
 
 
 ########################################################################
+# Création du token "Carte NFC".
+#
+def create_token(name, plural_name, token_type, token_mask, maximum_per_user):
+    logger.info('Création du token "%s"...', name)
+    r = requests.post(eusko_web_services + 'principalType/save',
+                      headers=headers,
+                      json={
+                          'class': 'org.cyclos.model.access.principaltypes.TokenPrincipalTypeDTO',
+                          'name': name,
+                          'pluralName': plural_name,
+                          'internalName': get_internal_name(name),
+                          'tokenType': token_type,
+                          'tokenMask': token_mask,
+                          'maximumPerUser': maximum_per_user,
+                      })
+    check_request_status(r)
+    token_id = r.json()['result']
+    logger.debug('token_id = %s', token_id)
+    add_constant('tokens', name, token_id)
+    return token_id
+
+ID_TOKEN_CARTE_NFC = create_token(
+    name='Carte NFC',
+    plural_name='Cartes NFC',
+    token_type='NFC_TAG',
+    token_mask='#### #### #### ####',
+    maximum_per_user=100,
+)
+
+all_token_types = [
+    ID_TOKEN_CARTE_NFC,
+]
+
+
+########################################################################
 # Création des produits et des groupes.
 #
 # Les produits servent à gérer les permissions et les règles d'accès, et
@@ -1409,6 +1444,7 @@ def create_member_product(name,
                           other_users_profile_fields={},
                           user_account_type_id=None,
                           dashboard_actions=[],
+                          my_token_types=[],
                           system_payments=[],
                           user_payments=[]):
     logger.info('Création du produit "%s"...', name)
@@ -1463,6 +1499,11 @@ def create_member_product(name,
         if dashboard_action['dashboardAction'] in dashboard_actions:
             dashboard_action['enabled'] = True
             dashboard_action['enabledByDefault'] = True
+    for token_type in product['myTokenTypes']:
+        if token_type['tokenType']['id'] in my_token_types:
+            token_type['enable'] = True
+            token_type['block'] = True
+            token_type['unblock'] = True
     product['systemPayments'] = system_payments
     product['userPayments'] = user_payments
     r = requests.post(eusko_web_services + 'product/save',
@@ -1508,6 +1549,7 @@ def set_admin_group_permissions(
         disabled_users='NONE',
         removed_users='NONE',
         user_password_actions=[],
+        user_token_types=[],
         access_user_accounts=[],
         payments_as_user_to_user=[],
         payments_as_user_to_system=[],
@@ -1576,6 +1618,15 @@ def set_admin_group_permissions(
     for password_action in product['userPasswordActions']:
         if password_action['passwordType']['internalName'] in user_password_actions:
             password_action['change'] = True
+    for token_type in product['userTokenTypes']:
+        if token_type['tokenType']['id'] in user_token_types:
+            token_type['view'] = True
+            token_type['block'] = True
+            token_type['unblock'] = True
+            token_type['cancel'] = True
+            token_type['initialize'] = True
+            token_type['personalize'] = True
+            token_type['changeDates'] = True
     product['userAccountsAccess'] = access_user_accounts
     product['userPaymentsAsUser'] = payments_as_user_to_user
     product['systemPaymentsAsUser'] = payments_as_user_to_system
@@ -1759,6 +1810,9 @@ ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
         'PAYMENT_USER_TO_USER',
         'PAYMENT_USER_TO_SYSTEM',
     ],
+    my_token_types=[
+        ID_TOKEN_CARTE_NFC,
+    ],
     system_payments=[
         ID_TYPE_PAIEMENT_RECONVERSION_NUMERIQUE,
     ],
@@ -1790,6 +1844,9 @@ ID_PRODUIT_ADHERENTS_UTILISATEURS = create_member_product(
         'ACCOUNT_INFO',
         'PAYMENT_USER_TO_USER',
         'PAYMENT_USER_TO_SYSTEM',
+    ],
+    my_token_types=[
+        ID_TOKEN_CARTE_NFC,
     ],
     user_payments=[
         ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
@@ -1871,6 +1928,7 @@ set_admin_group_permissions(
     user_password_actions=[
         'login',
     ],
+    user_token_types=all_token_types,
     access_user_accounts=all_user_accounts,
     payments_as_user_to_user=all_user_to_user_payments,
     payments_as_user_to_system=all_user_to_system_payments,
