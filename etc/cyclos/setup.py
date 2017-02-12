@@ -124,6 +124,16 @@ for password_type in password_types:
 logger.debug('ID_PASSWORD_LOGIN = %s', ID_PASSWORD_LOGIN)
 logger.debug('ID_PASSWORD_PIN = %s', ID_PASSWORD_PIN)
 
+# Récupération de la liste des méthodes d'identification.
+logger.info("Récupération de la liste des méthodes d'identification...")
+r = requests.get(global_web_services + 'principalType/list', headers=headers)
+check_request_status(r)
+principal_types = r.json()['result']
+for principal_type in principal_types:
+    if principal_type['internalName'] == 'username':
+        ID_PRINCIPAL_TYPE_LOGIN_NAME = principal_type['id']
+logger.debug('ID_PRINCIPAL_TYPE_LOGIN_NAME = %s', ID_PRINCIPAL_TYPE_LOGIN_NAME)
+
 
 ########################################################################
 # Modification de la configuration par défaut globale :
@@ -218,46 +228,6 @@ ID_RESEAU_EUSKO = create_network(
     name='Eusko',
     internal_name='eusko',
 )
-
-
-########################################################################
-# Modification de la configuration par défaut :
-# - activation du canal "Pay at POS" par défaut pour tous les
-#   utilisateurs
-#
-# D'abord on récupère l'id de la config par défaut.
-r = requests.get(eusko_web_services + 'configuration/getDefault',
-                 headers=headers)
-check_request_status(r)
-default_config_id = r.json()['result']['id']
-# Puis on liste les config de canaux pour retrouver l'id de la config
-# du canal "Pay at POS".
-r = requests.get(
-    eusko_web_services + 'channelConfiguration/list/' + default_config_id,
-    headers=headers
-)
-check_request_status(r)
-for channel_config in r.json()['result']:
-    if channel_config['channel']['internalName'] == 'pos':
-        pos_config_id = channel_config['id']
-# Enfin on charge la config du canal "Pay at POS", pour pouvoir la
-# modifier.
-r = requests.get(
-    eusko_web_services + 'channelConfiguration/load/' + pos_config_id,
-    headers=headers
-)
-check_request_status(r)
-pos_config = r.json()['result']
-pos_config['defined'] = True
-pos_config['enabled'] = True
-pos_config['userAccess'] = 'DEFAULT_ENABLED'
-pos_config['confirmationPassword'] = ID_PASSWORD_PIN
-r = requests.post(
-    eusko_web_services + 'channelConfiguration/save',
-    headers=headers,
-    json=pos_config
-)
-check_request_status(r)
 
 
 ########################################################################
@@ -356,6 +326,84 @@ ID_CLIENT_POINT_DE_VENTE_NFC = create_access_client(
 all_access_clients = [
     ID_CLIENT_POINT_DE_VENTE_NFC,
 ]
+
+
+########################################################################
+# Modification de la configuration par défaut :
+# - activation des canaux "Pay at POS" et "Mobile app" par défaut pour
+#   tous les utilisateurs
+# - canal "Pay at POS" : le mot de passe de confirmation est le code PIN
+# - canal "Mobile app" : on définit deux méthodes d'identification pour
+#   se connecter à l'application mobile :
+#       - le login, pour les connexions "normales"
+#       - le client "Point de vente NFC", pour pouvoir se connecter à
+#         l'application mobile en mode point de vente (POS)
+#   et on définit le token "Carte NFC" comme méthode d'identification
+#   pour recevoir des paiements en mode POS.
+#
+# Remarque : Il faut faire ces modifications après avoir créé le token
+# "Carte NFC" et l'access client "Point de vente NFC" car nous en avons
+# besoin pour configurer le canal "Mobile app".
+#
+# D'abord on récupère l'id de la config par défaut.
+r = requests.get(eusko_web_services + 'configuration/getDefault',
+                 headers=headers)
+check_request_status(r)
+default_config_id = r.json()['result']['id']
+# Puis on liste les config de canaux pour retrouver l'id de la config
+# du canal "Pay at POS".
+r = requests.get(
+    eusko_web_services + 'channelConfiguration/list/' + default_config_id,
+    headers=headers
+)
+check_request_status(r)
+for channel_config in r.json()['result']:
+    if channel_config['channel']['internalName'] == 'pos':
+        pos_config_id = channel_config['id']
+    elif channel_config['channel']['internalName'] == 'mobile':
+        mobile_app_config_id = channel_config['id']
+# Enfin on charge la config du canal "Pay at POS", pour pouvoir la
+# modifier.
+r = requests.get(
+    eusko_web_services + 'channelConfiguration/load/' + pos_config_id,
+    headers=headers
+)
+check_request_status(r)
+pos_config = r.json()['result']
+pos_config['defined'] = True
+pos_config['enabled'] = True
+pos_config['userAccess'] = 'DEFAULT_ENABLED'
+pos_config['confirmationPassword'] = ID_PASSWORD_PIN
+r = requests.post(
+    eusko_web_services + 'channelConfiguration/save',
+    headers=headers,
+    json=pos_config
+)
+check_request_status(r)
+# De le même manière, on charge la config du canal "Mobile app" pour
+# pouvoir la modifier.
+r = requests.get(
+    eusko_web_services + 'channelConfiguration/load/' + mobile_app_config_id,
+    headers=headers
+)
+check_request_status(r)
+mobile_app_config = r.json()['result']
+mobile_app_config['defined'] = True
+mobile_app_config['enabled'] = True
+mobile_app_config['userAccess'] = 'DEFAULT_ENABLED'
+mobile_app_config['principalTypes'] = [
+    ID_PRINCIPAL_TYPE_LOGIN_NAME,
+    ID_CLIENT_POINT_DE_VENTE_NFC,
+]
+mobile_app_config['receivePaymentPrincipalTypes'] = [
+    ID_TOKEN_CARTE_NFC,
+]
+r = requests.post(
+    eusko_web_services + 'channelConfiguration/save',
+    headers=headers,
+    json=mobile_app_config
+)
+check_request_status(r)
 
 
 ########################################################################
