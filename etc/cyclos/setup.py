@@ -1554,6 +1554,7 @@ def create_member_product(name,
                           other_users_profile_fields={},
                           user_account_type_id=None,
                           dashboard_actions=[],
+                          password_actions=[],
                           my_access_clients=[],
                           my_token_types=[],
                           system_payments=[],
@@ -1611,6 +1612,9 @@ def create_member_product(name,
         if dashboard_action['dashboardAction'] in dashboard_actions:
             dashboard_action['enabled'] = True
             dashboard_action['enabledByDefault'] = True
+    for password_action in product['passwordActions']:
+        if password_action['passwordType']['internalName'] in password_actions:
+            password_action['change'] = True
     for access_client in product['myAccessClients']:
         if access_client['accessClientType']['id'] in my_access_clients:
             access_client['enable'] = True
@@ -1650,7 +1654,7 @@ def get_admin_product(group_id):
 def set_admin_group_permissions(
         group_id,
         my_profile_fields=[],
-        passwords=[],
+        password_actions=[],
         visible_transaction_fields=[],
         transfer_status_flows=[],
         system_accounts=[],
@@ -1698,7 +1702,7 @@ def set_admin_group_permissions(
     # 'Change' (modifier le mot de passe) et 'At registration' (définir
     # le mot de passe lors de l'enregistrement de l'utilisateur).
     for password_action in product['passwordActions']:
-        if password_action['passwordType']['internalName'] in passwords:
+        if password_action['passwordType']['internalName'] in password_actions:
             password_action['change'] = True
             password_action['atRegistration'] = True
     product['visibleTransactionFields'] = visible_transaction_fields
@@ -1736,6 +1740,8 @@ def set_admin_group_permissions(
     for password_action in product['userPasswordActions']:
         if password_action['passwordType']['internalName'] in user_password_actions:
             password_action['change'] = True
+            password_action['reset'] = True
+            password_action['unblock'] = True
     for token_type in product['userTokenTypes']:
         if token_type['tokenType']['id'] in user_token_types:
             token_type['view'] = True
@@ -1936,6 +1942,10 @@ ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
         'PAYMENT_USER_TO_USER',
         'PAYMENT_USER_TO_SYSTEM',
     ],
+    password_actions=[
+        'login',
+        'pin',
+    ],
     my_access_clients=[
         ID_CLIENT_POINT_DE_VENTE_NFC,
     ],
@@ -1978,6 +1988,10 @@ ID_PRODUIT_ADHERENTS_UTILISATEURS = create_member_product(
         'PAYMENT_USER_TO_USER',
         'PAYMENT_USER_TO_SYSTEM',
     ],
+    password_actions=[
+        'login',
+        'pin',
+    ],
     my_token_types=[
         ID_TOKEN_CARTE_NFC,
     ],
@@ -1996,6 +2010,9 @@ ID_PRODUIT_UTILISATEURS_BASIQUES_SANS_COMPTE = create_member_product(
     my_profile_fields=[
         'FULL_NAME',
         'LOGIN_NAME',
+    ],
+    password_actions=[
+        'login',
     ],
 )
 # Porteurs.
@@ -2035,7 +2052,7 @@ set_admin_group_permissions(
         'FULL_NAME',
         'LOGIN_NAME',
     ],
-    passwords=[
+    password_actions=[
         'login',
     ],
     visible_transaction_fields=all_transaction_fields,
@@ -2061,6 +2078,7 @@ set_admin_group_permissions(
     removed_users='MANAGE',
     user_password_actions=[
         'login',
+        'pin',
     ],
     user_token_types=all_token_types,
     user_access_clients=all_access_clients,
@@ -2078,7 +2096,7 @@ set_admin_group_permissions(
         'LOGIN_NAME',
         ID_CHAMP_PERSO_UTILISATEUR_BDC,
     ],
-    passwords=[
+    password_actions=[
         'login',
     ],
     visible_transaction_fields=all_transaction_fields,
@@ -2144,7 +2162,7 @@ set_admin_group_permissions(
         'FULL_NAME',
         'LOGIN_NAME',
     ],
-    passwords=[
+    password_actions=[
         'login',
     ],
     accessible_user_groups=[
