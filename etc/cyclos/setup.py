@@ -326,6 +326,39 @@ all_token_types = [
 
 
 ########################################################################
+# Création du client "Point de vente NFC".
+#
+def create_access_client(name, plural_name, maximum_per_user, permission):
+    logger.info("Création du client '%s'...", name)
+    r = requests.post(eusko_web_services + 'principalType/save',
+                      headers=headers,
+                      json={
+                          'class': 'org.cyclos.model.access.principaltypes.AccessClientPrincipalTypeDTO',
+                          'name': name,
+                          'pluralName': plural_name,
+                          'internalName': get_internal_name(name),
+                          'maximumPerUser': maximum_per_user,
+                          'permission': permission,
+                      })
+    check_request_status(r)
+    access_client_id = r.json()['result']
+    logger.debug('access_client_id = %s', access_client_id)
+    add_constant('access_clients', name, access_client_id)
+    return access_client_id
+
+ID_CLIENT_POINT_DE_VENTE_NFC = create_access_client(
+    name='Point de vente NFC',
+    plural_name='Points de vente NFC',
+    maximum_per_user=10,
+    permission='RECEIVE_PAYMENT',
+)
+
+all_access_clients = [
+    ID_CLIENT_POINT_DE_VENTE_NFC,
+]
+
+
+########################################################################
 # Création des champs personnalisés pour les paiements.
 #
 # Note: On a besoin de la liste des champs personnalisés pour créer les
@@ -1521,6 +1554,7 @@ def create_member_product(name,
                           other_users_profile_fields={},
                           user_account_type_id=None,
                           dashboard_actions=[],
+                          my_access_clients=[],
                           my_token_types=[],
                           system_payments=[],
                           user_payments=[],
@@ -1577,6 +1611,10 @@ def create_member_product(name,
         if dashboard_action['dashboardAction'] in dashboard_actions:
             dashboard_action['enabled'] = True
             dashboard_action['enabledByDefault'] = True
+    for access_client in product['myAccessClients']:
+        if access_client['accessClientType']['id'] in my_access_clients:
+            access_client['enable'] = True
+            access_client['view'] = True
     for token_type in product['myTokenTypes']:
         if token_type['tokenType']['id'] in my_token_types:
             token_type['enable'] = True
@@ -1629,6 +1667,7 @@ def set_admin_group_permissions(
         removed_users='NONE',
         user_password_actions=[],
         user_token_types=[],
+        user_access_clients=[],
         access_user_accounts=[],
         payments_as_user_to_user=[],
         payments_as_user_to_system=[],
@@ -1706,6 +1745,14 @@ def set_admin_group_permissions(
             token_type['initialize'] = True
             token_type['personalize'] = True
             token_type['changeDates'] = True
+    for access_client in product['userAccessClients']:
+        if access_client['accessClientType']['id'] in user_access_clients:
+            access_client['view'] = True
+            access_client['manage'] = True
+            access_client['block'] = True
+            access_client['unblock'] = True
+            access_client['activate'] = True
+            access_client['unassign'] = True
     product['userAccountsAccess'] = access_user_accounts
     product['userPaymentsAsUser'] = payments_as_user_to_user
     product['systemPaymentsAsUser'] = payments_as_user_to_system
@@ -1889,6 +1936,9 @@ ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
         'PAYMENT_USER_TO_USER',
         'PAYMENT_USER_TO_SYSTEM',
     ],
+    my_access_clients=[
+        ID_CLIENT_POINT_DE_VENTE_NFC,
+    ],
     my_token_types=[
         ID_TOKEN_CARTE_NFC,
     ],
@@ -2013,6 +2063,7 @@ set_admin_group_permissions(
         'login',
     ],
     user_token_types=all_token_types,
+    user_access_clients=all_access_clients,
     access_user_accounts=all_user_accounts,
     payments_as_user_to_user=all_user_to_user_payments,
     payments_as_user_to_system=all_user_to_system_payments,
