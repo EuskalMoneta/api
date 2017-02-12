@@ -105,8 +105,11 @@ for channel in channels:
         ID_CANAL_MAIN_WEB = channel['id']
     elif channel['internalName'] == 'webServices':
         ID_CANAL_WEB_SERVICES = channel['id']
+    elif channel['internalName'] == 'pos':
+        ID_CANAL_PAY_AT_POS = channel['id']
 logger.debug('ID_CANAL_MAIN_WEB = %s', ID_CANAL_MAIN_WEB)
 logger.debug('ID_CANAL_WEB_SERVICES = %s', ID_CANAL_WEB_SERVICES)
+logger.debug('ID_CANAL_PAY_AT_POS = %s', ID_CANAL_PAY_AT_POS)
 
 
 ########################################################################
@@ -232,6 +235,41 @@ ID_DEVISE_EURO = create_currency(
     name='Euro',
     symbol='€',
 )
+
+
+########################################################################
+# Création du token "Carte NFC".
+#
+def create_token(name, plural_name, token_type, token_mask, maximum_per_user):
+    logger.info('Création du token "%s"...', name)
+    r = requests.post(eusko_web_services + 'principalType/save',
+                      headers=headers,
+                      json={
+                          'class': 'org.cyclos.model.access.principaltypes.TokenPrincipalTypeDTO',
+                          'name': name,
+                          'pluralName': plural_name,
+                          'internalName': get_internal_name(name),
+                          'tokenType': token_type,
+                          'tokenMask': token_mask,
+                          'maximumPerUser': maximum_per_user,
+                      })
+    check_request_status(r)
+    token_id = r.json()['result']
+    logger.debug('token_id = %s', token_id)
+    add_constant('tokens', name, token_id)
+    return token_id
+
+ID_TOKEN_CARTE_NFC = create_token(
+    name='Carte NFC',
+    plural_name='Cartes NFC',
+    token_type='NFC_TAG',
+    token_mask='#### #### #### ####',
+    maximum_per_user=100,
+)
+
+all_token_types = [
+    ID_TOKEN_CARTE_NFC,
+]
 
 
 ########################################################################
@@ -676,7 +714,9 @@ all_status_flows = [
 #
 def create_payment_transfer_type(name, direction, from_account_type_id,
                                  to_account_type_id, custom_fields=[],
-                                 status_flows=[], initial_statuses=[]):
+                                 status_flows=[], initial_statuses=[],
+                                 channels=[ID_CANAL_MAIN_WEB, ID_CANAL_WEB_SERVICES],
+                                 principal_types=[]):
     logger.info('Création du type de paiement "%s"...', name)
     r = requests.post(eusko_web_services + 'transferType/save',
                       headers=headers,
@@ -691,7 +731,8 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
                           'statusFlows': status_flows,
                           'initialStatuses': initial_statuses,
                           'maxChargebackTime': {'amount': '2', 'field': 'MONTHS'},
-                          'channels': [ID_CANAL_MAIN_WEB, ID_CANAL_WEB_SERVICES]
+                          'channels': channels,
+                          'principalTypes': principal_types,
                       })
     check_request_status(r)
     payment_transfer_type_id = r.json()['result']
@@ -1269,13 +1310,30 @@ ID_TYPE_PAIEMENT_RETRAIT_DU_COMPTE = create_payment_transfer_type(
     ],
 )
 
-# Et enfin, le type de paiement le plus important pour l'eusko
+# Et enfin, les types de paiement les plus importants pour l'eusko
 # numérique !
+# On crée un type de paiement dédié pour le paiement par carte via le
+# terminal de paiement, ce qui permettra de distinguer très facilement
+# les paiements par virement via le site web des paiements par carte.
+# Cela permettra aussi, éventuellement, de définir des règles
+# particulières pour l'un ou l'autre de ces moyens de paiement.
 ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT = create_payment_transfer_type(
     name='Virement inter-adhérent',
     direction='USER_TO_USER',
     from_account_type_id=ID_COMPTE_ADHERENT,
     to_account_type_id=ID_COMPTE_ADHERENT,
+)
+ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE = create_payment_transfer_type(
+    name='Paiement par carte',
+    direction='USER_TO_USER',
+    from_account_type_id=ID_COMPTE_ADHERENT,
+    to_account_type_id=ID_COMPTE_ADHERENT,
+    channels=[
+        ID_CANAL_PAY_AT_POS,
+    ],
+    principal_types=[
+        ID_TOKEN_CARTE_NFC,
+    ],
 )
 
 # Types de paiement pour des régularisations entre caisses des BDC.
@@ -1333,6 +1391,7 @@ all_user_to_user_payments = [
     ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DEDIE,
     ID_TYPE_PAIEMENT_VIREMENT_ENTRE_COMPTES_DEDIES,
     ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
+    ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE,
 ]
 all_user_to_self_payments = [
     ID_TYPE_PAIEMENT_DE_STOCK_DE_BILLETS_BDC_VERS_RETOURS_EUSKO_BDC,
@@ -1372,41 +1431,6 @@ def create_user_custom_field_linked_user(name, required=True):
 ID_CHAMP_PERSO_UTILISATEUR_BDC = create_user_custom_field_linked_user(
     name='BDC',
 )
-
-
-########################################################################
-# Création du token "Carte NFC".
-#
-def create_token(name, plural_name, token_type, token_mask, maximum_per_user):
-    logger.info('Création du token "%s"...', name)
-    r = requests.post(eusko_web_services + 'principalType/save',
-                      headers=headers,
-                      json={
-                          'class': 'org.cyclos.model.access.principaltypes.TokenPrincipalTypeDTO',
-                          'name': name,
-                          'pluralName': plural_name,
-                          'internalName': get_internal_name(name),
-                          'tokenType': token_type,
-                          'tokenMask': token_mask,
-                          'maximumPerUser': maximum_per_user,
-                      })
-    check_request_status(r)
-    token_id = r.json()['result']
-    logger.debug('token_id = %s', token_id)
-    add_constant('tokens', name, token_id)
-    return token_id
-
-ID_TOKEN_CARTE_NFC = create_token(
-    name='Carte NFC',
-    plural_name='Cartes NFC',
-    token_type='NFC_TAG',
-    token_mask='#### #### #### ####',
-    maximum_per_user=100,
-)
-
-all_token_types = [
-    ID_TOKEN_CARTE_NFC,
-]
 
 
 ########################################################################
@@ -1818,6 +1842,7 @@ ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
     ],
     user_payments=[
         ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
+        ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE,
     ],
 )
 assign_product_to_group(ID_PRODUIT_ADHERENTS_PRESTATAIRES,
@@ -1850,6 +1875,7 @@ ID_PRODUIT_ADHERENTS_UTILISATEURS = create_member_product(
     ],
     user_payments=[
         ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
+        ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE,
     ],
 )
 assign_product_to_group(ID_PRODUIT_ADHERENTS_UTILISATEURS,
