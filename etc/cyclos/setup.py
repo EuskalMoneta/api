@@ -111,9 +111,22 @@ logger.debug('ID_CANAL_MAIN_WEB = %s', ID_CANAL_MAIN_WEB)
 logger.debug('ID_CANAL_WEB_SERVICES = %s', ID_CANAL_WEB_SERVICES)
 logger.debug('ID_CANAL_PAY_AT_POS = %s', ID_CANAL_PAY_AT_POS)
 
+# Récupération de la liste des types de mots de passe.
+logger.info('Récupération de la liste des types de mots de passe...')
+r = requests.get(global_web_services + 'passwordType/list', headers=headers)
+check_request_status(r)
+password_types = r.json()['result']
+for password_type in password_types:
+    if password_type['internalName'] == 'login':
+        ID_PASSWORD_LOGIN = password_type['id']
+    elif password_type['internalName'] == 'pin':
+        ID_PASSWORD_PIN = password_type['id']
+logger.debug('ID_PASSWORD_LOGIN = %s', ID_PASSWORD_LOGIN)
+logger.debug('ID_PASSWORD_PIN = %s', ID_PASSWORD_PIN)
+
 
 ########################################################################
-# Modification de la configuration par défaut :
+# Modification de la configuration par défaut globale :
 # - définition de l'URL racine, pour que l'application web fonctionne
 # - choix de la virgule comme séparateur pour les décimales
 # - dates au format jour/mois/année
@@ -130,10 +143,10 @@ logger.debug('ID_CANAL_PAY_AT_POS = %s', ID_CANAL_PAY_AT_POS)
 r = requests.get(global_web_services + 'configuration/getDefault',
                  headers=headers)
 check_request_status(r)
-default_config_id = r.json()['result']['id']
+global_default_config_id = r.json()['result']['id']
 # On charge la configuration par défaut pour pouvoir la modifier.
 r = requests.get(
-    global_web_services + 'configuration/load/' + default_config_id,
+    global_web_services + 'configuration/load/' + global_default_config_id,
     headers=headers
 )
 check_request_status(r)
@@ -154,7 +167,7 @@ check_request_status(r)
 # Puis on liste les config de canaux pour retrouver l'id de la config
 # du canal "Web services".
 r = requests.get(
-    global_web_services + 'channelConfiguration/list/' + default_config_id,
+    global_web_services + 'channelConfiguration/list/' + global_default_config_id,
     headers=headers
 )
 check_request_status(r)
@@ -205,6 +218,46 @@ ID_RESEAU_EUSKO = create_network(
     name='Eusko',
     internal_name='eusko',
 )
+
+
+########################################################################
+# Modification de la configuration par défaut :
+# - activation du canal "Pay at POS" par défaut pour tous les
+#   utilisateurs
+#
+# D'abord on récupère l'id de la config par défaut.
+r = requests.get(eusko_web_services + 'configuration/getDefault',
+                 headers=headers)
+check_request_status(r)
+default_config_id = r.json()['result']['id']
+# Puis on liste les config de canaux pour retrouver l'id de la config
+# du canal "Pay at POS".
+r = requests.get(
+    eusko_web_services + 'channelConfiguration/list/' + default_config_id,
+    headers=headers
+)
+check_request_status(r)
+for channel_config in r.json()['result']:
+    if channel_config['channel']['internalName'] == 'pos':
+        pos_config_id = channel_config['id']
+# Enfin on charge la config du canal "Pay at POS", pour pouvoir la
+# modifier.
+r = requests.get(
+    eusko_web_services + 'channelConfiguration/load/' + pos_config_id,
+    headers=headers
+)
+check_request_status(r)
+pos_config = r.json()['result']
+pos_config['defined'] = True
+pos_config['enabled'] = True
+pos_config['userAccess'] = 'DEFAULT_ENABLED'
+pos_config['confirmationPassword'] = ID_PASSWORD_PIN
+r = requests.post(
+    eusko_web_services + 'channelConfiguration/save',
+    headers=headers,
+    json=pos_config
+)
+check_request_status(r)
 
 
 ########################################################################
