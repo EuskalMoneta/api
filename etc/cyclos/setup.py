@@ -1523,7 +1523,8 @@ def create_member_product(name,
                           dashboard_actions=[],
                           my_token_types=[],
                           system_payments=[],
-                          user_payments=[]):
+                          user_payments=[],
+                          receive_payments=[]):
     logger.info('Création du produit "%s"...', name)
     # On commence par créer le produit avec les propriétés de base.
     product = {
@@ -1583,6 +1584,7 @@ def create_member_product(name,
             token_type['unblock'] = True
     product['systemPayments'] = system_payments
     product['userPayments'] = user_payments
+    product['receivePayments'] = receive_payments
     r = requests.post(eusko_web_services + 'product/save',
                       headers=headers,
                       json=product)
@@ -1895,6 +1897,9 @@ ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
     ],
     user_payments=[
         ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
+        ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE,
+    ],
+    receive_payments=[
         ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE,
     ],
 )
