@@ -18,7 +18,7 @@ from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from members.misc import Member
 from misc import EuskalMonetaAPIException, sendmail_euskalmoneta
 
-
+import arrow
 log = logging.getLogger()
 
 
@@ -249,6 +249,25 @@ def export_history_adherent_pdf(request):
     end_date = datetime.strptime(
         request.query_params['end'], '%Y-%m-%d').replace(hour=23, minute=59, second=59)
 
+    search_history_data_with_balance = {
+        'account': accounts_summaries_data['result'][0]['status']['accountId'],
+        'orderBy': 'DATE_DESC',
+        'pageSize': 1000,  # maximum pageSize: 1000
+        'currentpage': 0,
+        'period':
+        {
+            'begin': begin_date.isoformat(),
+            'end': end_date.isoformat(),
+        },
+    }
+    accounts_history_res_with_balance = cyclos.post(
+        method='account/searchAccountHistory', data=search_history_data_with_balance)
+
+    balance = accounts_summaries_data['result'][0]['status']['balance']
+    for line in accounts_history_res_with_balance['result']['pageItems']:
+        line['balance'] = balance
+        balance = float(balance) - float(line['amount'])
+
     search_history_data = {
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
         'orderBy': 'DATE_DESC',
@@ -262,6 +281,14 @@ def export_history_adherent_pdf(request):
         'description': request.query_params['description']
     }
     accounts_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+
+    for line_without_balance in accounts_history_res['result']['pageItems']:
+        for line_with_balance in accounts_history_res_with_balance['result']['pageItems']:
+            if line_without_balance['id'] == line_with_balance['id']:
+                line_without_balance['balance'] = line_with_balance['balance']
+
+    for line in accounts_history_res['result']['pageItems']:
+        line['date'] = arrow.get(line['date']).format('Le YYYY-MM-DD à HH:mm')
     context = {
         'account_history': accounts_history_res['result'],
         'period': {
@@ -269,7 +296,6 @@ def export_history_adherent_pdf(request):
             'end': datetime.date(end_date),
         },
     }
-
     response = wkhtmltopdf_views.PDFTemplateResponse(request=request, context=context, template="summary/summary.html")
     pdf_content = response.rendered_content
 
