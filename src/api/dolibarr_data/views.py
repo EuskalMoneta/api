@@ -192,9 +192,13 @@ def get_bdc_name(request):
 @api_view(['GET'])
 def get_member_name(request):
     """
-    Get the member name (firstname + lastname) for the current user.
+    Get the member name (firstname + lastname or companyname) for the current user.
     """
-    return Response('{} {}'.format(request.user.profile.firstname, request.user.profile.lastname))
+    if request.user.profile.companyname:
+        member_name = '{}'.format(request.user.profile.companyname)
+    else:
+        member_name = '{} {}'.format(request.user.profile.firstname, request.user.profile.lastname)
+    return Response(member_name)
 
 
 @api_view(['GET'])

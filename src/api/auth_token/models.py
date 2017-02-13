@@ -13,6 +13,7 @@ class UserProfile(models.Model):
     cyclos_token = models.CharField(max_length=100)
     firstname = models.CharField(max_length=100)
     lastname = models.CharField(max_length=100)
+    companyname = models.CharField(max_length=100)
 
 
 def create_user_profile(sender, instance, created, **kwargs):

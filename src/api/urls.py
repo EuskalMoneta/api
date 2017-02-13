@@ -45,7 +45,6 @@ urlpatterns = [
     url(r'^system-accounts-summaries/$', bdc_cyclos_views.system_accounts_summaries),
     url(r'^dedicated-accounts-summaries/$', bdc_cyclos_views.dedicated_accounts_summaries),
     url(r'^deposit-banks-summaries/$', bdc_cyclos_views.deposit_banks_summaries),
-    url(r'^member-accounts-summaries/$', bdc_cyclos_views.member_account_summary),
     url(r'^accounts-history/$', bdc_cyclos_views.accounts_history),
     url(r'^payments-available-entree-stock/$', bdc_cyclos_views.payments_available_for_entree_stock),
     url(r'^entree-stock/$', bdc_cyclos_views.entree_stock),
@@ -86,7 +85,7 @@ urlpatterns = [
     url(r'^payments-available-history-adherent/$', cel_views.payments_available_for_adherents),
     url(r'^account-summary-adherents/$', cel_views.account_summary_for_adherents),
     url(r'^export-history-adherent-pdf/$', cel_views.export_history_adherent_pdf),
-    #url(r'^export-history-adherent-csv/$', cel_views.export_history_adherent_csv),
+    # url(r'^export-history-adherent-csv/$', cel_views.export_history_adherent_csv),
 ]
 
 urlpatterns += router.urls

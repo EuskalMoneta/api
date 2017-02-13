@@ -155,26 +155,6 @@ def deposit_banks_summaries(request):
     return Response(res)
 
 
-@api_view(['GET'])
-def member_account_summary(request):
-    """
-    Account summary for this member.
-    """
-    try:
-        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    serializer = serializers.MemberAccountsSummariesSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
-
-    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
-
-    # account/getAccountsSummary
-    query_data = [member_cyclos_id, None]  # ID de l'adhérent
-    return Response(cyclos.post(method='account/getAccountsSummary', data=query_data))
-
-
 @api_view(['POST'])
 def entree_stock(request):
     """

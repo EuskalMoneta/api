@@ -2172,6 +2172,9 @@ set_admin_group_permissions(
         ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE,
     ],
     accessible_user_groups=all_user_groups,
+    accessible_administrator_groups=[
+        ID_GROUPE_OPERATEURS_BDC,
+    ],
     user_profile_fields=[
         'FULL_NAME',
         'LOGIN_NAME',
