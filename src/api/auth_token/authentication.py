@@ -41,6 +41,14 @@ def authenticate(username, password):
         except forms.ValidationError:
             # we detected that our "username" variable is NOT an email
             token = dolibarr.login(login=username, password=password, reset=True)
+
+            member_results = dolibarr.get(model='members', login=username, api_key=token)
+            member_data = [item
+                           for item in member_results
+                           if item['login'] == username][0]
+            if not member_data:
+                raise AuthenticationFailed()
+
     except (DolibarrAPIException, KeyError, IndexError):
         raise AuthenticationFailed()
 
