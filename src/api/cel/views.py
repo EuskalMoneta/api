@@ -203,11 +203,10 @@ def payments_available_for_adherents(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    begin_date = datetime.strptime(request.query_params['begin'], '%Y-%m-%d')
-    end_date = datetime.strptime(
-        request.query_params['end'], '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+    begin_date = serializer.data['begin'].isoformat()
+    end_date = serializer.data['end'].replace(hour=23, minute=59, second=59).isoformat()
 
-    query_data = [cyclos.user_id, end_date.isoformat()]
+    query_data = [cyclos.user_id, end_date]
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
 
     search_history_data = {
@@ -217,8 +216,8 @@ def payments_available_for_adherents(request):
         'currentpage': 0,
         'period':
         {
-            'begin': begin_date.isoformat(),
-            'end': end_date.isoformat(),
+            'begin': begin_date,
+            'end': end_date,
         },
     }
     try:
@@ -243,11 +242,10 @@ def export_history_adherent_pdf(request):
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     query_data = [cyclos.user_id, None]
-
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
-    begin_date = datetime.strptime(request.query_params['begin'], '%Y-%m-%d')
-    end_date = datetime.strptime(
-        request.query_params['end'], '%Y-%m-%d').replace(hour=23, minute=59, second=59)
+
+    begin_date = serializer.data['begin'].isoformat()
+    end_date = serializer.data['end'].replace(hour=23, minute=59, second=59).isoformat()
 
     search_history_data_with_balance = {
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
@@ -256,8 +254,8 @@ def export_history_adherent_pdf(request):
         'currentpage': 0,
         'period':
         {
-            'begin': begin_date.isoformat(),
-            'end': end_date.isoformat(),
+            'begin': begin_date,
+            'end': end_date,
         },
     }
     accounts_history_res_with_balance = cyclos.post(
@@ -275,8 +273,8 @@ def export_history_adherent_pdf(request):
         'currentpage': 0,
         'period':
         {
-            'begin': begin_date.isoformat(),
-            'end': end_date.isoformat(),
+            'begin': begin_date,
+            'end': end_date,
         },
         'description': request.query_params['description']
     }
@@ -289,11 +287,12 @@ def export_history_adherent_pdf(request):
 
     for line in accounts_history_res['result']['pageItems']:
         line['date'] = arrow.get(line['date']).format('Le YYYY-MM-DD à HH:mm')
+
     context = {
         'account_history': accounts_history_res['result'],
         'period': {
-            'begin': datetime.date(begin_date),
-            'end': datetime.date(end_date),
+            'begin': serializer.data['begin'],
+            'end': serializer.data['end'],
         },
     }
     response = wkhtmltopdf_views.PDFTemplateResponse(request=request, context=context, template="summary/summary.html")

@@ -15,8 +15,8 @@ class LostPasswordSerializer(serializers.Serializer):
 
 class HistorySerializer(serializers.Serializer):
 
-    begin = serializers.DateField(format='iso-8601')
-    end = serializers.DateField(format='iso-8601')
+    begin = serializers.DateField(format=None)
+    end = serializers.DateField(format=None)
     description = serializers.CharField(required=False)
 
 
