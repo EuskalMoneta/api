@@ -304,3 +304,23 @@ def export_history_adherent_pdf(request):
     }
 
     return Response(pdf_content, headers=headers)
+
+
+@api_view(['GET'])
+def verif_eusko_numerique(request):
+
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if request.user.profile.companyname:
+        group_constant = str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires'])
+    else:
+        group_constant = str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])
+
+    # return Response(cyclos.post)
+
+    return Response(cyclos.post(method='user/load',
+                                data=[cyclos.user_id],
+                                token=request.user.profile.cyclos_token))
