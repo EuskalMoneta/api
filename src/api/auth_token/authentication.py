@@ -27,17 +27,17 @@ def authenticate(username, password):
             dolibarr_anonymous_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
                                                       password=settings.APPS_ANONYMOUS_PASSWORD,
                                                       reset=True)
-            user_results = dolibarr.get(model='members', email=username, api_key=dolibarr_anonymous_token)
-            user_data = [item
-                         for item in user_results
-                         if item['email'] == username][0]
-            if not user_data:
+            member_results = dolibarr.get(model='members', email=username, api_key=dolibarr_anonymous_token)
+            member_data = [item
+                           for item in member_results
+                           if item['email'] == username][0]
+            if not member_data:
                 raise AuthenticationFailed()
 
-            token = dolibarr.login(login=user_data['login'], password=password, reset=True)
+            token = dolibarr.login(login=member_data['login'], password=password, reset=True)
 
             # Cyclos needs the real 'username', we save it for later
-            username = user_data['login']
+            username = member_data['login']
         except forms.ValidationError:
             # we detected that our "username" variable is NOT an email
             token = dolibarr.login(login=username, password=password, reset=True)
@@ -66,6 +66,14 @@ def authenticate(username, password):
         user_profile = user.profile
         user_profile.cyclos_token = cyclos_token
         user_profile.dolibarr_token = token
+
+        try:
+            if member_data['company']:
+                user_profile.companyname = member_data['company']
+            else:
+                user_profile.companyname = ''
+        except KeyError:
+            user_profile.companyname = ''
 
         try:
             user_profile.firstname = user_data['firstname']
