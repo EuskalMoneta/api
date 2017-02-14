@@ -8,7 +8,7 @@
         <title></title>
     </head>
     <body>
-        <h1><img src="{% static 'icon-eusko.jpg' %}" alt="Logo Euskal Moneta" style="width:304px;height:228px;"> Euskal Moneta</h1>
+        <h1><img src="{% static 'img/icon-eusko.jpg' %}" alt="Logo Euskal Moneta" style="width:70px;height:70px;"> Euskal Moneta</h1>
         <h2 style="text-align: right">Relevé d'identité Eusko</h2>
         <h4>Titulaire du compte :</h3> {% if owner.shortDisplay.0 == 'Z' %} {{ owner.display }} {% endif %}
         <h4>Numéro de compte :</h3>  {{ number }}
