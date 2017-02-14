@@ -11,6 +11,7 @@ from rest_framework.decorators import api_view, permission_classes, renderer_cla
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from wkhtmltopdf import views as wkhtmltopdf_views
+from rest_framework_csv.renderers import CSVRenderer
 
 from cel import serializers
 from cyclos_api import CyclosAPI, CyclosAPIException
@@ -229,11 +230,15 @@ def payments_available_for_adherents(request):
     return Response([accounts_history_res, accounts_summaries_data['result'][0]['status']['balance']])
 
 
-@api_view(['GET'])
-@renderer_classes((PDFRenderer, ))
-def export_history_adherent_pdf(request):
+class ExportHistoryCSVRenderer(CSVRenderer):
+    header = ['Date', 'Libellé', 'Débit', 'Crédit', 'Solde']
 
-    serializer = serializers.HistorySerializer(data=request.query_params)
+
+@api_view(['GET'])
+@renderer_classes((PDFRenderer, ExportHistoryCSVRenderer))
+def export_history_adherent(request):
+
+    serializer = serializers.ExportHistorySerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
 
     try:
@@ -295,15 +300,31 @@ def export_history_adherent_pdf(request):
             'end': serializer.data['end'],
         },
     }
-    response = wkhtmltopdf_views.PDFTemplateResponse(request=request, context=context, template="summary/summary.html")
-    pdf_content = response.rendered_content
+    if request.query_params['mode'] == 'pdf':
+        response = wkhtmltopdf_views.PDFTemplateResponse(request=request, context=context, template="summary/summary.html")
+        pdf_content = response.rendered_content
 
-    headers = {
-        'Content-Disposition': 'filename="pdf_id.pdf"',
-        'Content-Length': len(pdf_content),
-    }
+        headers = {
+            'Content-Disposition': 'filename="pdf_id.pdf"',
+            'Content-Length': len(pdf_content),
+        }
 
-    return Response(pdf_content, headers=headers)
+        return Response(pdf_content, headers=headers)
+    else:
+        csv_content = [{'Date': line['date'],
+                        'Libellé': line['description'],
+                        'Crédit': line['amount'],
+                        'Débit': '',
+                        'Solde': line['balance']}
+                       if float(line['amount']) > float()
+                       else
+                       {'Date': line['date'],
+                        'Libellé': line['description'],
+                        'Crédit': '',
+                        'Débit': line['amount'],
+                        'Solde': line['balance']}
+                       for line in context['account_history']['pageItems']]
+        return Response(csv_content)
 
 
 @api_view(['GET'])
