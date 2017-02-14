@@ -5,6 +5,7 @@ from rest_framework import routers
 
 from bureauxdechange.views import BDCAPIView
 from members.views import MembersAPIView, MembersSubscriptionsAPIView
+from cel.beneficiaire import BeneficiaireViewSet
 
 from auth_token import views as auth_token_views
 import bdc_cyclos.views as bdc_cyclos_views
@@ -18,6 +19,7 @@ router = routers.SimpleRouter()
 router.register(r'bdc', BDCAPIView, base_name='bdc')
 router.register(r'members', MembersAPIView, base_name='members')
 router.register(r'members-subscriptions', MembersSubscriptionsAPIView, base_name='members-subscriptions')
+router.register(r'beneficiaires', BeneficiaireViewSet, base_name='beneficiaires')
 
 urlpatterns = [
     # Auth token

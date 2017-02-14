@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from cel import models
+
 
 class FirstConnectionSerializer(serializers.Serializer):
 
@@ -38,3 +40,10 @@ class ValidTokenSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField()
     confirm_password = serializers.CharField()
+
+
+class BeneficiaireSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.Beneficiaire
+        fields = ('owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number')
