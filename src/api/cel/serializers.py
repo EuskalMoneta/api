@@ -28,6 +28,11 @@ class ExportHistorySerializer(serializers.Serializer):
     mode = serializers.CharField()
 
 
+class ExportRIESerializer(serializers.Serializer):
+
+    account = serializers.IntegerField()
+
+
 class ValidTokenSerializer(serializers.Serializer):
 
     token = serializers.CharField()
