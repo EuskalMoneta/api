@@ -4,6 +4,7 @@ from rest_framework.decorators import list_route
 from rest_framework.response import Response
 
 from cel import models, serializers
+from cyclos_api import CyclosAPI, CyclosAPIException
 
 
 class BeneficiaireViewSet(viewsets.ModelViewSet):
@@ -15,13 +16,21 @@ class BeneficiaireViewSet(viewsets.ModelViewSet):
 
     @list_route(methods=['get'])
     def search(self, request, *args, **kwargs):
-        # Cyclos search
-        res = models.Beneficiaire.objects.get(number=request.query_params['number'])
-        assert res, False
-        if res:
-            return res
-        else:
-            return Response(status=status.HTTP_204_NO_CONTENT)
+        query = request.query_params.get('number', False)
+        if query and len(query) < 3:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+        except CyclosAPIException:
+            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # user/search for group = 'Banques de dépot'
+        data = cyclos.post(method='user/search', data={'keywords': str(request.query_params['number'])})
+        res = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
+               for item in data['result']['pageItems']]
+
+        return res if res else Response(status=status.HTTP_204_NO_CONTENT)
 
     def create(self, request, *args, **kwargs):
 
