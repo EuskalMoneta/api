@@ -20,6 +20,14 @@ class HistorySerializer(serializers.Serializer):
     description = serializers.CharField(required=False)
 
 
+class ExportHistorySerializer(serializers.Serializer):
+
+    begin = serializers.DateTimeField(format=None)
+    end = serializers.DateTimeField(format=None)
+    description = serializers.CharField(required=False)
+    mode = serializers.CharField()
+
+
 class ValidTokenSerializer(serializers.Serializer):
 
     token = serializers.CharField()
