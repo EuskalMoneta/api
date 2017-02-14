@@ -2,6 +2,7 @@ arrow
 django
 django-cors-middleware
 djangorestframework
+djangorestframework-csv
 django-filter  # Filtering support
 django-wkhtmltopdf
 drf-pdf
