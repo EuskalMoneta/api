@@ -328,6 +328,33 @@ def export_history_adherent(request):
 
 
 @api_view(['GET'])
+@renderer_classes((PDFRenderer, ))
+def export_rie_adherent(request):
+    serializer = serializers.ExportRIESerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)
+
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+    query_data = [cyclos.user_id, None]
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+
+    for account in (accounts_summaries_data['result']):
+        if account['number'] == request.query_params['account']:
+            response = wkhtmltopdf_views.PDFTemplateResponse(
+                request=request, context=account, template="summary/rie.html")
+            pdf_content = response.rendered_content
+
+            headers = {
+                'Content-Disposition': 'filename="pdf_id.pdf"',
+                'Content-Length': len(pdf_content),
+            }
+
+            return Response(pdf_content, headers=headers)
+
+
+@api_view(['GET'])
 def verif_eusko_numerique(request):
 
     try:

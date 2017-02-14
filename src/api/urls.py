@@ -85,6 +85,7 @@ urlpatterns = [
     url(r'^payments-available-history-adherent/$', cel_views.payments_available_for_adherents),
     url(r'^account-summary-adherents/$', cel_views.account_summary_for_adherents),
     url(r'^export-history-adherent/$', cel_views.export_history_adherent),
+    url(r'^export-rie-adherent/$', cel_views.export_rie_adherent),
     url(r'^verif-eusko-numerique/$', cel_views.verif_eusko_numerique),
 ]
 
