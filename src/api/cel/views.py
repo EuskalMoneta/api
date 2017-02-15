@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import logging
 from uuid import uuid4
 
+import arrow
 from django.conf import settings
 from drf_pdf.renderer import PDFRenderer
 import jwt
@@ -10,8 +11,8 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
-from wkhtmltopdf import views as wkhtmltopdf_views
 from rest_framework_csv.renderers import CSVRenderer
+from wkhtmltopdf import views as wkhtmltopdf_views
 
 from cel import serializers
 from cyclos_api import CyclosAPI, CyclosAPIException
@@ -19,7 +20,6 @@ from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from members.misc import Member
 from misc import EuskalMonetaAPIException, sendmail_euskalmoneta
 
-import arrow
 log = logging.getLogger()
 
 
@@ -358,20 +358,24 @@ def export_rie_adherent(request):
 
 
 @api_view(['GET'])
-def verif_eusko_numerique(request):
+def check_account(request):
 
+    res = False
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if request.user.profile.companyname:
-        group_constant = str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires'])
-    else:
-        group_constant = str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])
+        # Determine whether or not our user is an "utilisateur" or a "prestataire"
+        if request.user.profile.companyname:
+            group_constant = str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires'])
+        else:
+            group_constant = str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])
 
-    # return Response(cyclos.post)
+        # Fetching info for our current user (we look for his groups)
+        data = cyclos.post(method='user/load', data=[cyclos.user_id], token=request.user.profile.cyclos_token)
 
-    return Response(cyclos.post(method='user/load',
-                                data=[cyclos.user_id],
-                                token=request.user.profile.cyclos_token))
+        # Determine whether or not our user is part of the appropriate group
+        res = True if data['result']['group']['id'] == group_constant else False
+    except (KeyError, CyclosAPIException):
+        pass
+
+    return Response({'status': res})

@@ -88,7 +88,7 @@ urlpatterns = [
     url(r'^account-summary-adherents/$', cel_views.account_summary_for_adherents),
     url(r'^export-history-adherent/$', cel_views.export_history_adherent),
     url(r'^export-rie-adherent/$', cel_views.export_rie_adherent),
-    url(r'^verif-eusko-numerique/$', cel_views.verif_eusko_numerique),
+    url(r'^check-account/$', cel_views.check_account),
 ]
 
 urlpatterns += router.urls
