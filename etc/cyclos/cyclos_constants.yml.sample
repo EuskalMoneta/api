@@ -1,3 +1,5 @@
+access_clients:
+  point_de_vente_nfc: -7371965201600299221
 account_types:
   banque_de_depot: -7371965184420430037
   caisse_euro_bdc: -7371965205895266517
@@ -44,8 +46,8 @@ payment_types:
   cotisation_en_euro: -7371965162945593557
   cotisation_en_eusko: -7371965167240560853
   credit_du_compte: -7371965240255004885
-  de_retours_d_eusko_bdc_vers_stock_de_billets_bdc: -7371965330449318101
-  de_stock_de_billets_bdc_vers_retours_d_eusko_bdc: -7371965360514089173
+  de_retours_d_eusko_bdc_vers_stock_de_billets_bdc: -7371965334744285397
+  de_stock_de_billets_bdc_vers_retours_d_eusko_bdc: -7371965330449318101
   depot_de_billets: -7371965235960037589
   depot_en_banque: -7371965283204677845
   entree_coffre: -7371965223075135701
@@ -54,6 +56,7 @@ payment_types:
   impression_de_billets_d_eusko: -7371965214485201109
   paiement_de_banque_de_depot_vers_caisse_euro_bdc: -7371965291794612437
   paiement_de_caisse_euro_bdc_vers_banque_de_depot: -7371965261729841365
+  paiement_par_carte: -7371965360514089173
   perte_de_billets: -7371965175830495445
   reconversion_billets_versement_des_eusko: -7371965158650626261
   reconversion_numerique: -7371965231665070293
@@ -82,6 +85,8 @@ system_accounts:
   compte_de_transit: -7371965223075135701
   compte_des_billets_en_circulation: -7371965193010364629
   stock_de_billets: -7371965218780168405
+tokens:
+  carte_nfc: -7371965197305331925
 transaction_custom_fields:
   adherent: -7371965223075135701
   adherent_facultatif: -7371965193010364629
