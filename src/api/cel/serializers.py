@@ -46,4 +46,4 @@ class BeneficiaireSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.Beneficiaire
-        fields = ('owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number')
+        fields = ('id', 'owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number')
