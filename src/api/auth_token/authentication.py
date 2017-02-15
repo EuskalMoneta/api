@@ -16,6 +16,9 @@ log = logging.getLogger(__name__)
 
 def authenticate(username, password):
     user = None
+
+    # TODO faire une fonction get_username_from_username_or_email() ?
+    # il me semble que ça rendrait le code plus lisible et compréhensible
     try:
         dolibarr = DolibarrAPI()
 
@@ -23,31 +26,26 @@ def authenticate(username, password):
             # validate (or not) the fact that our "username" variable is an email
             validate_email(username)
 
-            # we detected that our "username" variable is an email, we try to connect to dolibarr with it
+            # we detected that our "username" variable is an email,
+            # we try to find the user that has this email (there must be exactly one)
             dolibarr_anonymous_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
                                                       password=settings.APPS_ANONYMOUS_PASSWORD,
                                                       reset=True)
-            member_results = dolibarr.get(model='members', email=username, api_key=dolibarr_anonymous_token)
-            member_data = [item
-                           for item in member_results
-                           if item['email'] == username][0]
-            if not member_data:
+            user_results = dolibarr.get(model='users', email=username, api_key=dolibarr_anonymous_token)
+            matching_users = [item
+                              for item in user_results
+                              if item['email'] == username]
+            if not matching_users or len(matching_users) > 1:
                 raise AuthenticationFailed()
 
-            token = dolibarr.login(login=member_data['login'], password=password, reset=True)
+            username = matching_users[0]['login']
 
-            # Cyclos needs the real 'username', we save it for later
-            username = member_data['login']
         except forms.ValidationError:
             # we detected that our "username" variable is NOT an email
-            token = dolibarr.login(login=username, password=password, reset=True)
+            # so it's really a username
+            pass
 
-            member_results = dolibarr.get(model='members', login=username, api_key=token)
-            member_data = [item
-                           for item in member_results
-                           if item['login'] == username][0]
-            if not member_data:
-                raise AuthenticationFailed()
+        dolibarr_token = dolibarr.login(login=username, password=password, reset=True)
 
     except (DolibarrAPIException, KeyError, IndexError):
         raise AuthenticationFailed()
@@ -59,36 +57,37 @@ def authenticate(username, password):
     except CyclosAPIException:
         raise AuthenticationFailed()
 
-    if token:
-        user_results = dolibarr.get(model='users', login=username, api_key=token)
+    user_results = dolibarr.get(model='users', login=username, api_key=dolibarr_token)
 
+    try:
+        user_data = [item
+                     for item in user_results
+                     if item['login'] == username][0]
+    except (KeyError, IndexError):
+        raise AuthenticationFailed()
+
+    user, created = User.objects.get_or_create(username=username)
+
+    user_profile = user.profile
+    user_profile.cyclos_token = cyclos_token
+    user_profile.dolibarr_token = dolibarr_token
+
+    # if there is a member linked to this user, load it in order to retrieve its company name
+    user_profile.companyname = ''
+    if user_data['fk_member']:
         try:
-            user_data = [item
-                         for item in user_results
-                         if item['login'] == username][0]
-        except (KeyError, IndexError):
-            raise AuthenticationFailed()
+            member = dolibarr.get(model='members', id=user_data['fk_member'], api_key=dolibarr_token)
+            if member['company']:
+                user_profile.companyname = member['company']
+        except DolibarrAPIException:
+            pass
 
-        user, created = User.objects.get_or_create(username=username)
+    try:
+        user_profile.firstname = user_data['firstname']
+        user_profile.lastname = user_data['lastname']
+    except KeyError:
+        raise AuthenticationFailed()
 
-        user_profile = user.profile
-        user_profile.cyclos_token = cyclos_token
-        user_profile.dolibarr_token = token
-
-        try:
-            if member_data['company']:
-                user_profile.companyname = member_data['company']
-            else:
-                user_profile.companyname = ''
-        except KeyError:
-            user_profile.companyname = ''
-
-        try:
-            user_profile.firstname = user_data['firstname']
-            user_profile.lastname = user_data['lastname']
-        except KeyError:
-            raise AuthenticationFailed()
-
-        user_profile.save()
+    user_profile.save()
 
     return user
