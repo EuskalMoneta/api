@@ -19,7 +19,7 @@ class BeneficiaireViewSet(viewsets.ModelViewSet):
     def search(self, request, *args, **kwargs):
         query = request.query_params.get('number', False)
         res = None
-        if not query or len(query) < 3:
+        if not query or len(query) != 9:
             return exceptions.ParseError()
 
         try:
