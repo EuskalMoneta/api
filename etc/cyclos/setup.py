@@ -2229,6 +2229,15 @@ set_admin_group_permissions(
     password_actions=[
         'login',
     ],
+    visible_transaction_fields=[
+        ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
+    ],
+    system_accounts=[
+        ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE,
+    ],
+    system_to_user_payments=[
+        ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE,
+    ],
     accessible_user_groups=[
         ID_GROUPE_ADHERENTS_PRESTATAIRES,
         ID_GROUPE_ADHERENTS_UTILISATEURS,
