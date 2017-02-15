@@ -301,7 +301,8 @@ def export_history_adherent(request):
         },
     }
     if request.query_params['mode'] == 'pdf':
-        response = wkhtmltopdf_views.PDFTemplateResponse(request=request, context=context, template="summary/summary.html")
+        response = wkhtmltopdf_views.PDFTemplateResponse(
+            request=request, context=context, template="summary/summary.html")
         pdf_content = response.rendered_content
 
         headers = {
@@ -342,8 +343,10 @@ def export_rie_adherent(request):
 
     for account in (accounts_summaries_data['result']):
         if account['number'] == request.query_params['account']:
+            # add loop to context to display rie 6 times
+            context = {'account': account, 'loop': range(0, 3)}
             response = wkhtmltopdf_views.PDFTemplateResponse(
-                request=request, context=account, template="summary/rie.html")
+                request=request, context=context, template="summary/rie.html")
             pdf_content = response.rendered_content
 
             headers = {
