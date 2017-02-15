@@ -81,8 +81,6 @@ def validate_first_connection(request):
     """
     serializer = serializers.ValidTokenSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
-    # new_password
-    # confirm_password
 
     try:
         token_data = jwt.decode(request.data['token'], settings.JWT_SECRET,
@@ -98,21 +96,19 @@ def validate_first_connection(request):
         # 1) Dans Dolibarr, créer un utilisateur lié à l'adhérent
         member = dolibarr.get(model='members', login=token_data['login'], api_key=dolibarr_token)
 
-        user_data = {'fk_member': member[0]['id'], 'statut': '1', 'public': '0', 'employee': '0',
-                     'email': member[0]['email'], 'login': member[0]['login'],
-                     'firstname': member[0]['firstname'], 'lastname': member[0]['lastname']}
-        user_obj = dolibarr.post(model='users', data=user_data, api_key=dolibarr_token)
+        create_user = 'members/{}/createUser'.format(member[0]['id'])
+        create_user_data = {'login': token_data['login']}
+
+        # user_id will be the ID for this new user
+        user_id = dolibarr.post(model=create_user, data=create_user_data, api_key=dolibarr_token)
 
         # 2) Dans Dolibarr, ajouter ce nouvel utilisateur dans le groupe "Adhérents"
-        # TODO: Comment retrouver l'id du group "Adhérents" ?
-        user_group_model = 'users/{}/setGroup/{}'.format(user_obj['id'],
-                                                         settings.DOLIBARR_CONSTANTS['groups']['adherents'])
+        user_group_model = 'users/{}/setGroup/{}'.format(user_id, settings.DOLIBARR_CONSTANTS['groups']['adherents'])
         user_group_res = dolibarr.get(model=user_group_model, api_key=dolibarr_token)
         if not user_group_res == 1:
             raise EuskalMonetaAPIException
 
         # 3) Dans Cyclos, activer l'utilisateur
-        # TODO
         cyclos = CyclosAPI(mode='login')
         cyclos_token = cyclos.login(
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
