@@ -1645,10 +1645,18 @@ def create_member_product(name,
             field['editableAtRegistration'] = True
             field['visible'] = True
             field['editable'] = True
-    if accessible_user_groups:
+    # Par défaut un utilisateur peut accéder à son propre groupe. C'est
+    # nécessaire pour qu'un utilisateur soit capable de voir dans quel
+    # groupe lui-même se trouve (voir aussi 'groupVisibility' plus bas).
+    if not accessible_user_groups:
+        product['userGroupAccessibility'] = 'OWN_GROUP'
+    else:
         product['userGroupAccessibility'] = 'SPECIFIC'
         product['accessibleUserGroups'] = accessible_user_groups
         product['searchUsersOnGroups'] = 'ALL'
+    # Permettre de voir le group dans lequel un utilisateur se trouve
+    # (s'applique aussi à soi-même).
+    product['groupVisibility'] = 'GROUP'
     for field in product['userProfileFields']:
         key = field['profileField']
         try:
