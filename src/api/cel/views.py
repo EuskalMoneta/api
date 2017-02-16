@@ -141,20 +141,50 @@ def validate_first_connection(request):
 @permission_classes((AllowAny, ))
 def lost_password(request):
     """
-    User login from dolibarr
+    Lost password function for Compte en Ligne members
     """
     serializer = serializers.LostPasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
-        pass
-        # dolibarr = DolibarrAPI()
-        # request.data['login']
-        # request.data['email']
-    except DolibarrAPIException:
-        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
-    except (KeyError, IndexError):
-        return Response({'error': 'Unable to get user ID from your username!'}, status=status.HTTP_400_BAD_REQUEST)
+        dolibarr = DolibarrAPI()
+        dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                                        password=settings.APPS_ANONYMOUS_PASSWORD)
+
+        valid_login = Member.validate_num_adherent(request.data['login'])
+
+        if valid_login:
+            # We want to search in members by login (N° Adhérent)
+            response = dolibarr.get(model='members', login=request.data['login'], api_key=dolibarr_token)
+            user_data = [item
+                         for item in response
+                         if item['login'] == request.data['login']][0]
+
+            if user_data['email'] == request.data['email']:
+                # We got a match!
+
+                # We need to mail a token etc...
+                payload = {'login': request.data['login'],
+                           'aud': 'guest', 'iss': 'lost-password',
+                           'jti': str(uuid4()), 'iat': datetime.utcnow(),
+                           'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
+
+                jwt_token = jwt.encode(payload, settings.JWT_SECRET)
+                confirm_url = '{}/validate-lost-password?token={}'.format(settings.CEL_PUBLIC_URL,
+                                                                          jwt_token.decode("utf-8"))
+
+                sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
+                                      to_email=request.data['email'])
+                return Response({'member': 'OK'})
+            else:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+
+        else:
+            return Response({'error': 'You need to provide a *VALID* login parameter! (Format: E12345)'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    except (DolibarrAPIException, KeyError, IndexError):
+        return Response({'error': 'Unable to get user data for this login!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])
@@ -163,16 +193,48 @@ def validate_lost_password(request):
     """
     validate_lost_password
     """
-    serializer = serializers.ValidTokenSerializer(data=request.data)
+    serializer = serializers.ValidateLostPasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
         token_data = jwt.decode(request.data['token'], settings.JWT_SECRET,
-                                issuer='lost-password', audience='member')
+                                issuer='lost-password', audience='guest')
     except jwt.InvalidTokenError:
         return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(token_data)
+    try:
+        # TODO verify SecurityQA with custom methods in models.SecurityAnswer
+        # question_text
+        # question_id
+        # answer
+
+        # Dans Cyclos, activer l'utilisateur (au cas où il soit à l'état bloqué)
+        cyclos = CyclosAPI(mode='login')
+        cyclos_token = cyclos.login(
+            auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                       settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
+
+        cyclos_user_id = cyclos.get_member_id_from_login(member_login=token_data['login'], token=cyclos_token)
+
+        active_user_data = {
+            'user': cyclos_user_id,  # ID de l'utilisateur
+            'status': 'ACTIVE'
+        }
+        cyclos.post(method='userStatus/changeStatus', data=active_user_data, token=cyclos_token)
+
+        # Dans Cyclos, reset le mot de passe d'un utilisateur
+        password_data = {
+            'user': cyclos_user_id,  # ID de l'utilisateur
+            'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+            'newPassword': request.data['new_password'],  # saisi par l'utilisateur
+            'confirmNewPassword': request.data['confirm_password'],  # saisi par l'utilisateur
+        }
+        cyclos.post(method='password/change', data=password_data, token=cyclos_token)
+
+        return Response({'status': 'success'})
+
+    except (EuskalMonetaAPIException, CyclosAPIException, KeyError, IndexError):
+        return Response({'error': 'Unable to get user data for this login!'}, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['GET'])

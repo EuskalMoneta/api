@@ -42,6 +42,23 @@ class ValidTokenSerializer(serializers.Serializer):
     confirm_password = serializers.CharField()
 
 
+class ValidLostPasswordSerializer(serializers.Serializer):
+
+    token = serializers.CharField()
+    new_password = serializers.CharField()
+    confirm_password = serializers.CharField()
+    question_text = serializers.CharField(required=False)
+    question_id = serializers.IntegerField(required=False)
+    answer = serializers.CharField()
+
+
+class SecurityAnswerSerializer(serializers.Serializer):
+
+    question_text = serializers.CharField(required=False)
+    question_id = serializers.IntegerField(required=False)
+    answer = serializers.CharField()
+
+
 class BeneficiaireSerializer(serializers.ModelSerializer):
 
     class Meta:
