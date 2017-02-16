@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             name='Beneficiaire',
             fields=[
                 ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('owner', models.CharField(max_length=150)),
+                ('owner', models.CharField(max_length=6)),
                 ('cyclos_id', models.CharField(max_length=30)),
                 ('cyclos_name', models.CharField(max_length=150)),
                 ('cyclos_account_number', models.CharField(max_length=30)),
