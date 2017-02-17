@@ -2,6 +2,8 @@ from django.conf import settings
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms.models import model_to_dict
 from rest_framework import status, viewsets
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 import jwt
@@ -19,7 +21,11 @@ class SecurityQAViewSet(viewsets.ViewSet):
 
         To use it, you *NEED* to be authenticated with an API Token.
         """
-        # TODO Authentification
+        # TokenAuthentication inspired by http://stackoverflow.com/a/36065715
+        user = TokenAuthentication().authenticate(request)
+        if not user:
+            raise AuthenticationFailed()
+
         queryset = models.SecurityQuestion.objects.filter(predefined=True)
         return Response([model_to_dict(item) for item in queryset])
 
@@ -62,7 +68,11 @@ class SecurityQAViewSet(viewsets.ViewSet):
 
         To use it, you *NEED* to be authenticated with an API Token.
         """
-        # TODO Authentification
+        # TokenAuthentication inspired by http://stackoverflow.com/a/36065715
+        user = TokenAuthentication().authenticate(request)
+        if not user:
+            raise AuthenticationFailed()
+
         serializer = serializers.SecurityAnswerSerializer(data=request.data)
 
         if not serializer.is_valid():
