@@ -170,8 +170,8 @@ def lost_password(request):
                            'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
                 jwt_token = jwt.encode(payload, settings.JWT_SECRET)
-                confirm_url = '{}/validate-lost-password?token={}'.format(settings.CEL_PUBLIC_URL,
-                                                                          jwt_token.decode("utf-8"))
+                confirm_url = '{}/valide-passe-perdu?token={}'.format(settings.CEL_PUBLIC_URL,
+                                                                      jwt_token.decode("utf-8"))
 
                 sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
                                       to_email=request.data['email'])
@@ -193,7 +193,7 @@ def validate_lost_password(request):
     """
     validate_lost_password
     """
-    serializer = serializers.ValidateLostPasswordSerializer(data=request.data)
+    serializer = serializers.ValidLostPasswordSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:

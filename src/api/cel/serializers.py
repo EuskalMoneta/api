@@ -52,6 +52,11 @@ class ValidLostPasswordSerializer(serializers.Serializer):
     answer = serializers.CharField()
 
 
+class GetSecurityQuestionSerializer(serializers.Serializer):
+
+    token = serializers.CharField()
+
+
 class SecurityAnswerSerializer(serializers.Serializer):
 
     question_text = serializers.CharField(required=False)
