@@ -269,7 +269,6 @@ def payments_available_for_adherents(request):
     accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
 
     search_history_data = {
-        'account': accounts_summaries_data['result'][0]['status']['accountId'],
         'orderBy': 'DATE_DESC',
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
@@ -279,6 +278,10 @@ def payments_available_for_adherents(request):
             'end': end_date,
         },
     }
+    try:
+        search_history_data.update({'account': request.query_params['account']})
+    except KeyError:
+        search_history_data.update({'account': accounts_summaries_data['result'][0]['status']['accountId']})
     try:
         search_history_data.update({'description': request.query_params['description']})
     except KeyError:

@@ -20,6 +20,7 @@ class HistorySerializer(serializers.Serializer):
     begin = serializers.DateTimeField(format=None)
     end = serializers.DateTimeField(format=None)
     description = serializers.CharField(required=False)
+    account = serializers.IntegerField(required=False)
 
 
 class ExportHistorySerializer(serializers.Serializer):
