@@ -357,8 +357,8 @@ def export_history_adherent(request):
     context = {
         'account_history': accounts_history_res['result'],
         'period': {
-            'begin': serializer.data['begin'],
-            'end': serializer.data['end'],
+            'begin': serializer.data['begin'].replace(hour=0, minute=0, second=0),
+            'end': serializer.data['end'].replace(hour=23, minute=59, second=59),
         },
     }
     if request.query_params['mode'] == 'pdf':
