@@ -63,7 +63,7 @@ def first_connection(request):
                                       to_email=request.data['email'])
                 return Response({'member': 'OK'})
             else:
-                return Response(status=status.HTTP_204_NO_CONTENT)
+                return Response(status=status.HTTP_400_BAD_REQUEST)
 
         else:
             return Response({'error': 'You need to provide a *VALID* login parameter! (Format: E12345)'},
@@ -177,7 +177,7 @@ def lost_password(request):
                                       to_email=request.data['email'])
                 return Response({'member': 'OK'})
             else:
-                return Response(status=status.HTTP_204_NO_CONTENT)
+                return Response(status=status.HTTP_400_BAD_REQUEST)
 
         else:
             return Response({'error': 'You need to provide a *VALID* login parameter! (Format: E12345)'},
