@@ -436,7 +436,7 @@ def check_account(request):
 
         # Determine whether or not our user is part of the appropriate group
         res = True if data['result']['group']['id'] == group_constant else False
-    except (KeyError, CyclosAPIException):
+    except KeyError:
         pass
 
     return Response({'status': res})

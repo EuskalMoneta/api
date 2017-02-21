@@ -54,8 +54,6 @@ class CyclosAPI(object):
         try:
             self.user_profile = self.post(method='user/getCurrentUser', data=[])
             self.user_id = self.user_profile['result']['id']
-        except CyclosAPIException:
-            raise CyclosAPIException(detail='Unable to connect to Cyclos!')
         except KeyError:
             raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
