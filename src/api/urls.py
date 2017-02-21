@@ -91,6 +91,9 @@ urlpatterns = [
     url(r'^export-history-adherent/$', cel_views.export_history_adherent),
     url(r'^export-rie-adherent/$', cel_views.export_rie_adherent),
     url(r'^check-account/$', cel_views.check_account),
+
+    # euskokart
+    url(r'^euskokart/$', cel_views.euskokart_list),
 ]
 
 urlpatterns += router.urls
