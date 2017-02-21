@@ -14,7 +14,7 @@ from rest_framework.response import Response
 from rest_framework_csv.renderers import CSVRenderer
 from wkhtmltopdf import views as wkhtmltopdf_views
 
-from cel import serializers
+from cel import models, serializers
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from members.misc import Member
@@ -203,10 +203,10 @@ def validate_lost_password(request):
         return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
 
     try:
-        # TODO verify SecurityQA with custom methods in models.SecurityAnswer
-        # question_text
-        # question_id
-        # answer
+        # Check SecurityQA with custom methods in models.SecurityAnswer
+        answer = models.SecurityAnswer.objects.get(owner=token_data['login'])
+        if not answer.check_answer(serializer.data['answer']):
+            return Response({'status': 'NOK'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Dans Cyclos, activer l'utilisateur (au cas où il soit à l'état bloqué)
         cyclos = CyclosAPI(mode='login')
@@ -226,8 +226,8 @@ def validate_lost_password(request):
         password_data = {
             'user': cyclos_user_id,  # ID de l'utilisateur
             'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
-            'newPassword': request.data['new_password'],  # saisi par l'utilisateur
-            'confirmNewPassword': request.data['confirm_password'],  # saisi par l'utilisateur
+            'newPassword': serializer.data['new_password'],  # saisi par l'utilisateur
+            'confirmNewPassword': serializer.data['confirm_password'],  # saisi par l'utilisateur
         }
         cyclos.post(method='password/change', data=password_data, token=cyclos_token)
 

@@ -31,7 +31,7 @@ class SecurityQAViewSet(viewsets.ViewSet):
 
     def retrieve(self, request, pk):
         """
-        This endpoint allow to retrieve the SecurityQuestion our connected user as chosen.
+        This endpoint allow to retrieve the SecurityQuestion our connected user has chosen.
 
         To use it, you *DON'T NEED* to be authenticated with an API Token,
         as its used to recover a lost password.
@@ -40,19 +40,23 @@ class SecurityQAViewSet(viewsets.ViewSet):
             return Response({'status': "You can't get Security QA for this user."},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        serializer = serializers.GetSecurityQuestionSerializer(data=request.query_params)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
         try:
-            token_data = jwt.decode(request.query_params['token'], settings.JWT_SECRET,
+            token = request.query_params.get('token', False)
+            if not token:
+                raise jwt.InvalidTokenError
+
+            token_data = jwt.decode(token, settings.JWT_SECRET,
                                     issuer='lost-password', audience='guest')
+            login = token_data['login']
         except jwt.InvalidTokenError:
-            return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
+            if request.user:
+                login = str(request.user)
+            else:
+                return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
 
         question = None
         try:
-            answer = models.SecurityAnswer.objects.get(owner=token_data['login'])
+            answer = models.SecurityAnswer.objects.get(owner=login)
             question = answer.question
         except ObjectDoesNotExist:
             pass
@@ -80,7 +84,7 @@ class SecurityQAViewSet(viewsets.ViewSet):
 
         if serializer.data.get('question_id', False):
             # We got a question_id
-            q = models.SecurityQuestion.objects.get(question_id=serializer.data['question_id'])
+            q = models.SecurityQuestion.objects.get(id=serializer.data['question_id'])
 
         elif serializer.data.get('question_text', False):
             # We didn't got a question_id, but a question_text: we need to create a new SecurityQuestion object
@@ -90,7 +94,7 @@ class SecurityQAViewSet(viewsets.ViewSet):
             return Response({'status': ('Error: You need to provide at least one thse two fields: '
                                         'question_id or question_text')}, status=status.HTTP_400_BAD_REQUEST)
 
-        res = models.SecurityAnswer.objects.create(owner=request.user, question=q)
+        res = models.SecurityAnswer.objects.create(owner=str(request.user), question=q)
         res.set_answer(raw_answer=serializer.data['answer'])
         res.save()
 
