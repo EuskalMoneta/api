@@ -63,3 +63,11 @@ class BeneficiaireSerializer(serializers.ModelSerializer):
     class Meta:
         model = models.Beneficiaire
         fields = ('id', 'owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number')
+
+
+class OneTimeTransferSerializer(serializers.Serializer):
+
+    debit = serializers.IntegerField()
+    beneficiaire = serializers.IntegerField()
+    amount = serializers.FloatField()
+    description = serializers.CharField()
