@@ -11,6 +11,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes, renderer_classes
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
+from rest_framework.exceptions import PermissionDenied
 from rest_framework_csv.renderers import CSVRenderer
 from wkhtmltopdf import views as wkhtmltopdf_views
 
@@ -419,27 +420,29 @@ def export_rie_adherent(request):
 
 
 @api_view(['GET'])
-def check_account(request):
+def has_account(request):
 
-    res = False
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
 
         # Determine whether or not our user is an "utilisateur" or a "prestataire"
-        if request.user.profile.companyname:
-            group_constant = str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires'])
-        else:
-            group_constant = str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])
+        group_constants_without_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte'])]
+
+        group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
 
         # Fetching info for our current user (we look for his groups)
         data = cyclos.post(method='user/load', data=[cyclos.user_id], token=request.user.profile.cyclos_token)
 
         # Determine whether or not our user is part of the appropriate group
-        res = True if data['result']['group']['id'] == group_constant else False
+        if data['result']['group']['id'] == group_constants_without_account:
+            return Response({'status': False})
+        elif data['result']['group']['id'] in group_constants_with_account:
+            return Response({'status': True})
+        else:
+            raise PermissionDenied()
     except KeyError:
-        pass
-
-    return Response({'status': res})
+        raise PermissionDenied()
 
 
 @api_view(['GET'])

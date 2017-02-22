@@ -37,6 +37,7 @@ urlpatterns = [
     url(r'^bdc-name/$', dolibarr_data_views.get_bdc_name),
     url(r'^member-name/$', dolibarr_data_views.get_member_name),
     url(r'^user-data/$', dolibarr_data_views.get_user_data),
+    url(r'^username/$', dolibarr_data_views.get_username),
     url(r'^towns/$', dolibarr_data_views.towns_by_zipcode),
 
     # Euskal moneta data (hardcoded data we dont fetch from APIs)
@@ -90,7 +91,7 @@ urlpatterns = [
     url(r'^account-summary-adherents/$', cel_views.account_summary_for_adherents),
     url(r'^export-history-adherent/$', cel_views.export_history_adherent),
     url(r'^export-rie-adherent/$', cel_views.export_rie_adherent),
-    url(r'^check-account/$', cel_views.check_account),
+    url(r'^has-account/$', cel_views.has_account),
     url(r'^one-time-transfer/$', cel_views.one_time_transfer),
 
     # euskokart

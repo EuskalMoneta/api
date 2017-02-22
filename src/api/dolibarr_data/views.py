@@ -190,6 +190,14 @@ def get_bdc_name(request):
 
 
 @api_view(['GET'])
+def get_username(request):
+    """
+    Get the username for the current user.
+    """
+    return Response(str(request.user))
+
+
+@api_view(['GET'])
 def get_member_name(request):
     """
     Get the member name (firstname + lastname or companyname) for the current user.
@@ -210,12 +218,17 @@ def get_user_data(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
+        username = serializer.data['username']
+    except KeyError:
+        username = str(request.user)
+
+    try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        user_results = dolibarr.get(model='users', login=request.query_params['username'])
+        user_results = dolibarr.get(model='users', login=username)
 
         user_data = [item
                      for item in user_results
-                     if item['login'] == request.query_params['username']][0]
+                     if item['login'] == username][0]
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except IndexError:
