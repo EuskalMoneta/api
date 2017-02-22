@@ -511,3 +511,29 @@ def one_time_transfer(request):
     }
 
     return Response(cyclos.post(method='payment/perform', data=query_data))
+
+
+@api_view(['POST'])
+def reconvert_eusko(request):
+    """
+    Transfer d'eusko entre compte de particulier.
+    """
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.ReconvertEuskoSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # payment/perform
+    query_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_numerique']),
+        'amount': serializer.data['amount'],
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': serializer.data['debit'],
+        'to': 'SYSTEM',
+        'description': serializer.data['description'],
+    }
+
+    return Response(cyclos.post(method='payment/perform', data=query_data))

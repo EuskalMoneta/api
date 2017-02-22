@@ -93,6 +93,7 @@ urlpatterns = [
     url(r'^export-rie-adherent/$', cel_views.export_rie_adherent),
     url(r'^has-account/$', cel_views.has_account),
     url(r'^one-time-transfer/$', cel_views.one_time_transfer),
+    url(r'^reconvert-eusko/$', cel_views.reconvert_eusko),
 
     # euskokart
     url(r'^euskokart/$', cel_views.euskokart_list),

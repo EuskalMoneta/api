@@ -71,3 +71,10 @@ class OneTimeTransferSerializer(serializers.Serializer):
     beneficiaire = serializers.IntegerField()
     amount = serializers.FloatField()
     description = serializers.CharField()
+
+
+class ReconvertEuskoSerializer(serializers.Serializer):
+
+    debit = serializers.IntegerField()
+    amount = serializers.FloatField()
+    description = serializers.CharField()
