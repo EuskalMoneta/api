@@ -40,6 +40,12 @@ def first_connection(request):
 
         valid_login = Member.validate_num_adherent(request.data['login'])
 
+        try:
+            dolibarr.get(model='users', login=request.data['login'], api_key=dolibarr_token)
+            return Response({'error': 'User already exist!'}, status=status.HTTP_201_CREATED)
+        except DolibarrAPIException:
+            pass
+
         if valid_login:
             # We want to search in members by login (N° Adhérent)
             response = dolibarr.get(model='members', login=request.data['login'], api_key=dolibarr_token)
@@ -93,6 +99,12 @@ def validate_first_connection(request):
         dolibarr = DolibarrAPI()
         dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
                                         password=settings.APPS_ANONYMOUS_PASSWORD)
+        # We check if the user already exist, if he already exist we return a 400
+        try:
+            dolibarr.get(model='users', login=token_data['login'], api_key=dolibarr_token)
+            return Response({'error': 'User already exist!'}, status=status.HTTP_400_BAD_REQUEST)
+        except DolibarrAPIException:
+            pass
 
         # 1) Dans Dolibarr, créer un utilisateur lié à l'adhérent
         member = dolibarr.get(model='members', login=token_data['login'], api_key=dolibarr_token)
