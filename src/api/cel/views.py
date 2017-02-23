@@ -557,3 +557,42 @@ def reconvert_eusko(request):
     }
 
     return Response(cyclos.post(method='payment/perform', data=query_data))
+
+
+@api_view(['GET'])
+def user_rights(request):
+    try:
+        res = {}
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+
+        # Determine whether or not our user is an "utilisateur" or a "prestataire"
+        group_constants_without_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte'])]
+
+        group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
+
+        # Fetching info for our current user (we look for his groups)
+        data = cyclos.post(method='user/load', data=[cyclos.user_id], token=request.user.profile.cyclos_token)
+
+        # Determine whether or not our user is part of the appropriate group
+        if data['result']['group']['id'] == group_constants_without_account:
+            res.update({'has_account_eusko_numerique': False})
+        elif data['result']['group']['id'] in group_constants_with_account:
+            res.update({'has_account_eusko_numerique': True})
+        else:
+            raise PermissionDenied()
+    except KeyError:
+        raise PermissionDenied()
+
+    # CGU via Dolibarr
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        dolibarr_member = dolibarr.get(model='members', login=str(request.user))[0]
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    except IndexError:
+        return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(dolibarr_member)
+    return Response(res)
