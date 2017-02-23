@@ -97,6 +97,8 @@ urlpatterns = [
 
     # euskokart
     url(r'^euskokart/$', cel_views.euskokart_list),
+    url(r'^euskokart-block/$', cel_views.euskokart_block),
+    url(r'^euskokart-unblock/$', cel_views.euskokart_unblock),
 ]
 
 urlpatterns += router.urls

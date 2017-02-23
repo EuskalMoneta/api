@@ -459,7 +459,6 @@ def has_account(request):
 
 @api_view(['GET'])
 def euskokart_list(request):
-
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
@@ -468,18 +467,25 @@ def euskokart_list(request):
     query_data = [str(settings.CYCLOS_CONSTANTS['tokens']['carte_nfc']), cyclos.user_id]
 
     euskokart_data = cyclos.post(method='token/getListData', data=query_data)
-    return Response(euskokart_data)
+    try:
+        euskokart_res = [item for item in euskokart_data['result']['tokens']]
+    except KeyError:
+        return Response({'error': 'Unable to fetch euskokart data!'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response(euskokart_res)
 
 
 @api_view(['GET'])
 def euskokart_block(request):
+    serializer = serializers.EuskoKartLockSerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)
 
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    query_data = [request.query_params['id']]
+    query_data = [serializer.data['id']]
 
     euskokart_data = cyclos.post(method='token/block', data=query_data)
     return Response(euskokart_data)
@@ -487,13 +493,15 @@ def euskokart_block(request):
 
 @api_view(['GET'])
 def euskokart_unblock(request):
+    serializer = serializers.EuskoKartLockSerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)
 
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    query_data = [request.query_params['id']]
+    query_data = [serializer.data['id']]
 
     euskokart_data = cyclos.post(method='token/unblock', data=query_data)
     return Response(euskokart_data)

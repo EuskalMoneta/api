@@ -14,6 +14,11 @@ class CyclosAPIException(APIException):
     default_detail = 'Cyclos API Exception'
 
 
+class CyclosAPILoggedOutException(APIException):
+    status_code = 403
+    default_detail = 'Cyclos API LoggedOut Exception'
+
+
 class CyclosAPI(object):
 
     def __init__(self, **kwargs):
@@ -54,6 +59,8 @@ class CyclosAPI(object):
         try:
             self.user_profile = self.post(method='user/getCurrentUser', data=[])
             self.user_id = self.user_profile['result']['id']
+        except CyclosAPIException:
+            raise CyclosAPIException(detail='Unable to connect to Cyclos!')
         except KeyError:
             raise CyclosAPIException(detail='Unable to fetch Cyclos data! Maybe your credentials are invalid!?')
 
@@ -180,8 +187,15 @@ class CyclosAPI(object):
         if api_response.status_code == requests.codes.ok:
             response_data = api_response.json()
         else:
-            # response_data = api_response.json()
-            # if response_data['errorCode'] == 'LOGGED_OUT':
+            try:
+                response_data = api_response.json()
+                if response_data['errorCode'] == 'LOGGED_OUT':
+                    raise CyclosAPILoggedOutException(response_data['errorCode'])
+            except CyclosAPILoggedOutException:
+                raise
+            except:
+                pass
+
             message = 'Cyclos API Exception in {} - {}: {} - {}'.format(
                 api_response.request.method, api_response.url, api_response, api_response.text)
             log.critical(message)

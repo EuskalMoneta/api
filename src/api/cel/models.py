@@ -11,6 +11,7 @@ class Beneficiaire(models.Model):
 
     class Meta:
         db_table = 'beneficiaire'
+        unique_together = ('owner', 'cyclos_account_number')
 
 
 class SecurityAnswer(models.Model):

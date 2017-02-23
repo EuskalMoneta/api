@@ -43,6 +43,11 @@ class ValidTokenSerializer(serializers.Serializer):
     confirm_password = serializers.CharField()
 
 
+class EuskoKartLockSerializer(serializers.Serializer):
+
+    id = serializers.CharField()
+
+
 class ValidLostPasswordSerializer(serializers.Serializer):
 
     token = serializers.CharField()

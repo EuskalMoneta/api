@@ -1,6 +1,6 @@
 from django.core.exceptions import ObjectDoesNotExist
 from django.forms.models import model_to_dict
-from rest_framework import exceptions, status, viewsets
+from rest_framework import exceptions, serializers as drf_serializers, status, viewsets
 from rest_framework.decorators import list_route
 from rest_framework.response import Response
 
@@ -37,15 +37,32 @@ class BeneficiaireViewSet(viewsets.ModelViewSet):
 
     def create(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except drf_serializers.ValidationError:
+            if 'non_field_errors' not in serializer.errors:
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-        if serializer.is_valid():
+        cyclos_account_number = request.data.get('cyclos_account_number', False)
+        if not cyclos_account_number:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        # Check is this Beneficiaire doesn't already exists before we create a new one,
+        # as we don't want any duplicate
+        obj = None
+        try:
+            obj = models.Beneficiaire.objects.get(owner=str(request.user),
+                                                  cyclos_account_number=cyclos_account_number)
+        except ObjectDoesNotExist:
+            pass
+
+        # Save the new object
+        if not obj:
             serializer.save()
-            obj = models.Beneficiaire.objects.get(cyclos_id=serializer.data['cyclos_id'])
-            obj.save()
+            obj = models.Beneficiaire.objects.get(owner=str(request.user),
+                                                  cyclos_account_number=cyclos_account_number)
 
-            return Response(model_to_dict(obj), status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response(model_to_dict(obj), status=status.HTTP_201_CREATED)
 
     def destroy(self, request, pk, *args, **kwargs):
         try:
