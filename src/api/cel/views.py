@@ -102,7 +102,7 @@ def validate_first_connection(request):
         # We check if the user already exist, if he already exist we return a 400
         try:
             dolibarr.get(model='users', login=token_data['login'], api_key=dolibarr_token)
-            return Response({'error': 'User already exist!'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'User already exist!'}, status=status.HTTP_201_CREATED)
         except DolibarrAPIException:
             pass
 
