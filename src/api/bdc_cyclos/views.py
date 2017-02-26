@@ -677,7 +677,8 @@ def cash_deposit(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        bdc_name = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
+        bdc_code = request.data['login_bdc']
+        bdc_name = dolibarr.get(model='users', login=bdc_code)[0]['lastname']
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (IndexError, KeyError):
@@ -686,7 +687,7 @@ def cash_deposit(request):
     if request.data['mode'] == 'cash-deposit':
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['remise_d_euro_en_caisse'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['euro'])
-        description = "Remise d'espèces - {} - {}".format(request.user.profile.user, bdc_name)
+        description = "Remise d'espèces - {} - {}".format(bdc_code, bdc_name)
     elif request.data['mode'] == 'sortie-caisse-eusko':
         try:
             porteur = request.data['porteur']
@@ -695,7 +696,7 @@ def cash_deposit(request):
 
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
-        description = 'Sortie caisse eusko - {} - {}'.format(request.user.profile.user, bdc_name)
+        description = 'Sortie caisse eusko - {} - {}'.format(bdc_code, bdc_name)
 
     else:
         return Response({'error': 'Mode parameter is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -753,7 +754,8 @@ def sortie_retour_eusko(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        bdc_name = dolibarr.get(model='users', login=request.user.profile.user)[0]['lastname']
+        bdc_code = request.data['login_bdc']
+        bdc_name = dolibarr.get(model='users', login=bdc_code)[0]['lastname']
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (IndexError, KeyError):
@@ -791,7 +793,7 @@ def sortie_retour_eusko(request):
             # "Sortie retour d'eusko - Bxxx - Nom du BDC
             # Opération de Z12345 - Nom du prestataire" -> description du payment initial
             'description': 'Sortie retours eusko - {} - {}\n{}'.format(
-                request.user.profile.user, bdc_name, payment['description'])
+                bdc_code, bdc_name, payment['description'])
         }
         cyclos.post(method='payment/perform', data=sortie_retour_eusko_data)
 
