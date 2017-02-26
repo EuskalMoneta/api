@@ -46,10 +46,6 @@ if DEBUG and DEBUG in [True, 'true', 'True', 'yes', 'Yes']:
 else:
     DEBUG = False
 
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 ALLOWED_HOSTS = ['*']
 
@@ -168,6 +164,19 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
+
+# Email
+# https://docs.djangoproject.com/en/1.10/topics/email/
+# Set EMAIL_HOST, EMAIL_PORT, etc. in docker-compose.yml.
+# If EMAIL_HOST is not set or is empty, the console backend is used.
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+if EMAIL_HOST:
+    EMAIL_PORT = os.getenv('EMAIL_PORT', 0)
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+    EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', False)
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Public URLs
 API_PUBLIC_URL = os.environ.get('API_PUBLIC_URL')
