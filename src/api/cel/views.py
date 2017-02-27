@@ -447,7 +447,7 @@ def has_account(request):
         data = cyclos.post(method='user/load', data=[cyclos.user_id], token=request.user.profile.cyclos_token)
 
         # Determine whether or not our user is part of the appropriate group
-        if data['result']['group']['id'] == group_constants_without_account:
+        if data['result']['group']['id'] in group_constants_without_account:
             return Response({'status': False})
         elif data['result']['group']['id'] in group_constants_with_account:
             return Response({'status': True})
