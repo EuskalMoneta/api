@@ -1320,9 +1320,29 @@ ID_TYPE_PAIEMENT_VIREMENT_ENTRE_COMPTES_DEDIES = create_payment_transfer_type(
     to_account_type_id=ID_COMPTE_DEDIE,
 )
 
-# Types de paiement pour l'eusko numérique
-#
-ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE = create_payment_transfer_type(
+# Les 2 types de paiement suivants sont utilisés lorsqu'un adhérent fait
+# un paiement "en ligne" pour créditer son compte numérique.
+# On parle ici de change "en ligne" par opposition à "dans un bureau
+# de change". Il peut s'agir d'un paiement par prélèvement automatique,
+# par virement ou par carte bleue (dans le cas de la VAD c'est-à-dire la
+# vente à distance sur Internet).
+# L'API Eusko doit générer ces 2 paiements de façon cohérente. Cela ne
+# peut pas être géré dans le paramétrage avec des frais car il s'agit de
+# 2 paiements de compte système à compte utilisateur, mais pour des
+# utilisateurs différents (le compte dédié eusko numérique, et
+# l'adhérent dont il faut créditer le compte).
+# Le champ "Numéro de transaction banque" contient la référence du
+# paiement bancaire réel en €.
+ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUROS = create_payment_transfer_type(
+    name='Change numérique en ligne - Versement des €',
+    direction='SYSTEM_TO_USER',
+    from_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
+    to_account_type_id=ID_COMPTE_DEDIE,
+    custom_fields=[
+        ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
+    ],
+)
+ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUSKO = create_payment_transfer_type(
     name='Change numérique en ligne - Versement des eusko',
     direction='SYSTEM_TO_USER',
     from_account_type_id=ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE,
@@ -1331,7 +1351,6 @@ ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
     ],
 )
-# frais : versement des €
 
 # Ce type de paiement sera utilisé lorsqu'un adhérent fera un paiement
 # en € dans un bureau de change pour créditer son compte numérique.
@@ -1505,7 +1524,8 @@ all_system_to_user_payments = [
     ID_TYPE_PAIEMENT_VENTE_EN_EURO,
     ID_TYPE_PAIEMENT_VENTE_EN_EUSKO,
     ID_TYPE_PAIEMENT_REGUL_DEPOT_INSUFFISANT,
-    ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE,
+    ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUROS,
+    ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUSKO,
     ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_BDC,
     ID_TYPE_PAIEMENT_DEPOT_DE_BILLETS,
     ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE,
@@ -2233,10 +2253,12 @@ set_admin_group_permissions(
         ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
     ],
     system_accounts=[
+        ID_COMPTE_DE_DEBIT_EURO,
         ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE,
     ],
     system_to_user_payments=[
-        ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE,
+        ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUROS,
+        ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUSKO,
     ],
     accessible_user_groups=[
         ID_GROUPE_ADHERENTS_PRESTATAIRES,
