@@ -596,3 +596,16 @@ def user_rights(request):
 
     return Response(dolibarr_member)
     return Response(res)
+
+
+@api_view(['GET'])
+def euskokart_pin(request):
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+    response = (cyclos.post(method='password/getData', data=cyclos.user_id))
+    for item in response['result']['passwords']:
+        if item['type']['name'] == 'PIN':
+            res = item['status']
+    return Response(res)
