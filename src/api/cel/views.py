@@ -609,3 +609,35 @@ def euskokart_pin(request):
         if item['type']['name'] == 'PIN':
             res = item['status']
     return Response(res)
+
+
+@api_view(['POST'])
+def euskokart_update_pin(request):
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.UpdatePinSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    query_data = {
+        'user': cyclos.user_id,
+        'type': str(settings.CYCLOS_CONSTANTS['password_types']['pin']),
+        'newPassword': serializer.data['pin1'],
+        'confirmNewPassword': serializer.data['pin2']
+    }
+    try:
+        query_data.update({'oldPassword': serializer.data['ex_pin']})
+        try:
+            cyclos.post(method='password/change', data=query_data)
+            return Response({'status': 'Pin modified!'}, status=status.HTTP_202_ACCEPTED)
+        except:
+            return Response({'error': 'Unable to change your pin!'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    except:
+        try:
+            cyclos.post(method='password/change', data=query_data)
+            return Response({'status': 'Pin added!'}, status=status.HTTP_200_OK)
+        except:
+            return Response({'error': 'Unable to set up your pin!'}, status=status.HTTP_400_BAD_REQUEST)

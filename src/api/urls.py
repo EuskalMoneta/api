@@ -101,6 +101,7 @@ urlpatterns = [
     url(r'^euskokart-block/$', cel_views.euskokart_block),
     url(r'^euskokart-unblock/$', cel_views.euskokart_unblock),
     url(r'^euskokart-pin/$', cel_views.euskokart_pin),
+    url(r'^euskokart-upd-pin/$', cel_views.euskokart_update_pin),
 ]
 
 urlpatterns += router.urls

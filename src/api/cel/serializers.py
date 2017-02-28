@@ -83,3 +83,10 @@ class ReconvertEuskoSerializer(serializers.Serializer):
     debit = serializers.IntegerField()
     amount = serializers.FloatField()
     description = serializers.CharField()
+
+
+class UpdatePinSerializer(serializers.Serializer):
+
+    pin1 = serializers.IntegerField()
+    pin2 = serializers.IntegerField()
+    ex_pin = serializers.CharField(required=False)
