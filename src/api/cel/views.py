@@ -638,20 +638,46 @@ def euskokart_update_pin(request):
         'newPassword': serializer.data['pin1'],
         'confirmNewPassword': serializer.data['pin2']
     }
+
     try:
         query_data.update({'oldPassword': serializer.data['ex_pin']})
-        try:
-            cyclos.post(method='password/change', data=query_data)
-            return Response({'status': 'Pin modified!'}, status=status.HTTP_202_ACCEPTED)
-        except:
-            return Response({'error': 'Unable to change your pin!'}, status=status.HTTP_401_UNAUTHORIZED)
+        mode = 'modifiy'
+    except KeyError:
+        mode = 'add'
 
-    except:
-        try:
-            cyclos.post(method='password/change', data=query_data)
-            return Response({'status': 'Pin added!'}, status=status.HTTP_200_OK)
-        except:
-            return Response({'error': 'Unable to set up your pin!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        cyclos.post(method='password/change', data=query_data)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to set your pin code!'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    if mode == 'modifiy':
+        subject = "Modification de votre code d'eusko carte"
+        body = ("Le code de vos cartes euskos a été modifié le {}. "
+                "Si vous n'êtes pas à l'initiative de cette modification, "
+                "veuillez contacter Euskal Moneta").format(datetime.utcnow())
+    elif mode == 'add':
+        subject = "Ajout du code de votre eusko carte",
+        body = ("Le code de vos cartes euskos a été choisi le {}. "
+                "Si vous n'êtes pas à l'initiative de ce choix, "
+                "veuillez contacter Euskal Moneta").format(datetime.utcnow()),
+
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        response = dolibarr.get(model='members', login=str(request.user))
+        sendmail_euskalmoneta(
+            subject=subject,
+            body=body,
+            to_email=response[0]['email'])
+    except DolibarrAPIException as e:
+        return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
+                        status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': 'Unable to send mail! error : {}'.format(e)},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if mode == 'modifiy':
+        return Response({'status': 'Pin modified!'}, status=status.HTTP_202_ACCEPTED)
+    elif mode == 'add':
+        return Response({'status': 'Pin added!'}, status=status.HTTP_201_CREATED)
 
 
 @api_view(['POST'])
