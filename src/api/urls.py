@@ -95,6 +95,8 @@ urlpatterns = [
     url(r'^one-time-transfer/$', cel_views.one_time_transfer),
     url(r'^reconvert-eusko/$', cel_views.reconvert_eusko),
     url(r'^user-rights/$', cel_views.user_rights),
+    url(r'^accept-cgu/$', cel_views.accept_cgu),
+    url(r'^refuse-cgu/$', cel_views.refuse_cgu),
 
     # euskokart
     url(r'^euskokart/$', cel_views.euskokart_list),
