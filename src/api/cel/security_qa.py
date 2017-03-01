@@ -60,7 +60,7 @@ class SecurityQAViewSet(viewsets.ViewSet):
         if question:
             return Response({'question': model_to_dict(question)})
         else:
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response({'error': 'Unable to read security question!'}, status=status.HTTP_400_BAD_REQUEST)
 
     def create(self, request):
         """
