@@ -86,7 +86,7 @@ def validate_first_connection(request):
     """
     validate_first_connection
     """
-    serializer = serializers.ValidTokenSerializer(data=request.data)
+    serializer = serializers.ValidFirstConnectionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
@@ -106,7 +106,27 @@ def validate_first_connection(request):
         except DolibarrAPIException:
             pass
 
-        # 1) Dans Dolibarr, créer un utilisateur lié à l'adhérent
+        # 1) Créer une réponse à une SecurityQuestion (créer aussi une SecurityAnswer).
+        if serializer.data.get('question_id', False):
+            # We got a question_id
+            q = models.SecurityQuestion.objects.get(id=serializer.data['question_id'])
+
+        elif serializer.data.get('question_text', False):
+            # We didn't got a question_id, but a question_text: we need to create a new SecurityQuestion object
+            q = models.SecurityQuestion.objects.create(question=serializer.data['question_text'])
+
+        else:
+            return Response({'status': ('Error: You need to provide at least one thse two fields: '
+                                        'question_id or question_text')}, status=status.HTTP_400_BAD_REQUEST)
+
+        res = models.SecurityAnswer.objects.create(owner=token_data['login'], question=q)
+        res.set_answer(raw_answer=serializer.data['answer'])
+        res.save()
+
+        if not res:
+            Response({'error': 'Unable to save security answer!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2) Dans Dolibarr, créer un utilisateur lié à l'adhérent
         member = dolibarr.get(model='members', login=token_data['login'], api_key=dolibarr_token)
 
         create_user = 'members/{}/createUser'.format(member[0]['id'])
@@ -115,13 +135,13 @@ def validate_first_connection(request):
         # user_id will be the ID for this new user
         user_id = dolibarr.post(model=create_user, data=create_user_data, api_key=dolibarr_token)
 
-        # 2) Dans Dolibarr, ajouter ce nouvel utilisateur dans le groupe "Adhérents"
+        # 3) Dans Dolibarr, ajouter ce nouvel utilisateur dans le groupe "Adhérents"
         user_group_model = 'users/{}/setGroup/{}'.format(user_id, settings.DOLIBARR_CONSTANTS['groups']['adherents'])
         user_group_res = dolibarr.get(model=user_group_model, api_key=dolibarr_token)
         if not user_group_res == 1:
             raise EuskalMonetaAPIException
 
-        # 3) Dans Cyclos, activer l'utilisateur
+        # 4) Dans Cyclos, activer l'utilisateur
         cyclos = CyclosAPI(mode='login')
         cyclos_token = cyclos.login(
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
@@ -135,7 +155,7 @@ def validate_first_connection(request):
         }
         cyclos.post(method='userStatus/changeStatus', data=active_user_data, token=cyclos_token)
 
-        # 4) Dans Cyclos, initialiser le mot de passe d'un utilisateur
+        # 5) Dans Cyclos, initialiser le mot de passe d'un utilisateur
         password_data = {
             'user': cyclos_user_id,  # ID de l'utilisateur
             'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),

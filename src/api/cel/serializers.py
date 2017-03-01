@@ -36,11 +36,14 @@ class ExportRIESerializer(serializers.Serializer):
     account = serializers.IntegerField()
 
 
-class ValidTokenSerializer(serializers.Serializer):
+class ValidFirstConnectionSerializer(serializers.Serializer):
 
     token = serializers.CharField()
     new_password = serializers.CharField()
     confirm_password = serializers.CharField()
+    question_text = serializers.CharField(required=False)
+    question_id = serializers.IntegerField(required=False)
+    answer = serializers.CharField()
 
 
 class EuskoKartLockSerializer(serializers.Serializer):

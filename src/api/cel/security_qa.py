@@ -19,13 +19,9 @@ class SecurityQAViewSet(viewsets.ViewSet):
         """
         This endpoint allow to retrieve all predefined SecurityQuestions.
 
-        To use it, you *NEED* to be authenticated with an API Token.
+        To use it, you *DON'T NEED* to be authenticated with an API Token,
+        as its used to create a SecurityAnswer (this is used in ValidFirstConnection page).
         """
-        # TokenAuthentication inspired by http://stackoverflow.com/a/36065715
-        user = TokenAuthentication().authenticate(request)
-        if not user:
-            raise AuthenticationFailed()
-
         queryset = models.SecurityQuestion.objects.filter(predefined=True)
         return Response([model_to_dict(item) for item in queryset])
 
