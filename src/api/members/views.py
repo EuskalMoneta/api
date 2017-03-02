@@ -10,7 +10,7 @@ from rest_framework.response import Response
 from base_api import BaseAPIView
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPIException
-from members.serializers import MemberSerializer, MembersSubscriptionsSerializer
+from members.serializers import MemberSerializer, MembersSubscriptionsSerializer, MemberPartialSerializer
 from members.misc import Member, Subscription
 from misc import sendmail_euskalmoneta
 from pagination import CustomPagination
@@ -113,9 +113,13 @@ class MembersAPIView(BaseAPIView):
 
     def partial_update(self, request, pk=None):
         data = request.data
-        serializer = MemberSerializer(data=data)
+        serializer = MemberPartialSerializer(data=data)
         if serializer.is_valid():
-            data = Member.validate_data(data, mode='update')
+            try:
+                data['array_options'] = {'options_asso_saisie_libre': data['options_asso_saisie_libre']}
+                del data['options_asso_saisie_libre']
+            except KeyError:
+                pass
         else:
             log.critical(serializer.errors)
             return Response({'error': 'Oops! Something is wrong in your request data: {}'.format(serializer.errors)},
