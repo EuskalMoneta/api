@@ -14,6 +14,7 @@ import cel.views as cel_views
 import dolibarr_data.views as dolibarr_data_views
 import euskalmoneta_data.views as euskalmoneta_data_views
 import gestioninterne.views as gi_views
+import gestioninterne.credits_comptes_prelevements_auto as credits_views
 
 
 router = routers.SimpleRouter()
@@ -80,6 +81,9 @@ urlpatterns = [
     url(r'^validate-depots-retraits/$', gi_views.validate_depots_retraits),
     url(r'^payments-available-reconversions/$', gi_views.payments_available_for_reconversions),
     url(r'^validate-reconversions/$', gi_views.validate_reconversions),
+
+    # Crédit des comptes Eusko par prélèvement automatique
+    url(r'^credits-comptes-prelevement-auto/import-csv/(?P<filename>[^/]+)$', credits_views.import_csv),
 
     # Endpoints for Compte en Ligne
     url(r'^first-connection/$', cel_views.first_connection),
