@@ -148,6 +148,20 @@ def perform(request):
     return Response(serializer.data['selected_payments'])
 
 
+@api_view(['POST'])
+def delete(request):
+    """
+    Delete one or more Echeance object(s).
+    """
+    serializer = serializers.GenericHistoryValidationSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    for payment in serializer.data['selected_payments']:
+        models.Echeance.objects.get(ref=payment['ref']).delete()
+
+    return Response(serializer.data['selected_payments'])
+
+
 @api_view(['GET'])
 def list(request, mode):
     """
