@@ -86,7 +86,7 @@ def validate_first_connection(request):
     """
     validate_first_connection
     """
-    serializer = serializers.ValidTokenSerializer(data=request.data)
+    serializer = serializers.ValidFirstConnectionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
@@ -106,7 +106,27 @@ def validate_first_connection(request):
         except DolibarrAPIException:
             pass
 
-        # 1) Dans Dolibarr, créer un utilisateur lié à l'adhérent
+        # 1) Créer une réponse à une SecurityQuestion (créer aussi une SecurityAnswer).
+        if serializer.data.get('question_id', False):
+            # We got a question_id
+            q = models.SecurityQuestion.objects.get(id=serializer.data['question_id'])
+
+        elif serializer.data.get('question_text', False):
+            # We didn't got a question_id, but a question_text: we need to create a new SecurityQuestion object
+            q = models.SecurityQuestion.objects.create(question=serializer.data['question_text'])
+
+        else:
+            return Response({'status': ('Error: You need to provide at least one thse two fields: '
+                                        'question_id or question_text')}, status=status.HTTP_400_BAD_REQUEST)
+
+        res = models.SecurityAnswer.objects.create(owner=token_data['login'], question=q)
+        res.set_answer(raw_answer=serializer.data['answer'])
+        res.save()
+
+        if not res:
+            Response({'error': 'Unable to save security answer!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # 2) Dans Dolibarr, créer un utilisateur lié à l'adhérent
         member = dolibarr.get(model='members', login=token_data['login'], api_key=dolibarr_token)
 
         create_user = 'members/{}/createUser'.format(member[0]['id'])
@@ -115,13 +135,13 @@ def validate_first_connection(request):
         # user_id will be the ID for this new user
         user_id = dolibarr.post(model=create_user, data=create_user_data, api_key=dolibarr_token)
 
-        # 2) Dans Dolibarr, ajouter ce nouvel utilisateur dans le groupe "Adhérents"
+        # 3) Dans Dolibarr, ajouter ce nouvel utilisateur dans le groupe "Adhérents"
         user_group_model = 'users/{}/setGroup/{}'.format(user_id, settings.DOLIBARR_CONSTANTS['groups']['adherents'])
         user_group_res = dolibarr.get(model=user_group_model, api_key=dolibarr_token)
         if not user_group_res == 1:
             raise EuskalMonetaAPIException
 
-        # 3) Dans Cyclos, activer l'utilisateur
+        # 4) Dans Cyclos, activer l'utilisateur
         cyclos = CyclosAPI(mode='login')
         cyclos_token = cyclos.login(
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
@@ -135,7 +155,7 @@ def validate_first_connection(request):
         }
         cyclos.post(method='userStatus/changeStatus', data=active_user_data, token=cyclos_token)
 
-        # 4) Dans Cyclos, initialiser le mot de passe d'un utilisateur
+        # 5) Dans Cyclos, initialiser le mot de passe d'un utilisateur
         password_data = {
             'user': cyclos_user_id,  # ID de l'utilisateur
             'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
@@ -561,8 +581,10 @@ def reconvert_eusko(request):
 
 @api_view(['GET'])
 def user_rights(request):
+
+    # Get useful data from Cyclos for this user
     try:
-        res = {}
+        res = {'username': str(request.user)}
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
 
         # Determine whether or not our user is an "utilisateur" or a "prestataire"
@@ -572,27 +594,141 @@ def user_rights(request):
                                         str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
 
         # Fetching info for our current user (we look for his groups)
-        data = cyclos.post(method='user/load', data=[cyclos.user_id], token=request.user.profile.cyclos_token)
+        user_data = cyclos.post(method='user/load', data=[cyclos.user_id], token=request.user.profile.cyclos_token)
 
         # Determine whether or not our user is part of the appropriate group
-        if data['result']['group']['id'] == group_constants_without_account:
+        if user_data['result']['group']['id'] in group_constants_without_account:
             res.update({'has_account_eusko_numerique': False})
-        elif data['result']['group']['id'] in group_constants_with_account:
+        elif user_data['result']['group']['id'] in group_constants_with_account:
             res.update({'has_account_eusko_numerique': True})
         else:
             raise PermissionDenied()
-    except KeyError:
+
+        # Member Display name
+        res.update({'display_name': user_data['result']['name']})
+    except (CyclosAPIException, KeyError):
         raise PermissionDenied()
 
-    # CGU via Dolibarr
+    # Get useful data from Dolibarr for this user
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        dolibarr_member = dolibarr.get(model='members', login=str(request.user))[0]
-    except DolibarrAPIException:
-        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
-    except IndexError:
-        return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
-                        status=status.HTTP_400_BAD_REQUEST)
+        member_data = dolibarr.get(model='members', login=str(request.user))[0]
 
-    return Response(dolibarr_member)
+        # return Response(member_data)
+        now = arrow.now('Europe/Paris')
+        end_date_arrow = arrow.get(member_data['datefin']).to('Europe/Paris')
+
+        res.update({
+            'member_type': member_data['type'],
+            'has_valid_membership': True if end_date_arrow > now else False,
+            'has_accepted_cgu':
+            True if member_data['array_options']['options_accepte_cgu_eusko_numerique'] else False})
+    except (DolibarrAPIException, KeyError):
+        raise PermissionDenied()
+
     return Response(res)
+
+
+@api_view(['GET'])
+def euskokart_pin(request):
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+    response = (cyclos.post(method='password/getData', data=cyclos.user_id))
+    for item in response['result']['passwords']:
+        if item['type']['name'] == 'PIN':
+            res = item['status']
+    return Response(res)
+
+
+@api_view(['POST'])
+def euskokart_update_pin(request):
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.UpdatePinSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    query_data = {
+        'user': cyclos.user_id,
+        'type': str(settings.CYCLOS_CONSTANTS['password_types']['pin']),
+        'newPassword': serializer.data['pin1'],
+        'confirmNewPassword': serializer.data['pin2']
+    }
+
+    try:
+        query_data.update({'oldPassword': serializer.data['ex_pin']})
+        mode = 'modifiy'
+    except KeyError:
+        mode = 'add'
+
+    try:
+        cyclos.post(method='password/change', data=query_data)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to set your pin code!'}, status=status.HTTP_401_UNAUTHORIZED)
+
+    if mode == 'modifiy':
+        subject = "Modification de votre code d'eusko carte"
+        body = ("Le code de vos cartes euskos a été modifié le {}. "
+                "Si vous n'êtes pas à l'initiative de cette modification, "
+                "veuillez contacter Euskal Moneta").format(datetime.utcnow())
+    elif mode == 'add':
+        subject = "Ajout du code de votre eusko carte",
+        body = ("Le code de vos cartes euskos a été choisi le {}. "
+                "Si vous n'êtes pas à l'initiative de ce choix, "
+                "veuillez contacter Euskal Moneta").format(datetime.utcnow()),
+
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        response = dolibarr.get(model='members', login=str(request.user))
+        sendmail_euskalmoneta(
+            subject=subject,
+            body=body,
+            to_email=response[0]['email'])
+    except DolibarrAPIException as e:
+        return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
+                        status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return Response({'error': 'Unable to send mail! error : {}'.format(e)},
+                        status=status.HTTP_400_BAD_REQUEST)
+    if mode == 'modifiy':
+        return Response({'status': 'Pin modified!'}, status=status.HTTP_202_ACCEPTED)
+    elif mode == 'add':
+        return Response({'status': 'Pin added!'}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+def accept_cgu(request):
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        member_data = dolibarr.get(model='members', login=str(request.user))[0]
+
+        data = {'array_options': {'options_accepte_cgu_eusko_numerique': True}}
+
+        response = dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
+        return Response(response)
+        return Response({'status': 'OK'})
+    except (DolibarrAPIException, KeyError, IndexError):
+        return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def refuse_cgu(request):
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        member_data = dolibarr.get(model='members', login=str(request.user))[0]
+
+        data = {'array_options': {'options_accepte_cgu_eusko_numerique': False}}
+
+        response = dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
+        return Response(response)
+        return Response({'status': 'OK'})
+
+        # sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
+        #                       to_email=request.data['email'])
+        return Response({'status': 'OK'})
+    except (DolibarrAPIException, KeyError, IndexError):
+        return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)
