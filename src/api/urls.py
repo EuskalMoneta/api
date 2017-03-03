@@ -84,6 +84,8 @@ urlpatterns = [
 
     # Crédit des comptes Eusko par prélèvement automatique
     url(r'^credits-comptes-prelevement-auto/import-csv/(?P<filename>[^/]+)$', credits_views.import_csv),
+    url(r'^credits-comptes-prelevement-auto/credit/$', credits_views.credit),
+    url(r'^credits-comptes-prelevement-auto/errors/$', credits_views.errors),
 
     # Endpoints for Compte en Ligne
     url(r'^first-connection/$', cel_views.first_connection),
