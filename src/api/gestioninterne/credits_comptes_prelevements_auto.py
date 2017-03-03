@@ -5,6 +5,7 @@ import logging
 
 from django.conf import settings
 from django.db import IntegrityError
+from django.db.models import Q
 from django.forms.models import model_to_dict
 from django.utils.text import slugify
 from rest_framework import status
@@ -91,9 +92,9 @@ def import_csv(request, filename):
 
 
 @api_view(['POST'])
-def credit(request):
+def perform(request):
     """
-    credit
+    perform
     """
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
@@ -104,7 +105,8 @@ def credit(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     for payment in serializer.data['selected_payments']:
-        # try:
+        try:
+            adherent_cyclos_id = cyclos.get_member_id_from_login(member_login=payment['adherent_id'])
             change_numerique_euro = {
                 'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_euro']),  # noqa
                 'amount': payment['montant'],
@@ -124,7 +126,7 @@ def credit(request):
                 'amount': payment['montant'],
                 'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
                 'from': 'SYSTEM',
-                'to': cyclos.user_id,
+                'to': adherent_cyclos_id,
                 'customValues': [{
                     'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
                     'stringValue': payment['ref']  # référence de l'échéance
@@ -132,32 +134,36 @@ def credit(request):
                 'description': 'Change par prélèvement automatique'
             }
             change_prelevement_auto_id = cyclos.post(method='payment/perform', data=change_prelevement_auto)
-            return Response(change_prelevement_auto_id)
 
-            echeance = models.Echeance.objects.get(ref=change_prelevement_auto_id)
-            echeance.cyclos_payment_id = change_prelevement_auto_id
+            echeance = models.Echeance.objects.get(ref=payment['ref'])
+            echeance.cyclos_payment_id = change_prelevement_auto_id['result']['id']
             echeance.cyclos_error = ''
             echeance.save()
 
-        # except Exception as e:
-        #     echeance = models.Echeance.objects.get(ref=payment['ref'])
-        #     echeance.cyclos_error = str(e)
-        #     echeance.save()
+        except Exception as e:
+            echeance = models.Echeance.objects.get(ref=payment['ref'])
+            echeance.cyclos_error = str(e)
+            echeance.save()
 
     return Response(serializer.data['selected_payments'])
 
 
 @api_view(['GET'])
-def errors(request):
+def list(request, mode):
     """
-    List errors stored in our Echeance table.
+    List pending Echeances objects and Echeances objects in 'error' state.
     We know that a entry in our table is an error WHERE cyclos_error IS NOT NULL AND cyclos_error != "".
 
-    See how I found this way to filter / exclude via Django ORM: http://stackoverflow.com/a/844572
+    See how I found this way to chain excludes via Django ORM: http://stackoverflow.com/a/844572
     """
-    # return Response([model_to_dict(obj)
-    #                  for obj in
-    #                  models.Echeance.objects.all()])
-    return Response([model_to_dict(obj)
-                     for obj in
-                     models.Echeance.objects.exclude(cyclos_error__isnull=True).exclude(cyclos_error__exact='')])
+    if mode == 'errors':
+        return Response([model_to_dict(obj)
+                         for obj in
+                         models.Echeance.objects.exclude(cyclos_error__isnull=True).exclude(cyclos_error__exact='')])
+    else:
+        return Response([model_to_dict(obj)
+                         for obj in
+                         models.Echeance.objects.filter(
+                         Q(cyclos_error__isnull=True) | Q(cyclos_error__exact=''),
+                         Q(cyclos_payment_id__isnull=True) | Q(cyclos_payment_id__exact=''))
+                         ])
