@@ -46,7 +46,7 @@ def import_csv(request, filename):
     # I don't like 'Sentences with Spaces And Random Caps' as key in my dicts, I slugify every key here
     reader.fieldnames = [slugify(name) for name in reader.fieldnames]
 
-    # I need to filter out csv lines with 'statut-echeance' field, and I prefer to strip every value in my data
+    # I need to filter out csv lines by 'statut-echeance' field, and I prefer to strip every value in my data
     csv_data = [{k: row[k].strip()
                  for k in row}
                 for row in reader
@@ -107,9 +107,26 @@ def perform(request):
     for payment in serializer.data['selected_payments']:
         try:
             adherent_cyclos_id = cyclos.get_member_id_from_login(member_login=payment['adherent_id'])
+
+            # Determine whether or not our user is part of the appropriate group
+            group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                            str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
+
+            # Fetching info for our current user (we look for his groups)
+            user_data = cyclos.post(method='user/load', data=[adherent_cyclos_id])
+
+            if not user_data['result']['group']['id'] in group_constants_with_account:
+                error = "{} n'a pas de compte Eusko numérique...".format(payment['adherent_id'])
+                log.critical(error)
+                echeance = models.Echeance.objects.get(ref=payment['ref'])
+                echeance.cyclos_error = error
+                echeance.save()
+                continue
+
+            # Payment in Euro
             change_numerique_euro = {
                 'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_euro']),  # noqa
-                'amount': payment['montant'],
+                'amount': float(payment['montant']),
                 'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
                 'from': 'SYSTEM',
                 'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
@@ -121,9 +138,10 @@ def perform(request):
             }
             cyclos.post(method='payment/perform', data=change_numerique_euro)
 
+            # Payment in Eusko
             change_prelevement_auto = {
                 'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),  # noqa
-                'amount': payment['montant'],
+                'amount': float(payment['montant']),
                 'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
                 'from': 'SYSTEM',
                 'to': adherent_cyclos_id,
@@ -139,7 +157,6 @@ def perform(request):
             echeance.cyclos_payment_id = change_prelevement_auto_id['result']['id']
             echeance.cyclos_error = ''
             echeance.save()
-
         except Exception as e:
             echeance = models.Echeance.objects.get(ref=payment['ref'])
             echeance.cyclos_error = str(e)
