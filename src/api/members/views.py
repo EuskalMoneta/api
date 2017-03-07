@@ -116,6 +116,16 @@ class MembersAPIView(BaseAPIView):
         if serializer.is_valid():
             response = self.dolibarr.get(model='members/{}'.format(pk), api_key=request.user.profile.dolibarr_token)
             data = Member.validate_options(request.data, response['array_options'])
+
+            try:
+                # Envoi mail lorsque l'option "Je souhaite être informé..." à été modifiée
+                if (response['array_options']['options_recevoir_actus'] !=
+                   data['array_options']['options_recevoir_actus']):
+                    Member.send_mail_newsletter(login=str(request.user),
+                                                profile=request.user.profile,
+                                                new_status=data['array_options']['options_recevoir_actus'])
+            except KeyError:
+                pass
         else:
             log.critical(serializer.errors)
             return Response({'error': 'Oops! Something is wrong in your request data: {}'.format(serializer.errors)},

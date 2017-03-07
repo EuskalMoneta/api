@@ -1,9 +1,12 @@
+import copy
 import datetime
 import logging
 import time
 
 import arrow
 from django.conf import settings
+
+from misc import sendmail_euskalmoneta
 
 log = logging.getLogger()
 
@@ -52,6 +55,30 @@ class Member:
         return res
 
     @staticmethod
+    def send_mail_newsletter(login, profile, new_status):
+        """
+        Envoi mail à Euskal Moneta lorsque l'option "Je souhaite être informé..." à été modifiée.
+        """
+        try:
+            if profile.companyname:
+                name = profile.companyname
+            else:
+                name = '{} {}'.format(profile.firstname, profile.lastname)
+
+            if new_status == '1':
+                text = 'souhaite'
+            else:
+                text = 'ne souhaite plus'
+
+            body = '%s (%s) %s recevoir les actualités par mail.'.format(name, login, text)
+            # TODO: Mettre l'adresse en settings Django API
+            sendmail_euskalmoneta(subject="Changement d'option pour l'abonnement aux actualités",
+                                  body=body, to_email='contact@euskalmoneta.org')
+            return True
+        except KeyError:
+            return False
+
+    @staticmethod
     def validate_options(data, source=None):
         """
         We don't want to create sub-objects on the front-side, thus our API have to deal with them.
@@ -59,7 +86,7 @@ class Member:
         try:
             data['array_options']
         except KeyError:
-            data['array_options'] = source if source else {}
+            data['array_options'] = copy.deepcopy(source) if source else {}
 
         try:
             # Subscribe newsletter field

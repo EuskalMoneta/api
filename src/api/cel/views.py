@@ -621,6 +621,8 @@ def user_rights(request):
         res.update({
             'member_type': member_data['type'],
             'has_valid_membership': True if end_date_arrow > now else False,
+            'lang':
+            member_data['array_options']['options_langue'] if member_data['array_options']['options_langue'] else 'fr',
             'has_accepted_cgu':
             True if member_data['array_options']['options_accepte_cgu_eusko_numerique'] else False})
     except (DolibarrAPIException, KeyError):
