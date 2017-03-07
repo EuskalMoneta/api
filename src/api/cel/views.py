@@ -706,10 +706,10 @@ def accept_cgu(request):
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         member_data = dolibarr.get(model='members', login=str(request.user))[0]
 
-        data = {'array_options': {'options_accepte_cgu_eusko_numerique': True}}
+        data = {'array_options': member_data['array_options']}
+        data['array_options'].update({'options_accepte_cgu_eusko_numerique': True})
 
-        response = dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
-        return Response(response)
+        dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
         return Response({'status': 'OK'})
     except (DolibarrAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -721,11 +721,10 @@ def refuse_cgu(request):
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         member_data = dolibarr.get(model='members', login=str(request.user))[0]
 
-        data = {'array_options': {'options_accepte_cgu_eusko_numerique': False}}
+        data = {'array_options': member_data['array_options']}
+        data['array_options'].update({'options_accepte_cgu_eusko_numerique': False})
 
-        response = dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
-        return Response(response)
-        return Response({'status': 'OK'})
+        dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
 
         # sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
         #                       to_email=request.data['email'])
