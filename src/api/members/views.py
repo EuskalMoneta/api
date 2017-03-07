@@ -114,7 +114,8 @@ class MembersAPIView(BaseAPIView):
     def partial_update(self, request, pk=None):
         serializer = MemberPartialSerializer(data=request.data)
         if serializer.is_valid():
-            data = Member.validate_options(request.data)
+            response = self.dolibarr.get(model='members/{}'.format(pk), api_key=request.user.profile.dolibarr_token)
+            data = Member.validate_options(request.data, response['array_options'])
         else:
             log.critical(serializer.errors)
             return Response({'error': 'Oops! Something is wrong in your request data: {}'.format(serializer.errors)},

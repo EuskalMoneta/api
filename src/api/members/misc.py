@@ -52,14 +52,14 @@ class Member:
         return res
 
     @staticmethod
-    def validate_options(data):
+    def validate_options(data, source=None):
         """
         We don't want to create sub-objects on the front-side, thus our API have to deal with them.
         """
         try:
             data['array_options']
         except KeyError:
-            data['array_options'] = {}
+            data['array_options'] = source if source else {}
 
         try:
             # Subscribe newsletter field
