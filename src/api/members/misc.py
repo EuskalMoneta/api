@@ -56,17 +56,31 @@ class Member:
         """
         We don't want to create sub-objects on the front-side, thus our API have to deal with them.
         """
-        data['array_options'] = {}
-
-        # Subscribe newsletter field
-        data['array_options'].update({'options_recevoir_actus': data['options_recevoir_actus']})
-        del data['options_recevoir_actus']
-
-        # If we are in "saisie libre"-mode: we use the options_asso_saisie_libre field,
-        # if not we use the fk_asso field
         try:
+            data['array_options']
+        except KeyError:
+            data['array_options'] = {}
+
+        try:
+            # Subscribe newsletter field
+            data['array_options'].update({'options_recevoir_actus': data['options_recevoir_actus']})
+            del data['options_recevoir_actus']
+        except KeyError:
+            pass
+
+        try:
+            # If we are in "saisie libre"-mode: we use the options_asso_saisie_libre field,
+            # if not we use the fk_asso field
             data['array_options'].update({'options_asso_saisie_libre': data['options_asso_saisie_libre']})
             del data['options_asso_saisie_libre']
+        except KeyError:
+            pass
+
+        try:
+            # If we are in "saisie libre"-mode: we use the options_asso_saisie_libre field,
+            # if not we use the fk_asso field
+            data['array_options'].update({'options_langue': data['options_langue']})
+            del data['options_langue']
         except KeyError:
             pass
 

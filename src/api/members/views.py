@@ -112,14 +112,9 @@ class MembersAPIView(BaseAPIView):
         pass
 
     def partial_update(self, request, pk=None):
-        data = request.data
-        serializer = MemberPartialSerializer(data=data)
+        serializer = MemberPartialSerializer(data=request.data)
         if serializer.is_valid():
-            try:
-                data['array_options'] = {'options_asso_saisie_libre': data['options_asso_saisie_libre']}
-                del data['options_asso_saisie_libre']
-            except KeyError:
-                pass
+            data = Member.validate_options(request.data)
         else:
             log.critical(serializer.errors)
             return Response({'error': 'Oops! Something is wrong in your request data: {}'.format(serializer.errors)},
