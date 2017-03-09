@@ -59,24 +59,44 @@ class Member:
         """
         Envoi mail à Euskal Moneta lorsque l'option "Je souhaite être informé..." à été modifiée.
         """
-        try:
-            if profile.companyname:
-                name = profile.companyname
-            else:
-                name = '{} {}'.format(profile.firstname, profile.lastname)
+        if profile.companyname:
+            name = profile.companyname
+        else:
+            name = '{} {}'.format(profile.firstname, profile.lastname)
 
-            if new_status == '1':
-                text = 'souhaite'
-            else:
-                text = 'ne souhaite plus'
+        if new_status == '1':
+            text = 'souhaite'
+        else:
+            text = 'ne souhaite plus'
 
-            body = '%s (%s) %s recevoir les actualités par mail.'.format(name, login, text)
-            # TODO: Mettre l'adresse en settings Django API
-            sendmail_euskalmoneta(subject="Changement d'option pour l'abonnement aux actualités",
-                                  body=body, to_email='contact@euskalmoneta.org')
-            return True
-        except KeyError:
-            return False
+        body = '{} ({}) {} recevoir les actualités par mail.'.format(name, login, text)
+
+        sendmail_euskalmoneta(subject="Changement d'option pour l'abonnement aux actualités", body=body,
+                              to_email='gestion@euskalmoneta.org')
+
+    @staticmethod
+    def send_mail_change_auto(login, profile, mode, new_amount, comment):
+        """
+        Envoi mail à Euskal Moneta lorsque le montant du change automatique à été modifié.
+        """
+        if profile.companyname:
+            name = profile.companyname
+        else:
+            name = '{} {}'.format(profile.firstname, profile.lastname)
+
+        if mode == 'delete':
+            subject = 'Arrêt du change mensuel automatique'
+            body = ('{} ({}) a modifié le montant de son change automatique mensuel.'
+                    '\r\nNouveau montant: {}').format(name, login, new_amount)
+        else:
+            subject = 'Modification du montant du change mensuel automatique'
+            body = '{} ({}) souhaite arrêter son change automatique mensuel.'.format(name, login)
+
+        if comment:
+            body = '{}\r\nCommentaire: {}'.format(body, comment)
+
+        sendmail_euskalmoneta(subject=subject, body=body,
+                              to_email='gestion@euskalmoneta.org')
 
     @staticmethod
     def validate_options(data, source=None):
@@ -108,6 +128,22 @@ class Member:
             # if not we use the fk_asso field
             data['array_options'].update({'options_langue': data['options_langue']})
             del data['options_langue']
+        except KeyError:
+            pass
+
+        try:
+            # Change automatique amount field
+            data['array_options'].update(
+                {'options_prelevement_change_montant': data['options_prelevement_change_montant']})
+            del data['options_prelevement_change_montant']
+        except KeyError:
+            pass
+
+        try:
+            # Change automatique periodicite field
+            data['array_options'].update(
+                {'options_prelevement_change_periodicite': data['options_prelevement_change_periodicite']})
+            del data['options_prelevement_change_periodicite']
         except KeyError:
             pass
 

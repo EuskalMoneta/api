@@ -121,9 +121,18 @@ class MembersAPIView(BaseAPIView):
                 # Envoi mail lorsque l'option "Je souhaite être informé..." à été modifiée
                 if (response['array_options']['options_recevoir_actus'] !=
                    data['array_options']['options_recevoir_actus']):
-                    Member.send_mail_newsletter(login=str(request.user),
-                                                profile=request.user.profile,
-                                                new_status=data['array_options']['options_recevoir_actus'])
+                    Member.send_mail_newsletter(
+                        login=str(request.user), profile=request.user.profile,
+                        new_status=data['array_options']['options_recevoir_actus'])
+
+                # Envoi mail lorsque l'option "Je souhaite être informé..." à été modifiée
+                if (response['array_options']['options_prelevement_change_montant'] !=
+                   data['array_options']['options_prelevement_change_montant']):
+                    Member.send_mail_change_auto(
+                        login=str(request.user), profile=request.user.profile,
+                        mode=data['mode'], new_amount=data['array_options']['options_prelevement_change_montant'],
+                        comment=data['prelevement_change_comment'])
+
             except KeyError:
                 pass
         else:
