@@ -132,6 +132,27 @@ class Member:
             pass
 
         try:
+            data['array_options'].update({
+                'options_prelevement_cotisation_montant': data['options_prelevement_cotisation_montant']})
+            del data['options_prelevement_cotisation_montant']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({
+                'options_prelevement_cotisation_periodicite': data['options_prelevement_cotisation_periodicite']})
+            del data['options_prelevement_cotisation_periodicite']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({
+                'options_prelevement_auto_cotisation_eusko': data['options_prelevement_auto_cotisation_eusko']})
+            del data['options_prelevement_auto_cotisation_eusko']
+        except KeyError:
+            pass
+
+        try:
             # Change automatique amount field
             data['array_options'].update(
                 {'options_prelevement_change_montant': data['options_prelevement_change_montant']})
