@@ -182,6 +182,7 @@ STATIC_URL = '/static/'
 # Set EMAIL_HOST, EMAIL_PORT, etc. in docker-compose.yml.
 # If EMAIL_HOST is not set or is empty, the console backend is used.
 EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_NOTIFICATION_GESTION = os.getenv('EMAIL_NOTIFICATION_GESTION', '')
 if EMAIL_HOST:
     EMAIL_PORT = os.getenv('EMAIL_PORT', 0)
     EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')

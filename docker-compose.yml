@@ -16,6 +16,7 @@ services:
       - BDC_PUBLIC_URL=http://localhost:8001
       - GI_PUBLIC_URL=http://localhost:8002
       - CEL_PUBLIC_URL=http://localhost:8003
+      - EMAIL_NOTIFICATION_GESTION=gestion@euskalmoneta.org
       - RAVEN_CONFIG_DSN=http://46498c24303d4b27828e5e47ce927818:6177efcf6d1d47508f1c22332c8dddaf@sentry:9000/2
     depends_on:
       - dolibarr-app
