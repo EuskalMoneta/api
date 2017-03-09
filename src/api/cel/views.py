@@ -728,8 +728,8 @@ def refuse_cgu(request):
 
         dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
 
-        # sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
-        #                       to_email=request.data['email'])
+        sendmail_euskalmoneta(subject="subject", body="body blabla, refus cgu",
+                              to_email=member_data['email'])
         return Response({'status': 'OK'})
     except (DolibarrAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)
