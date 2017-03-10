@@ -5,6 +5,8 @@ from uuid import uuid4
 
 import arrow
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.translation import activate, gettext as _
 from drf_pdf.renderer import PDFRenderer
 import jwt
 from rest_framework import status
@@ -66,8 +68,14 @@ def first_connection(request):
                 confirm_url = '{}/valide-premiere-connexion?token={}'.format(settings.CEL_PUBLIC_URL,
                                                                              jwt_token.decode("utf-8"))
 
-                sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
-                                      to_email=request.data['email'])
+                # Activate user pre-selected language
+                activate(user_data['array_options']['options_langue'])
+
+                # Translate subject & body for this email
+                subject = _('Première connexion à votre compte en ligne Eusko')
+                body = render_to_string('mails/first_connection.txt', {'token': confirm_url, 'user': user_data})
+
+                sendmail_euskalmoneta(subject=subject, body=body, to_email=request.data['email'])
                 return Response({'member': 'OK'})
             else:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -206,8 +214,14 @@ def lost_password(request):
                 confirm_url = '{}/valide-passe-perdu?token={}'.format(settings.CEL_PUBLIC_URL,
                                                                       jwt_token.decode("utf-8"))
 
-                sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
-                                      to_email=request.data['email'])
+                # Activate user pre-selected language
+                activate(user_data['array_options']['options_langue'])
+
+                # Translate subject & body for this email
+                subject = _('Changement de mot de passe pour votre compte en ligne Eusko')
+                body = render_to_string('mails/lost_password.txt', {'token': confirm_url, 'user': user_data})
+
+                sendmail_euskalmoneta(subject=subject, body=body, to_email=request.data['email'])
                 return Response({'member': 'OK'})
             else:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -637,7 +651,7 @@ def euskokart_pin(request):
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-    response = (cyclos.post(method='password/getData', data=cyclos.user_id))
+    response = cyclos.post(method='password/getData', data=cyclos.user_id)
     for item in response['result']['passwords']:
         if item['type']['name'] == 'PIN':
             res = item['status']
@@ -672,34 +686,31 @@ def euskokart_update_pin(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to set your pin code!'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    if mode == 'modifiy':
-        subject = "Modification de votre code d'eusko carte"
-        body = ("Le code de vos cartes euskos a été modifié le {}. "
-                "Si vous n'êtes pas à l'initiative de cette modification, "
-                "veuillez contacter Euskal Moneta").format(datetime.utcnow())
-    elif mode == 'add':
-        subject = "Ajout du code de votre eusko carte",
-        body = ("Le code de vos cartes euskos a été choisi le {}. "
-                "Si vous n'êtes pas à l'initiative de ce choix, "
-                "veuillez contacter Euskal Moneta").format(datetime.utcnow()),
-
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         response = dolibarr.get(model='members', login=str(request.user))
-        sendmail_euskalmoneta(
-            subject=subject,
-            body=body,
-            to_email=response[0]['email'])
+
+        # Activate user pre-selected language
+        activate(response[0]['array_options']['options_langue'])
+
+        if mode == 'modifiy':
+            subject = _('Modification du code secret de votre euskokart')
+            response_data = {'status': 'Pin modified!'}
+        elif mode == 'add':
+            subject = _('Choix du code secret de votre euskokart')
+            response_data = {'status': 'Pin added!'}
+
+        body = render_to_string('mails/euskokart_update_pin.txt', {'mode': mode, 'user': response[0]})
+
+        sendmail_euskalmoneta(subject=subject, body=body, to_email=response[0]['email'])
     except DolibarrAPIException as e:
         return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
                         status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({'error': 'Unable to send mail! error : {}'.format(e)},
                         status=status.HTTP_400_BAD_REQUEST)
-    if mode == 'modifiy':
-        return Response({'status': 'Pin modified!'}, status=status.HTTP_202_ACCEPTED)
-    elif mode == 'add':
-        return Response({'status': 'Pin added!'}, status=status.HTTP_201_CREATED)
+
+    return Response(response_data, status=status.HTTP_202_ACCEPTED)
 
 
 @api_view(['POST'])
@@ -728,8 +739,15 @@ def refuse_cgu(request):
 
         dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
 
-        sendmail_euskalmoneta(subject="subject", body="body blabla, refus cgu",
-                              to_email=member_data['email'])
+        # Activate user pre-selected language
+        activate(member_data['array_options']['options_langue'])
+
+        # Translate subject & body for this email
+        subject = _('Refus des CGU')
+        body = render_to_string('mails/refuse_cgu.txt', {'user': member_data})
+
+        sendmail_euskalmoneta(subject=subject, body=body)
+
         return Response({'status': 'OK'})
     except (DolibarrAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)

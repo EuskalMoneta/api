@@ -10,7 +10,9 @@ class EuskalMonetaAPIException(Exception):
     pass
 
 
-def sendmail_euskalmoneta(subject, body, to_email, from_email=None):
+def sendmail_euskalmoneta(subject, body, to_email=None, from_email=None):
+    if to_email is None:
+        to_email = settings.EMAIL_NOTIFICATION_GESTION
     if from_email is None:
         from_email = settings.EMAIL_HOST_USER
 

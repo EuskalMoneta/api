@@ -4,6 +4,8 @@ import arrow
 from django import forms
 from django.conf import settings
 from django.core.validators import validate_email
+from django.template.loader import render_to_string
+from django.utils.translation import activate, gettext as _
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -52,7 +54,15 @@ class MembersAPIView(BaseAPIView):
         self.cyclos.post(method='user/register', data=create_user_data)
 
         try:
-            sendmail_euskalmoneta(subject="subject", body="body", to_email=data['email'])
+            # Activate user pre-selected language
+            # TODO: Ask member for his prefered lang
+            # activate(data['options_langue'])
+
+            # Translate subject & body for this email
+            subject = _('Votre adhésion à Euskal Moneta')
+            body = render_to_string('mails/create_member.txt', {'user': data})
+
+            sendmail_euskalmoneta(subject=subject, body=body, to_email=data['email'])
         except KeyError:
             log.critical("Oops! No mail sent to the member, we didn't had a email address !")
         return Response(response_obj, status=status.HTTP_201_CREATED)
@@ -123,7 +133,8 @@ class MembersAPIView(BaseAPIView):
                    data['array_options']['options_recevoir_actus']):
                     Member.send_mail_newsletter(
                         login=str(request.user), profile=request.user.profile,
-                        new_status=data['array_options']['options_recevoir_actus'])
+                        new_status=data['array_options']['options_recevoir_actus'],
+                        lang=response['array_options']['options_langue'])
 
                 # Envoi mail lorsque l'option "Je souhaite être informé..." à été modifiée
                 if (response['array_options']['options_prelevement_change_montant'] !=
@@ -131,7 +142,7 @@ class MembersAPIView(BaseAPIView):
                     Member.send_mail_change_auto(
                         login=str(request.user), profile=request.user.profile,
                         mode=data['mode'], new_amount=data['array_options']['options_prelevement_change_montant'],
-                        comment=data['prelevement_change_comment'])
+                        comment=data['prelevement_change_comment'], lang=response['array_options']['options_langue'])
 
             except KeyError:
                 pass
