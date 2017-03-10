@@ -5,6 +5,8 @@ import time
 
 import arrow
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.translation import activate, gettext as _
 
 from misc import sendmail_euskalmoneta
 
@@ -55,48 +57,38 @@ class Member:
         return res
 
     @staticmethod
-    def send_mail_newsletter(login, profile, new_status):
+    def send_mail_newsletter(login, profile, new_status, lang):
         """
         Envoi mail à Euskal Moneta lorsque l'option "Je souhaite être informé..." à été modifiée.
         """
-        if profile.companyname:
-            name = profile.companyname
-        else:
-            name = '{} {}'.format(profile.firstname, profile.lastname)
+        # Activate user pre-selected language
+        activate(lang)
 
-        if new_status == '1':
-            text = 'souhaite'
-        else:
-            text = 'ne souhaite plus'
+        # Translate subject & body for this email
+        subject = _("Changement d'option pour l'abonnement aux actualités")
+        body = render_to_string('mails/send_mail_newsletter.txt',
+                                {'login': login, 'profile': profile, 'new_status': new_status})
 
-        body = '{} ({}) {} recevoir les actualités par mail.'.format(name, login, text)
-
-        sendmail_euskalmoneta(subject="Changement d'option pour l'abonnement aux actualités", body=body,
-                              to_email='gestion@euskalmoneta.org')
+        sendmail_euskalmoneta(subject=subject, body=body)
 
     @staticmethod
-    def send_mail_change_auto(login, profile, mode, new_amount, comment):
+    def send_mail_change_auto(login, profile, mode, new_amount, comment, lang):
         """
         Envoi mail à Euskal Moneta lorsque le montant du change automatique à été modifié.
         """
-        if profile.companyname:
-            name = profile.companyname
-        else:
-            name = '{} {}'.format(profile.firstname, profile.lastname)
+        # Activate user pre-selected language
+        activate(lang)
 
         if mode == 'delete':
-            subject = 'Arrêt du change mensuel automatique'
-            body = ('{} ({}) a modifié le montant de son change automatique mensuel.'
-                    '\r\nNouveau montant: {}').format(name, login, new_amount)
+            subject = _('Arrêt du change mensuel automatique')
         else:
-            subject = 'Modification du montant du change mensuel automatique'
-            body = '{} ({}) souhaite arrêter son change automatique mensuel.'.format(name, login)
+            subject = _('Modification du montant du change mensuel automatique')
 
-        if comment:
-            body = '{}\r\nCommentaire: {}'.format(body, comment)
+        body = render_to_string('mails/send_mail_change_auto.txt',
+                                {'login': login, 'profile': profile, 'mode': mode,
+                                 'new_amount': new_amount, 'comment': comment})
 
-        sendmail_euskalmoneta(subject=subject, body=body,
-                              to_email='gestion@euskalmoneta.org')
+        sendmail_euskalmoneta(subject=subject, body=body)
 
     @staticmethod
     def validate_options(data, source=None):
