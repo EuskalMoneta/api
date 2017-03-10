@@ -93,3 +93,10 @@ class UpdatePinSerializer(serializers.Serializer):
     pin1 = serializers.IntegerField()
     pin2 = serializers.IntegerField()
     ex_pin = serializers.CharField(required=False)
+
+
+class MembersSubscriptionSerializer(serializers.Serializer):
+    start_date = serializers.DateTimeField(format=None)
+    end_date = serializers.DateTimeField(format=None)
+    amount = serializers.IntegerField()
+    label = serializers.CharField()

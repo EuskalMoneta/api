@@ -530,13 +530,12 @@ def euskokart_unblock(request):
 @api_view(['POST'])
 def one_time_transfer(request):
     """
-    Transfer d'eusko entre compte de particulier.
+    Transfer d'eusko entre compte d'adhérent.
     """
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
     serializer = serializers.OneTimeTransferSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
@@ -733,3 +732,31 @@ def refuse_cgu(request):
         return Response({'status': 'OK'})
     except (DolibarrAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def members_cel_subscription(request):
+
+    serializer = serializers.MembersSubscriptionSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        member = dolibarr.get(model='members', login=str(request.user))
+    except DolibarrAPIException as e:
+        return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
+                        status=status.HTTP_400_BAD_REQUEST)
+    # Register new subscription
+    data_res_subscription = {'start_date': serializer.data['start_date'].strftime('%s'), 'end_date': serializer.data['end_date'].strftime('%s'),
+                             'amount': serializer.data['amount'], 'label': serializer.data['label']}
+    try:
+        res_id_subscription = dolibarr.post(
+            model='members/{}/subscriptions'.format(member[0].get('id')), data=data_res_subscription)
+    except Exception as e:
+        log.critical("data_res_subscription: {}".format(data_res_subscription))
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    return Response(res_id_subscription)
