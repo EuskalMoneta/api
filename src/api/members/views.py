@@ -125,7 +125,9 @@ class MembersAPIView(BaseAPIView):
         serializer = MemberPartialSerializer(data=request.data)
         if serializer.is_valid():
             response = self.dolibarr.get(model='members/{}'.format(pk), api_key=request.user.profile.dolibarr_token)
-            data = Member.validate_options(request.data, response['array_options'])
+
+            # Validate / modify data (serialize to match Dolibarr formats)
+            data = Member.validate_data(request.data, mode='update', base_options=response['array_options'])
 
             try:
                 # Envoi mail lorsque l'option "Je souhaite être informé..." à été modifiée

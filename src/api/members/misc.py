@@ -23,7 +23,7 @@ class Member:
             return False
 
     @staticmethod
-    def validate_data(data, mode='create'):
+    def validate_data(data, mode='create', base_options=None):
         """
         1. Dolibarr.llx_adherent.fk_adherent_type : typeid in the Dolibarr API = "3" (particulier)
         2. Dolibarr.llx_adherent.morphy = "phy" (personne physique)
@@ -37,7 +37,12 @@ class Member:
             data['public'] = "0"
 
         data['birth'] = Member.validate_birthdate(data['birth'])
-        data = Member.validate_options(data)
+
+        if base_options:
+            data = Member.validate_options(data, base_options)
+        else:
+            data = Member.validate_options(data)
+
         data = Member.validate_phones(data)
 
         return data
