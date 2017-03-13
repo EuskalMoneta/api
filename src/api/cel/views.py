@@ -651,10 +651,11 @@ def euskokart_pin(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
     response = cyclos.post(method='password/getData', data=cyclos.user_id)
-    for item in response['result']['passwords']:
-        if item['type']['name'] == 'PIN':
-            res = item['status']
-    return Response(res)
+    passwords = r.json()['result']['passwords']
+    pin_code = [p
+                for p in passwords
+                if p['type'['id'] == str(settings.CYCLOS_CONSTANTS['password_types']['pin'])][0]
+    return Response(pin_code['status'])
 
 
 @api_view(['POST'])
