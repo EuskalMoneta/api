@@ -36,7 +36,10 @@ class Member:
             data['statut'] = "1"
             data['public'] = "0"
 
-        data['birth'] = Member.validate_birthdate(data['birth'])
+        try:
+            data['birth'] = Member.validate_birthdate(data['birth'])
+        except KeyError:
+            pass
 
         if base_options:
             data = Member.validate_options(data, base_options)
