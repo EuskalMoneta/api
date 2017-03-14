@@ -318,7 +318,7 @@ def change_euro_eusko(request):
             },
         ],
         # "Change - E12345 - Nom de l'adhérent - Mode de paiement"
-        'description': 'Change - {} - {} - {}'.format(
+        'description': 'Change billets - {} - {} - {}'.format(
             request.data['member_login'], member_name, request.data['payment_mode_name']),
     }
 
@@ -1054,3 +1054,76 @@ def change_password(request):
     }
 
     return Response(cyclos.post(method='password/change', data=change_password_data))
+
+
+@api_view(['POST'])
+def change_euro_eusko_numeriques(request):
+    """
+    Change d'€ en eusko numériques pour un adhérent via un BDC.
+    """
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    serializer = serializers.ChangeEuroEuskoSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
+
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        dolibarr_member = dolibarr.get(model='members', login=request.data['member_login'])[0]
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    except IndexError:
+        return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    if dolibarr_member['type'].lower() == 'particulier':
+        member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
+    else:
+        member_name = dolibarr_member['company']
+
+    # payment/perform
+    bdc_query_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_bdc_versement_des_euro']),
+        'amount': request.data['amount'],
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+        'from': 'SYSTEM',
+        'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
+                'linkedEntityValue': member_cyclos_id  # ID de l'adhérent
+            },
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
+                'enumeratedValues': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
+            },
+        ],
+        # "Change - E12345 - Nom de l'adhérent - Mode de paiement"
+        'description': 'Change numérique - {} - {} - {}'.format(
+            request.data['member_login'], member_name, request.data['payment_mode_name']),
+    }
+    cyclos.post(method='payment/perform', data=bdc_query_data)
+
+    # payment/perform
+    query_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['credit_du_compte']),
+        'amount': request.data['amount'],
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': 'SYSTEM',
+        'to': member_cyclos_id,  # ID de l'adhérent
+        'customValues': [
+            {
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['bdc']),
+                'linkedEntityValue': cyclos.user_bdc_id  # ID de l'utilisateur Bureau de change
+            },
+        ],
+        # "Change numérique - Nom du BDC"
+        'description': 'Change numérique - {}'.format(request.user.profile.lastname),
+    }
+    cyclos.post(method='payment/perform', data=query_data)
+
+    return Response({'status': 'OK'})

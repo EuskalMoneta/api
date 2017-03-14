@@ -56,6 +56,7 @@ urlpatterns = [
     url(r'^entree-stock/$', bdc_cyclos_views.entree_stock),
     url(r'^sortie-stock/$', bdc_cyclos_views.sortie_stock),
     url(r'^change-euro-eusko/$', bdc_cyclos_views.change_euro_eusko),
+    url(r'^change-euro-eusko-numeriques/$', bdc_cyclos_views.change_euro_eusko_numeriques),
     url(r'^reconversion/$', bdc_cyclos_views.reconversion),
     url(r'^bank-deposit/$', bdc_cyclos_views.bank_deposit),
     url(r'^cash-deposit/$', bdc_cyclos_views.cash_deposit),
