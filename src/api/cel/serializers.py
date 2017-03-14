@@ -90,8 +90,9 @@ class ReconvertEuskoSerializer(serializers.Serializer):
 
 class UpdatePinSerializer(serializers.Serializer):
 
-    pin1 = serializers.IntegerField()
-    pin2 = serializers.IntegerField()
+    # pins are integers, but IntegerField() can't starts with 0, thus we needed to use CharField()
+    pin1 = serializers.CharField()
+    pin2 = serializers.CharField()
     ex_pin = serializers.CharField(required=False)
 
 
