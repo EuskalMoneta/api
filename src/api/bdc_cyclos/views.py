@@ -820,10 +820,6 @@ def depot_eusko_numerique(request):
     serializer = serializers.DepotEuskoNumeriqueSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    if not request.data['login_bdc'].lower() == 'b001':
-        return Response({'error': 'Forbidden, this operation is not publicly available!'},
-                        status=status.HTTP_403_FORBIDDEN)
-
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
     try:
@@ -889,10 +885,6 @@ def retrait_eusko_numerique(request):
 
     serializer = serializers.RetraitEuskoNumeriqueSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
-
-    if not request.data['login_bdc'].lower() == 'b001':
-        return Response({'error': 'Forbidden, this operation is not publicly available!'},
-                        status=status.HTTP_403_FORBIDDEN)
 
     member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
