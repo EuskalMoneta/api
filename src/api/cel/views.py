@@ -381,7 +381,7 @@ def export_history_adherent(request):
 
     search_history_data = {
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
-        'orderBy': 'DATE_DESC',
+        'orderBy': 'DATE_ASC',
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
         'period':
@@ -399,13 +399,16 @@ def export_history_adherent(request):
                 line_without_balance['balance'] = line_with_balance['balance']
 
     for line in accounts_history_res['result']['pageItems']:
-        line['date'] = arrow.get(line['date']).format('Le YYYY-MM-DD à HH:mm')
+        line['date'] = arrow.get(line['date']).format('DD-MM-YYYY à HH:mm')
 
     context = {
+        'account_number': accounts_summaries_data['result'][0]['number'],
+        'name': accounts_summaries_data['result'][0]['owner']['display'],
         'account_history': accounts_history_res['result'],
+        'account_login': str(request.user),
         'period': {
-            'begin': serializer.data['begin'].replace(hour=0, minute=0, second=0),
-            'end': serializer.data['end'].replace(hour=23, minute=59, second=59),
+            'begin': arrow.get(serializer.data['begin']).format('DD MMMM YYYY', locale='fr'),
+            'end': arrow.get(serializer.data['end']).format('DD MMMM YYYY', locale='fr'),
         },
     }
     if request.query_params['mode'] == 'pdf':
