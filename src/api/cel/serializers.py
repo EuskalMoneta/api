@@ -46,7 +46,7 @@ class ValidFirstConnectionSerializer(serializers.Serializer):
     answer = serializers.CharField()
 
 
-class EuskoKartLockSerializer(serializers.Serializer):
+class EuskokartLockSerializer(serializers.Serializer):
 
     id = serializers.CharField()
 

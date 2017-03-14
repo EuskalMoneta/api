@@ -511,7 +511,7 @@ def euskokart_list(request):
 
 @api_view(['GET'])
 def euskokart_block(request):
-    serializer = serializers.EuskoKartLockSerializer(data=request.query_params)
+    serializer = serializers.EuskokartLockSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
 
     try:
@@ -527,7 +527,7 @@ def euskokart_block(request):
 
 @api_view(['GET'])
 def euskokart_unblock(request):
-    serializer = serializers.EuskoKartLockSerializer(data=request.query_params)
+    serializer = serializers.EuskokartLockSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
 
     try:
