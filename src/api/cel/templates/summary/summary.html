@@ -47,9 +47,9 @@
             <div style="width:100%">
                 <div style="width:87%;float:left">
                     <aside>
-                        Nom : {{ name }} <br />
-                        Identifiant : {{ account_login }}<br />
-                        Numéro de compte : {{ account_number }}
+                        {% blocktrans %}Nom : {{ name }}{% endblocktrans %}<br />
+                        {% blocktrans %}Identifiant : {{ account_login }}{% endblocktrans %}<br />
+                        {% blocktrans %}Numéro de compte : {{ account_number }}{% endblocktrans %}
                     </aside>
                 </div>
                 <div>
@@ -62,23 +62,24 @@
             </div>
         </header>
         <article>
-            <h4 style="text-align:center">Historique du {{ period|get_item:'begin' }} au {{ period|get_item:'end' }}</h4>
+            <h4 style="text-align:center">
+                {% blocktrans with begin=period|get_item:'begin' end=period|get_item:'end' %}Historique du {{ begin }} au {{ end }}{% endblocktrans %}</h4>
             <table>
                 <tr>
                     <td class="rowtitle">
-                        Date
+                        {% blocktrans %}Date{% endblocktrans %}
                     </td>
                     <td class="rowtitle">
-                        Libellé
+                        {% blocktrans %}Libellé{% endblocktrans %}
                     </td>
                     <td class="rowtitle">
-                        Débit
+                        {% blocktrans %}Débit{% endblocktrans %}
                     </td>
                     <td class="rowtitle">
-                        Crédit
+                        {% blocktrans %}Crédit{% endblocktrans %}
                     </td>
                     <td class="rowtitle">
-                        Solde
+                        {% blocktrans %}Solde{% endblocktrans %}
                     </td>
                 </tr>
                 {% for item in account_history|get_item:'pageItems' %}
@@ -91,16 +92,16 @@
                     </td>
                     <td>
                     {% if item|get_item:'amount' < "0" %}
-                        {{ item|get_item:'amount' }}
+                        {{ item|get_item:'amount' | floatformat:2 }}
                     {% endif %}
                     </td>
                     <td>
                     {% if item|get_item:'amount' > "0" %}
-                        {{ item|get_item:'amount' }}
+                        {{ item|get_item:'amount' | floatformat:2 }}
                     {% endif %}
                     </td>
                     <td>
-                        {{ item|get_item:'balance' }}
+                        {{ item|get_item:'balance' | floatformat:2 }}
                     </td>
                 </tr>
                 {% endfor %}

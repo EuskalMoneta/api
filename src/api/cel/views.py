@@ -425,16 +425,16 @@ def export_history_adherent(request):
     else:
         csv_content = [{'Date': line['date'],
                         'Libellé': line['description'],
-                        'Crédit': line['amount'],
+                        'Crédit': str(line['amount']).replace('.', ','),
                         'Débit': '',
-                        'Solde': line['balance']}
+                        'Solde': str(line['balance']).replace('.', ',')}
                        if float(line['amount']) > float()
                        else
                        {'Date': line['date'],
                         'Libellé': line['description'],
                         'Crédit': '',
-                        'Débit': line['amount'],
-                        'Solde': line['balance']}
+                        'Débit': str(line['amount']).replace('.', ','),
+                        'Solde': str(line['balance']).replace('.', ',')}
                        for line in context['account_history']['pageItems']]
         return Response(csv_content)
 
