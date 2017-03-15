@@ -760,13 +760,41 @@ def members_cel_subscription(request):
 
     serializer = serializers.MembersSubscriptionSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
-
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         member = dolibarr.get(model='members', login=str(request.user))
     except DolibarrAPIException as e:
         return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
                         status=status.HTTP_400_BAD_REQUEST)
+
+    current_member = dolibarr.get(model='members', id=member[0]['id'])
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if current_member['type'].lower() == 'particulier':
+        member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
+    else:
+        member_name = current_member['company']
+
+    try:
+        data = cyclos.post(method='user/search', data={'keywords': 'Z00001'})
+        euskal_moneta_cyclos_id = data['result']['pageItems'][0]['id']
+    except (KeyError, IndexError, CyclosAPIException) as e:
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    query_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
+        'amount': serializer.data['amount'],
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': cyclos.user_id,
+        'to': euskal_moneta_cyclos_id,
+        'description': 'Cotisation - {} - {}'.format(current_member['login'], member_name),
+    }
+    cyclos.post(method='payment/perform', data=query_data)
+
     # Register new subscription
     data_res_subscription = {'start_date': serializer.data['start_date'].strftime('%s'),
                              'end_date': serializer.data['end_date'].strftime('%s'),
@@ -829,36 +857,10 @@ def members_cel_subscription(request):
         log.critical(e)
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-    current_member = dolibarr.get(model='members', id=member[0]['id'])
     res = {'id_subscription': res_id_subscription,
            'id_payment': res_id_payment,
            'link_sub_payment': res_id_link_sub_payment,
            'id_link_payment_member': res_id_link_payment_member,
            'member': current_member}
-    try:
-        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if current_member['type'].lower() == 'particulier':
-        member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
-    else:
-        member_name = current_member['company']
-
-    try:
-        data = cyclos.post(method='user/search', data={'keywords': 'Z00001'})
-        euskal_moneta_cyclos_id = data['result']['pageItems'][0]['id']
-    except (KeyError, IndexError, CyclosAPIException) as e:
-        log.critical(e)
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    query_data = {
-        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
-        'amount': serializer.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-        'from': cyclos.user_id,
-        'to': euskal_moneta_cyclos_id,
-        'description': 'Cotisation - {} - {}'.format(current_member['login'], member_name),
-    }
-    cyclos.post(method='payment/perform', data=query_data)
     return Response(res, status=status.HTTP_201_CREATED)
