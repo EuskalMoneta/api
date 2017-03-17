@@ -292,6 +292,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                  'description': 'Cotisation - {} - {}'.format(
                     current_member['login'], member_name),
                  })
+            currency = 'eusko'
         elif 'Euro' in data['payment_mode']:
             query_data.update(
                 {'type': str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_euro']),
@@ -304,6 +305,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                  'description': 'Cotisation - {} - {} - {}'.format(
                     current_member['login'], member_name, payment_label),
                  })
+            currency = '€'
         else:
             return Response({'error': 'This payment_mode is invalid!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -316,7 +318,16 @@ class MembersSubscriptionsAPIView(BaseAPIView):
         self.cyclos.post(method='payment/perform', data=query_data)
 
         try:
-            sendmail_euskalmoneta(subject="subject", body="body", to_email=current_member['email'])
+            # Activate user pre-selected language
+            # TODO: Ask member for his prefered lang
+            # activate(data['options_langue'])
+
+            # Translate subject & body for this email
+            subject = _('Votre cotisation à Euskal Moneta')
+            body = render_to_string('mails/subscription.txt',
+                                    {'user': current_member, 'amount': data['amount'], 'currency': currency})
+
+            sendmail_euskalmoneta(subject=subject, body=body, to_email=current_member['email'])
         except KeyError:
             log.critical("Oops! No mail sent to this member {}, "
                          "we didn't had a email address !".format(current_member['login']))
