@@ -75,7 +75,11 @@ class Member:
         # Translate subject & body for this email
         subject = _("Changement d'option pour l'abonnement aux actualités")
         body = render_to_string('mails/send_mail_newsletter.txt',
-                                {'login': login, 'profile': profile, 'new_status': new_status})
+                                {'login': login,
+                                 'profile_firstname': str(profile.firstname),
+                                 'profile_lastname': str(profile.lastname),
+                                 'profile_companyname': str(profile.companyname),
+                                 'new_status': new_status})
 
         sendmail_euskalmoneta(subject=subject, body=body)
 
@@ -93,7 +97,10 @@ class Member:
             subject = _('Modification du montant du change mensuel automatique')
 
         body = render_to_string('mails/send_mail_change_auto.txt',
-                                {'login': login, 'profile': profile, 'mode': mode,
+                                {'login': login, 'mode': mode,
+                                 'profile_firstname': str(profile.firstname),
+                                 'profile_lastname': str(profile.lastname),
+                                 'profile_companyname': str(profile.companyname),
                                  'new_amount': new_amount, 'comment': comment})
 
         sendmail_euskalmoneta(subject=subject, body=body)
