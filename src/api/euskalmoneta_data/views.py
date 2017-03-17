@@ -26,7 +26,7 @@ def porteurs_eusko(request):
     List porteurs d'euskos.
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -45,7 +45,7 @@ def deposit_banks(request):
     List available banks.
     """
     try:
-        cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string)
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 

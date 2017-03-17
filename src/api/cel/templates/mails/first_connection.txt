@@ -1,0 +1,26 @@
+{% load staticfiles i18n %}
+{% load template_tags %}
+
+{% if user|get_item:'company' %}
+  {% blocktrans with name=user|get_item:'company' %}
+    Bonjour {{ name }},
+  {% endblocktrans %}
+{% else %}
+  {% blocktrans with name=user|get_item:'firstname' %}
+    Bonjour {{ name }},
+  {% endblocktrans %}
+{% endif %}
+
+{% trans "Nous avons reçu une demande de première connexion à votre compte en ligne Eusko" %}.
+
+{% trans "Vous allez maintenant pouvoir choisir votre mot de passe de connexion en cliquant sur le lien ci-dessous" %} :
+
+{{ token }}
+
+{% trans "Vous devez aussi définir une question de sécurité qui sera utilisée pour vérifier votre identité si vous perdiez votre mot de passe" %}.
+
+{% trans "Si vous n'êtes pas à l'origine de cette demande, vous pouvez simplement ignorer ce message" %}.
+{% trans "N'hésitez pas à nous contacter si vous avez des questions" %}.
+
+{% trans "Bien cordialement" %},
+{% trans "L'équipe d'Euskal Moneta" %}

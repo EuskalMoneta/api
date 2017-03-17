@@ -105,12 +105,41 @@ for channel in channels:
         ID_CANAL_MAIN_WEB = channel['id']
     elif channel['internalName'] == 'webServices':
         ID_CANAL_WEB_SERVICES = channel['id']
+    elif channel['internalName'] == 'pos':
+        ID_CANAL_PAY_AT_POS = channel['id']
+    elif channel['internalName'] == 'mobile':
+        ID_CANAL_MOBILE_APP = channel['id']
 logger.debug('ID_CANAL_MAIN_WEB = %s', ID_CANAL_MAIN_WEB)
 logger.debug('ID_CANAL_WEB_SERVICES = %s', ID_CANAL_WEB_SERVICES)
+logger.debug('ID_CANAL_PAY_AT_POS = %s', ID_CANAL_PAY_AT_POS)
+logger.debug('ID_CANAL_MOBILE_APP = %s', ID_CANAL_MOBILE_APP)
+
+# Récupération de la liste des types de mots de passe.
+logger.info('Récupération de la liste des types de mots de passe...')
+r = requests.get(global_web_services + 'passwordType/list', headers=headers)
+check_request_status(r)
+password_types = r.json()['result']
+for password_type in password_types:
+    if password_type['internalName'] == 'login':
+        ID_PASSWORD_LOGIN = password_type['id']
+    elif password_type['internalName'] == 'pin':
+        ID_PASSWORD_PIN = password_type['id']
+logger.debug('ID_PASSWORD_LOGIN = %s', ID_PASSWORD_LOGIN)
+logger.debug('ID_PASSWORD_PIN = %s', ID_PASSWORD_PIN)
+
+# Récupération de la liste des méthodes d'identification.
+logger.info("Récupération de la liste des méthodes d'identification...")
+r = requests.get(global_web_services + 'principalType/list', headers=headers)
+check_request_status(r)
+principal_types = r.json()['result']
+for principal_type in principal_types:
+    if principal_type['internalName'] == 'username':
+        ID_PRINCIPAL_TYPE_LOGIN_NAME = principal_type['id']
+logger.debug('ID_PRINCIPAL_TYPE_LOGIN_NAME = %s', ID_PRINCIPAL_TYPE_LOGIN_NAME)
 
 
 ########################################################################
-# Modification de la configuration par défaut :
+# Modification de la configuration par défaut globale :
 # - définition de l'URL racine, pour que l'application web fonctionne
 # - choix de la virgule comme séparateur pour les décimales
 # - dates au format jour/mois/année
@@ -127,31 +156,31 @@ logger.debug('ID_CANAL_WEB_SERVICES = %s', ID_CANAL_WEB_SERVICES)
 r = requests.get(global_web_services + 'configuration/getDefault',
                  headers=headers)
 check_request_status(r)
-default_config_id = r.json()['result']['id']
+global_default_config_id = r.json()['result']['id']
 # On charge la configuration par défaut pour pouvoir la modifier.
 r = requests.get(
-    global_web_services + 'configuration/load/' + default_config_id,
+    global_web_services + 'configuration/load/' + global_default_config_id,
     headers=headers
 )
 check_request_status(r)
-default_config = r.json()['result']
-default_config['rootUrl'] = url
-default_config['numberFormat'] = 'COMMA_AS_DECIMAL'
-default_config['dateFormat'] = 'DMY_SLASH'
-default_config['timeFormat'] = 'H24'
-default_config['accountNumberConfiguration'] = {
+global_default_config = r.json()['result']
+global_default_config['rootUrl'] = url
+global_default_config['numberFormat'] = 'COMMA_AS_DECIMAL'
+global_default_config['dateFormat'] = 'DMY_SLASH'
+global_default_config['timeFormat'] = 'H24'
+global_default_config['accountNumberConfiguration'] = {
     'enabled': True
 }
 r = requests.post(
     global_web_services + 'configuration/save',
     headers=headers,
-    json=default_config
+    json=global_default_config
 )
 check_request_status(r)
 # Puis on liste les config de canaux pour retrouver l'id de la config
 # du canal "Web services".
 r = requests.get(
-    global_web_services + 'channelConfiguration/list/' + default_config_id,
+    global_web_services + 'channelConfiguration/list/' + global_default_config_id,
     headers=headers
 )
 check_request_status(r)
@@ -232,6 +261,154 @@ ID_DEVISE_EURO = create_currency(
     name='Euro',
     symbol='€',
 )
+
+
+########################################################################
+# Création du token "Carte NFC".
+#
+def create_token(name, plural_name, token_type, token_mask, maximum_per_user):
+    logger.info('Création du token "%s"...', name)
+    r = requests.post(eusko_web_services + 'principalType/save',
+                      headers=headers,
+                      json={
+                          'class': 'org.cyclos.model.access.principaltypes.TokenPrincipalTypeDTO',
+                          'name': name,
+                          'pluralName': plural_name,
+                          'internalName': get_internal_name(name),
+                          'tokenType': token_type,
+                          'tokenMask': token_mask,
+                          'maximumPerUser': maximum_per_user,
+                      })
+    check_request_status(r)
+    token_id = r.json()['result']
+    logger.debug('token_id = %s', token_id)
+    add_constant('tokens', name, token_id)
+    return token_id
+
+ID_TOKEN_CARTE_NFC = create_token(
+    name='Carte NFC',
+    plural_name='Cartes NFC',
+    token_type='NFC_TAG',
+    token_mask='#### #### #### ####',
+    maximum_per_user=100,
+)
+
+all_token_types = [
+    ID_TOKEN_CARTE_NFC,
+]
+
+
+########################################################################
+# Création du client "Point de vente NFC".
+#
+def create_access_client(name, plural_name, maximum_per_user, permission):
+    logger.info('Création du client "%s"...', name)
+    r = requests.post(eusko_web_services + 'principalType/save',
+                      headers=headers,
+                      json={
+                          'class': 'org.cyclos.model.access.principaltypes.AccessClientPrincipalTypeDTO',
+                          'name': name,
+                          'pluralName': plural_name,
+                          'internalName': get_internal_name(name),
+                          'maximumPerUser': maximum_per_user,
+                          'permission': permission,
+                      })
+    check_request_status(r)
+    access_client_id = r.json()['result']
+    logger.debug('access_client_id = %s', access_client_id)
+    add_constant('access_clients', name, access_client_id)
+    return access_client_id
+
+ID_CLIENT_POINT_DE_VENTE_NFC = create_access_client(
+    name='Point de vente NFC',
+    plural_name='Points de vente NFC',
+    maximum_per_user=10,
+    permission='RECEIVE_PAYMENT',
+)
+
+all_access_clients = [
+    ID_CLIENT_POINT_DE_VENTE_NFC,
+]
+
+
+########################################################################
+# Modification de la configuration des canaux "Pay at POS" et "Mobile
+# app".
+# La configuration par défaut pour chaque canal est héritée de la
+# configuration globale. Pour personnaliser cette configuration au
+# niveau du réseau Eusko, il faut créer une nouvelle configuration
+# pour chaque canal.
+# Ensuite on personnalise les configurations de la manière suivante :
+# - activation de chaque canal par défaut pour tous les utilisateurs
+# - canal "Pay at POS" : le mot de passe de confirmation est le code PIN
+# - canal "Mobile app" : on définit deux méthodes d'identification pour
+#   se connecter à l'application mobile :
+#       - le login, pour les connexions "normales"
+#       - le client "Point de vente NFC", pour pouvoir se connecter à
+#         l'application mobile en mode point de vente (POS)
+#   et on définit le token "Carte NFC" comme méthode d'identification
+#   pour recevoir des paiements en mode POS.
+#
+# Remarque : Il faut faire ces modifications après avoir créé le token
+# "Carte NFC" et l'access client "Point de vente NFC" car nous en avons
+# besoin pour configurer le canal "Mobile app".
+#
+def get_data_for_new_channel_configuration(channel, configuration):
+    logger.debug("get_data_for_new_channel_configuration(%s, %s)", channel, configuration)
+    r = requests.post(eusko_web_services + 'channelConfiguration/getDataForNew/',
+                      headers=headers,
+                      json={
+                          'channel': channel,
+                          'configuration': configuration,
+                      })
+    check_request_status(r)
+    return r.json()['result']['dto']
+
+# D'abord on récupère l'id de la config par défaut.
+logger.info('Récupération de l\'id de la configuration par défaut...')
+r = requests.get(eusko_web_services + 'configuration/getDefault',
+                 headers=headers)
+check_request_status(r)
+eusko_default_config_id = r.json()['result']['id']
+# Puis on crée une nouvelle configuration pour le canal "Pay at POS".
+logger.info('Création d\'une nouvelle configuration pour le canal "Pay at POS"...')
+new_pos_config = get_data_for_new_channel_configuration(
+    channel=ID_CANAL_PAY_AT_POS,
+    configuration=eusko_default_config_id)
+new_pos_config['defined'] = True
+new_pos_config['enabled'] = True
+new_pos_config['userAccess'] = 'DEFAULT_ENABLED'
+new_pos_config['confirmationPassword'] = ID_PASSWORD_PIN
+logger.info('Sauvegarde de la nouvelle configuration...')
+r = requests.post(
+    eusko_web_services + 'channelConfiguration/save',
+    headers=headers,
+    json=new_pos_config
+)
+check_request_status(r)
+# De le même manière, on crée une nouvelle configuration pour le canal
+# "Mobile app".
+logger.info('Création d\'une nouvelle configuration pour le canal "Mobile app"...')
+new_mobile_app_config = get_data_for_new_channel_configuration(
+    channel=ID_CANAL_MOBILE_APP,
+    configuration=eusko_default_config_id)
+new_mobile_app_config['defined'] = True
+new_mobile_app_config['enabled'] = True
+new_mobile_app_config['userAccess'] = 'DEFAULT_ENABLED'
+new_mobile_app_config['principalTypes'] = [
+    ID_PRINCIPAL_TYPE_LOGIN_NAME,
+    ID_CLIENT_POINT_DE_VENTE_NFC,
+]
+new_mobile_app_config['receivePaymentPrincipalTypes'] = [
+    ID_TOKEN_CARTE_NFC,
+]
+logger.info('Sauvegarde de la nouvelle configuration...')
+r = requests.post(
+    eusko_web_services + 'channelConfiguration/save',
+    headers=headers,
+    json=new_mobile_app_config
+)
+check_request_status(r)
 
 
 ########################################################################
@@ -676,7 +853,9 @@ all_status_flows = [
 #
 def create_payment_transfer_type(name, direction, from_account_type_id,
                                  to_account_type_id, custom_fields=[],
-                                 status_flows=[], initial_statuses=[]):
+                                 status_flows=[], initial_statuses=[],
+                                 channels=[ID_CANAL_MAIN_WEB, ID_CANAL_WEB_SERVICES],
+                                 principal_types=[]):
     logger.info('Création du type de paiement "%s"...', name)
     r = requests.post(eusko_web_services + 'transferType/save',
                       headers=headers,
@@ -691,7 +870,8 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
                           'statusFlows': status_flows,
                           'initialStatuses': initial_statuses,
                           'maxChargebackTime': {'amount': '2', 'field': 'MONTHS'},
-                          'channels': [ID_CANAL_MAIN_WEB, ID_CANAL_WEB_SERVICES]
+                          'channels': channels,
+                          'principalTypes': principal_types,
                       })
     check_request_status(r)
     payment_transfer_type_id = r.json()['result']
@@ -1140,9 +1320,29 @@ ID_TYPE_PAIEMENT_VIREMENT_ENTRE_COMPTES_DEDIES = create_payment_transfer_type(
     to_account_type_id=ID_COMPTE_DEDIE,
 )
 
-# Types de paiement pour l'eusko numérique
-#
-ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE = create_payment_transfer_type(
+# Les 2 types de paiement suivants sont utilisés lorsqu'un adhérent fait
+# un paiement "en ligne" pour créditer son compte numérique.
+# On parle ici de change "en ligne" par opposition à "dans un bureau
+# de change". Il peut s'agir d'un paiement par prélèvement automatique,
+# par virement ou par carte bleue (dans le cas de la VAD c'est-à-dire la
+# vente à distance sur Internet).
+# L'API Eusko doit générer ces 2 paiements de façon cohérente. Cela ne
+# peut pas être géré dans le paramétrage avec des frais car il s'agit de
+# 2 paiements de compte système à compte utilisateur, mais pour des
+# utilisateurs différents (le compte dédié eusko numérique, et
+# l'adhérent dont il faut créditer le compte).
+# Le champ "Numéro de transaction banque" contient la référence du
+# paiement bancaire réel en €.
+ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUROS = create_payment_transfer_type(
+    name='Change numérique en ligne - Versement des €',
+    direction='SYSTEM_TO_USER',
+    from_account_type_id=ID_COMPTE_DE_DEBIT_EURO,
+    to_account_type_id=ID_COMPTE_DEDIE,
+    custom_fields=[
+        ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
+    ],
+)
+ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUSKO = create_payment_transfer_type(
     name='Change numérique en ligne - Versement des eusko',
     direction='SYSTEM_TO_USER',
     from_account_type_id=ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE,
@@ -1151,7 +1351,6 @@ ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE = create_payment_transfer_type(
         ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
     ],
 )
-# frais : versement des €
 
 # Ce type de paiement sera utilisé lorsqu'un adhérent fera un paiement
 # en € dans un bureau de change pour créditer son compte numérique.
@@ -1269,13 +1468,30 @@ ID_TYPE_PAIEMENT_RETRAIT_DU_COMPTE = create_payment_transfer_type(
     ],
 )
 
-# Et enfin, le type de paiement le plus important pour l'eusko
+# Et enfin, les types de paiement les plus importants pour l'eusko
 # numérique !
+# On crée un type de paiement dédié pour le paiement par carte via le
+# terminal de paiement, ce qui permettra de distinguer très facilement
+# les paiements par virement via le site web des paiements par carte.
+# Cela permettra aussi, éventuellement, de définir des règles
+# particulières pour l'un ou l'autre de ces moyens de paiement.
 ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT = create_payment_transfer_type(
     name='Virement inter-adhérent',
     direction='USER_TO_USER',
     from_account_type_id=ID_COMPTE_ADHERENT,
     to_account_type_id=ID_COMPTE_ADHERENT,
+)
+ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE = create_payment_transfer_type(
+    name='Paiement par carte',
+    direction='USER_TO_USER',
+    from_account_type_id=ID_COMPTE_ADHERENT,
+    to_account_type_id=ID_COMPTE_ADHERENT,
+    channels=[
+        ID_CANAL_PAY_AT_POS,
+    ],
+    principal_types=[
+        ID_TOKEN_CARTE_NFC,
+    ],
 )
 
 # Types de paiement pour des régularisations entre caisses des BDC.
@@ -1308,7 +1524,8 @@ all_system_to_user_payments = [
     ID_TYPE_PAIEMENT_VENTE_EN_EURO,
     ID_TYPE_PAIEMENT_VENTE_EN_EUSKO,
     ID_TYPE_PAIEMENT_REGUL_DEPOT_INSUFFISANT,
-    ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE,
+    ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUROS,
+    ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUSKO,
     ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_BDC,
     ID_TYPE_PAIEMENT_DEPOT_DE_BILLETS,
     ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE,
@@ -1333,6 +1550,7 @@ all_user_to_user_payments = [
     ID_TYPE_PAIEMENT_BANQUE_VERS_COMPTE_DEDIE,
     ID_TYPE_PAIEMENT_VIREMENT_ENTRE_COMPTES_DEDIES,
     ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
+    ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE,
 ]
 all_user_to_self_payments = [
     ID_TYPE_PAIEMENT_DE_STOCK_DE_BILLETS_BDC_VERS_RETOURS_EUSKO_BDC,
@@ -1409,8 +1627,12 @@ def create_member_product(name,
                           other_users_profile_fields={},
                           user_account_type_id=None,
                           dashboard_actions=[],
+                          password_actions=[],
+                          my_access_clients=[],
+                          my_token_types=[],
                           system_payments=[],
-                          user_payments=[]):
+                          user_payments=[],
+                          receive_payments=[]):
     logger.info('Création du produit "%s"...', name)
     # On commence par créer le produit avec les propriétés de base.
     product = {
@@ -1443,10 +1665,18 @@ def create_member_product(name,
             field['editableAtRegistration'] = True
             field['visible'] = True
             field['editable'] = True
-    if accessible_user_groups:
+    # Par défaut un utilisateur peut accéder à son propre groupe. C'est
+    # nécessaire pour qu'un utilisateur soit capable de voir dans quel
+    # groupe lui-même se trouve (voir aussi 'groupVisibility' plus bas).
+    if not accessible_user_groups:
+        product['userGroupAccessibility'] = 'OWN_GROUP'
+    else:
         product['userGroupAccessibility'] = 'SPECIFIC'
         product['accessibleUserGroups'] = accessible_user_groups
         product['searchUsersOnGroups'] = 'ALL'
+    # Permettre de voir le group dans lequel un utilisateur se trouve
+    # (s'applique aussi à soi-même).
+    product['groupVisibility'] = 'GROUP'
     for field in product['userProfileFields']:
         key = field['profileField']
         try:
@@ -1463,8 +1693,21 @@ def create_member_product(name,
         if dashboard_action['dashboardAction'] in dashboard_actions:
             dashboard_action['enabled'] = True
             dashboard_action['enabledByDefault'] = True
+    for password_action in product['passwordActions']:
+        if password_action['passwordType']['internalName'] in password_actions:
+            password_action['change'] = True
+    for access_client in product['myAccessClients']:
+        if access_client['accessClientType']['id'] in my_access_clients:
+            access_client['enable'] = True
+            access_client['view'] = True
+    for token_type in product['myTokenTypes']:
+        if token_type['tokenType']['id'] in my_token_types:
+            token_type['enable'] = True
+            token_type['block'] = True
+            token_type['unblock'] = True
     product['systemPayments'] = system_payments
     product['userPayments'] = user_payments
+    product['receivePayments'] = receive_payments
     r = requests.post(eusko_web_services + 'product/save',
                       headers=headers,
                       json=product)
@@ -1492,7 +1735,7 @@ def get_admin_product(group_id):
 def set_admin_group_permissions(
         group_id,
         my_profile_fields=[],
-        passwords=[],
+        password_actions=[],
         visible_transaction_fields=[],
         transfer_status_flows=[],
         system_accounts=[],
@@ -1508,6 +1751,8 @@ def set_admin_group_permissions(
         disabled_users='NONE',
         removed_users='NONE',
         user_password_actions=[],
+        user_token_types=[],
+        user_access_clients=[],
         access_user_accounts=[],
         payments_as_user_to_user=[],
         payments_as_user_to_system=[],
@@ -1538,7 +1783,7 @@ def set_admin_group_permissions(
     # 'Change' (modifier le mot de passe) et 'At registration' (définir
     # le mot de passe lors de l'enregistrement de l'utilisateur).
     for password_action in product['passwordActions']:
-        if password_action['passwordType']['internalName'] in passwords:
+        if password_action['passwordType']['internalName'] in password_actions:
             password_action['change'] = True
             password_action['atRegistration'] = True
     product['visibleTransactionFields'] = visible_transaction_fields
@@ -1576,6 +1821,25 @@ def set_admin_group_permissions(
     for password_action in product['userPasswordActions']:
         if password_action['passwordType']['internalName'] in user_password_actions:
             password_action['change'] = True
+            password_action['reset'] = True
+            password_action['unblock'] = True
+    for token_type in product['userTokenTypes']:
+        if token_type['tokenType']['id'] in user_token_types:
+            token_type['view'] = True
+            token_type['block'] = True
+            token_type['unblock'] = True
+            token_type['cancel'] = True
+            token_type['initialize'] = True
+            token_type['personalize'] = True
+            token_type['changeDates'] = True
+    for access_client in product['userAccessClients']:
+        if access_client['accessClientType']['id'] in user_access_clients:
+            access_client['view'] = True
+            access_client['manage'] = True
+            access_client['block'] = True
+            access_client['unblock'] = True
+            access_client['activate'] = True
+            access_client['unassign'] = True
     product['userAccountsAccess'] = access_user_accounts
     product['userPaymentsAsUser'] = payments_as_user_to_user
     product['systemPaymentsAsUser'] = payments_as_user_to_system
@@ -1759,11 +2023,25 @@ ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
         'PAYMENT_USER_TO_USER',
         'PAYMENT_USER_TO_SYSTEM',
     ],
+    password_actions=[
+        'login',
+        'pin',
+    ],
+    my_access_clients=[
+        ID_CLIENT_POINT_DE_VENTE_NFC,
+    ],
+    my_token_types=[
+        ID_TOKEN_CARTE_NFC,
+    ],
     system_payments=[
         ID_TYPE_PAIEMENT_RECONVERSION_NUMERIQUE,
     ],
     user_payments=[
         ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
+        ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE,
+    ],
+    receive_payments=[
+        ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE,
     ],
 )
 assign_product_to_group(ID_PRODUIT_ADHERENTS_PRESTATAIRES,
@@ -1791,8 +2069,16 @@ ID_PRODUIT_ADHERENTS_UTILISATEURS = create_member_product(
         'PAYMENT_USER_TO_USER',
         'PAYMENT_USER_TO_SYSTEM',
     ],
+    password_actions=[
+        'login',
+        'pin',
+    ],
+    my_token_types=[
+        ID_TOKEN_CARTE_NFC,
+    ],
     user_payments=[
         ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
+        ID_TYPE_PAIEMENT_PAIEMENT_PAR_CARTE,
     ],
 )
 assign_product_to_group(ID_PRODUIT_ADHERENTS_UTILISATEURS,
@@ -1805,6 +2091,9 @@ ID_PRODUIT_UTILISATEURS_BASIQUES_SANS_COMPTE = create_member_product(
     my_profile_fields=[
         'FULL_NAME',
         'LOGIN_NAME',
+    ],
+    password_actions=[
+        'login',
     ],
 )
 # Porteurs.
@@ -1844,7 +2133,7 @@ set_admin_group_permissions(
         'FULL_NAME',
         'LOGIN_NAME',
     ],
-    passwords=[
+    password_actions=[
         'login',
     ],
     visible_transaction_fields=all_transaction_fields,
@@ -1870,7 +2159,10 @@ set_admin_group_permissions(
     removed_users='MANAGE',
     user_password_actions=[
         'login',
+        'pin',
     ],
+    user_token_types=all_token_types,
+    user_access_clients=all_access_clients,
     access_user_accounts=all_user_accounts,
     payments_as_user_to_user=all_user_to_user_payments,
     payments_as_user_to_system=all_user_to_system_payments,
@@ -1885,7 +2177,7 @@ set_admin_group_permissions(
         'LOGIN_NAME',
         ID_CHAMP_PERSO_UTILISATEUR_BDC,
     ],
-    passwords=[
+    password_actions=[
         'login',
     ],
     visible_transaction_fields=all_transaction_fields,
@@ -1954,8 +2246,19 @@ set_admin_group_permissions(
         'FULL_NAME',
         'LOGIN_NAME',
     ],
-    passwords=[
+    password_actions=[
         'login',
+    ],
+    visible_transaction_fields=[
+        ID_CHAMP_PERSO_PAIEMENT_NUMERO_TRANSACTION_BANQUE,
+    ],
+    system_accounts=[
+        ID_COMPTE_DE_DEBIT_EURO,
+        ID_COMPTE_DE_DEBIT_EUSKO_NUMERIQUE,
+    ],
+    system_to_user_payments=[
+        ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUROS,
+        ID_TYPE_PAIEMENT_CHANGE_NUMERIQUE_EN_LIGNE_VERSEMENT_DES_EUSKO,
     ],
     accessible_user_groups=[
         ID_GROUPE_ADHERENTS_PRESTATAIRES,

@@ -2,10 +2,12 @@ arrow
 django
 django-cors-middleware
 djangorestframework
+djangorestframework-csv
 django-filter  # Filtering support
 django-wkhtmltopdf
 drf-pdf
 markdown       # Markdown support for the browsable API.
+psycopg2
 pytest
 pytest-django
 python-slugify

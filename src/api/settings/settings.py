@@ -46,10 +46,6 @@ if DEBUG and DEBUG in [True, 'true', 'True', 'yes', 'Yes']:
 else:
     DEBUG = False
 
-if DEBUG:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-else:
-    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 ALLOWED_HOSTS = ['*']
 
@@ -88,6 +84,7 @@ MIDDLEWARE = [
 
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -119,13 +116,25 @@ WSGI_APPLICATION = 'wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/1.9/ref/settings/#databases
-
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+DATABASE_NAME = os.getenv('DATABASE_NAME', False)
+if not DATABASE_NAME:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': DATABASE_NAME,
+            'USER': os.environ.get('DATABASE_USER'),
+            'PASSWORD': os.environ.get('DATABASE_PASSWORD'),
+            'HOST': os.environ.get('DATABASE_HOST'),
+            'PORT': '5432',
+        }
+    }
 
 
 # Password validation
@@ -150,7 +159,12 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/1.9/topics/i18n/
 
-LANGUAGE_CODE = 'fr-fr'
+LANGUAGE_CODE = 'fr'
+
+LANGUAGES = (
+    ('fr', 'Francais'),
+    ('eu', 'Euskara'),
+)
 
 TIME_ZONE = 'Europe/Paris'
 
@@ -168,6 +182,22 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 MEDIA_URL = '/media/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
 STATIC_URL = '/static/'
+
+LOCALE_PATHS = (os.path.join(BASE_DIR, 'locale'), )
+
+# Email
+# https://docs.djangoproject.com/en/1.10/topics/email/
+# Set EMAIL_HOST, EMAIL_PORT, etc. in docker-compose.yml.
+# If EMAIL_HOST is not set or is empty, the console backend is used.
+EMAIL_HOST = os.getenv('EMAIL_HOST', '')
+EMAIL_NOTIFICATION_GESTION = os.getenv('EMAIL_NOTIFICATION_GESTION', '')
+if EMAIL_HOST:
+    EMAIL_PORT = os.getenv('EMAIL_PORT', 0)
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+    EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+    EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', False)
+else:
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 # Public URLs
 API_PUBLIC_URL = os.environ.get('API_PUBLIC_URL')

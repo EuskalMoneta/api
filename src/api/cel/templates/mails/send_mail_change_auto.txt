@@ -1,0 +1,30 @@
+{% load staticfiles i18n %}
+Bonjour,
+
+{% if profile_companyname %}
+  {% if mode == 'delete' %}
+    {% blocktrans %}
+      {{ profile_companyname }} ({{ login }}) souhaite arrêter son change automatique mensuel.
+    {% endblocktrans %}
+  {% else %}
+    {% blocktrans %}
+      {{ profile_companyname }} ({{ login }}) a modifié le montant de son change automatique mensuel.
+      Nouveau Montant: {{ new_amount }}
+    {% endblocktrans %}
+  {% endif %}
+{% else %}
+  {% if mode == 'delete' %}
+    {% blocktrans %}
+      {{ profile_firstname }} {{ profile_lastname }} ({{ login }}) souhaite arrêter son change automatique mensuel.
+    {% endblocktrans %}
+  {% else %}
+    {% blocktrans %}
+      {{ profile_firstname }} {{ profile_lastname }} ({{ login }}) a modifié le montant de son change automatique mensuel.
+      Nouveau Montant: {{ new_amount }}
+    {% endblocktrans %}
+  {% endif %}
+{% endif %}
+
+{% if comment %}
+  {% blocktrans %}Commentaire: {{ comment }}{% endblocktrans %}
+{% endif %}

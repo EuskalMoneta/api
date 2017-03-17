@@ -1,0 +1,280 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: \n"
+"POT-Creation-Date: 2017-03-10 17:06+0100\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"Language: \n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n > 1);\n"
+
+#: cel/templates/mails/euskokart_update_pin.txt:5
+#: cel/templates/mails/euskokart_update_pin.txt:9
+#: cel/templates/mails/first_connection.txt:5
+#: cel/templates/mails/first_connection.txt:9
+#: cel/templates/mails/lost_password.txt:5
+#: cel/templates/mails/lost_password.txt:9
+#: members/templates/mails/create_member.txt:5
+#: members/templates/mails/create_member.txt:9
+#: members/templates/mails/subscription.txt:5
+#: members/templates/mails/subscription.txt:9
+#, python-format
+msgid ""
+"\n"
+"    Bonjour %(name)s,\n"
+"  "
+msgstr ""
+
+#: cel/templates/mails/euskokart_update_pin.txt:15
+msgid "Le code secret de votre euskokart vient d'être défini"
+msgstr ""
+
+#: cel/templates/mails/euskokart_update_pin.txt:17
+msgid "Le code secret de votre euskokart vient d'être modifié"
+msgstr ""
+
+#: cel/templates/mails/euskokart_update_pin.txt:20
+msgid ""
+"Si vous n'êtes pas à l'initiative de cette action, veuillez nous contacter"
+msgstr ""
+
+#: cel/templates/mails/euskokart_update_pin.txt:22
+#: cel/templates/mails/first_connection.txt:25
+#: cel/templates/mails/lost_password.txt:25
+#: members/templates/mails/create_member.txt:23
+#: members/templates/mails/subscription.txt:23
+msgid "Bien cordialement"
+msgstr ""
+
+#: cel/templates/mails/euskokart_update_pin.txt:23
+#: cel/templates/mails/first_connection.txt:26
+#: cel/templates/mails/lost_password.txt:26
+#: members/templates/mails/create_member.txt:24
+#: members/templates/mails/subscription.txt:24
+msgid "L'équipe d'Euskal Moneta"
+msgstr ""
+
+#: cel/templates/mails/first_connection.txt:14
+msgid ""
+"Nous avons reçu une demande de première connexion à votre compte en ligne "
+"Eusko"
+msgstr ""
+
+#: cel/templates/mails/first_connection.txt:16
+msgid ""
+"Vous allez maintenant pouvoir choisir votre mot de passe de connexion en "
+"cliquant sur le lien ci-dessous"
+msgstr ""
+
+#: cel/templates/mails/first_connection.txt:20
+msgid ""
+"Vous devez aussi définir une question de sécurité qui sera utilisée pour "
+"vérifier votre identité si vous perdiez votre mot de passe"
+msgstr ""
+
+#: cel/templates/mails/first_connection.txt:22
+#: cel/templates/mails/lost_password.txt:22
+msgid ""
+"Si vous n'êtes pas à l'origine de cette demande, vous pouvez simplement "
+"ignorer ce message"
+msgstr ""
+
+#: cel/templates/mails/first_connection.txt:23
+#: cel/templates/mails/lost_password.txt:23
+msgid "N'hésitez pas à nous contacter si vous avez des questions"
+msgstr ""
+
+#: cel/templates/mails/lost_password.txt:14
+msgid ""
+"Nous avons reçu une demande de changement de mot de passe pour l'accès à "
+"votre compte en ligne Eusko"
+msgstr ""
+
+#: cel/templates/mails/lost_password.txt:16
+msgid ""
+"Vous allez maintenant pouvoir choisir un nouveau mot de passe de connexion "
+"en cliquant sur le lien ci-dessous"
+msgstr ""
+
+#: cel/templates/mails/lost_password.txt:20
+msgid ""
+"Pour pouvoir choisir un nouveau mot de passe, vous devrez d'abord répondre à "
+"la question de sécurité que vous aviez définie"
+msgstr ""
+
+#: cel/templates/mails/refuse_cgu.txt:5
+#, python-format
+msgid ""
+"\n"
+"    %(name)s (%(num_adherent)s) a refusé les CGU de l'Eusko numérique.\n"
+"  "
+msgstr ""
+
+#: cel/templates/mails/refuse_cgu.txt:9
+#, python-format
+msgid ""
+"\n"
+"    %(firstname)s %(lastname)s (%(num_adherent)s) a refusé les CGU de "
+"l'Eusko numérique.\n"
+"  "
+msgstr ""
+
+#: cel/templates/mails/send_mail_change_auto.txt:6
+#, python-format
+msgid ""
+"\n"
+"      %(profile.company)s (%(login)s) souhaite arrêter son change "
+"automatique mensuel.\n"
+"    "
+msgstr ""
+
+#: cel/templates/mails/send_mail_change_auto.txt:10
+#, python-format
+msgid ""
+"\n"
+"      %(profile.company)s (%(login)s) a modifié le montant de son change "
+"automatique mensuel.\n"
+"      Nouveau Montant: %(new_amount)s\n"
+"    "
+msgstr ""
+
+#: cel/templates/mails/send_mail_change_auto.txt:17
+#, python-format
+msgid ""
+"\n"
+"      %(profile.firstname)s %(profile.lastname)s (%(login)s) souhaite "
+"arrêter son change automatique mensuel.\n"
+"    "
+msgstr ""
+
+#: cel/templates/mails/send_mail_change_auto.txt:21
+#, python-format
+msgid ""
+"\n"
+"      %(profile.firstname)s %(profile.lastname)s (%(login)s) a modifié le "
+"montant de son change automatique mensuel.\n"
+"      Nouveau Montant: %(new_amount)s\n"
+"    "
+msgstr ""
+
+#: cel/templates/mails/send_mail_change_auto.txt:29
+#, python-format
+msgid "Commentaire: %(comment)s"
+msgstr ""
+
+#: cel/templates/mails/send_mail_newsletter.txt:6
+#, python-format
+msgid ""
+"\n"
+"      %(profile.company)s (%(login)s) souhaite recevoir les actualités par "
+"mail.\n"
+"    "
+msgstr ""
+
+#: cel/templates/mails/send_mail_newsletter.txt:10
+#, python-format
+msgid ""
+"\n"
+"      %(profile.company)s (%(login)s) ne souhaite plus recevoir les "
+"actualités par mail.\n"
+"    "
+msgstr ""
+
+#: cel/templates/mails/send_mail_newsletter.txt:16
+#, python-format
+msgid ""
+"\n"
+"      %(profile.firstname)s %(profile.lastname)s (%(login)s) souhaite "
+"recevoir les actualités par mail.\n"
+"    "
+msgstr ""
+
+#: cel/templates/mails/send_mail_newsletter.txt:20
+#, python-format
+msgid ""
+"\n"
+"      %(profile.firstname)s %(profile.lastname)s (%(login)s) ne souhaite "
+"plus recevoir les actualités par mail.\n"
+"    "
+msgstr ""
+
+#: cel/views.py:75
+msgid "Première connexion à votre compte en ligne Eusko"
+msgstr ""
+
+#: cel/views.py:221
+msgid "Changement de mot de passe pour votre compte en ligne Eusko"
+msgstr ""
+
+#: cel/views.py:697
+msgid "Modification du code secret de votre euskokart"
+msgstr ""
+
+#: cel/views.py:700
+msgid "Choix du code secret de votre euskokart"
+msgstr ""
+
+#: cel/views.py:746
+msgid "Refus des CGU"
+msgstr ""
+
+#: members/misc.py:68
+msgid "Changement d'option pour l'abonnement aux actualités"
+msgstr ""
+
+#: members/misc.py:83
+msgid "Arrêt du change mensuel automatique"
+msgstr ""
+
+#: members/misc.py:85
+msgid "Modification du montant du change mensuel automatique"
+msgstr ""
+
+#: members/serializers.py:16
+msgid "Monsieur"
+msgstr ""
+
+#: members/serializers.py:16
+msgid "Madame"
+msgstr ""
+
+#: members/templates/mails/create_member.txt:14
+#: members/templates/mails/subscription.txt:14
+msgid "Votre adhésion à Euskal Moneta a bien été enregistrée, merci !"
+msgstr ""
+
+#: members/templates/mails/create_member.txt:16
+#: members/templates/mails/subscription.txt:16
+msgid ""
+"Vous pouvez maintenant ouvrir un compte Eusko numérique, en quelques "
+"minutes, sur cette page :"
+msgstr ""
+
+#: members/templates/mails/create_member.txt:19
+#: members/templates/mails/subscription.txt:19
+msgid ""
+"Vous allez recevoir votre carte d'adhérent ou votre euskokart par courrier "
+"dans quelques jours"
+msgstr ""
+
+#: members/templates/mails/create_member.txt:21
+#: members/templates/mails/subscription.txt:21
+msgid ""
+"Pous plus d'informations sur l'Eusko, consulter la liste des entreprises et "
+"associations adhérentes, trouver le bureau de change le plus proche de chez "
+"vous, etc., rendez-vous sur"
+msgstr ""
+
+#: members/views.py:62
+msgid "Votre adhésion à Euskal Moneta"
+msgstr ""

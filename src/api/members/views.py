@@ -1,14 +1,18 @@
 import logging
 
 import arrow
+from django import forms
 from django.conf import settings
+from django.core.validators import validate_email
+from django.template.loader import render_to_string
+from django.utils.translation import activate, gettext as _
 from rest_framework import status
 from rest_framework.response import Response
 
 from base_api import BaseAPIView
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPIException
-from members.serializers import MemberSerializer, MembersSubscriptionsSerializer
+from members.serializers import MemberSerializer, MembersSubscriptionsSerializer, MemberPartialSerializer
 from members.misc import Member, Subscription
 from misc import sendmail_euskalmoneta
 from pagination import CustomPagination
@@ -37,7 +41,7 @@ class MembersAPIView(BaseAPIView):
 
         # Cyclos: Register member
         try:
-            self.cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+            self.cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
         except CyclosAPIException:
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -50,12 +54,21 @@ class MembersAPIView(BaseAPIView):
         self.cyclos.post(method='user/register', data=create_user_data)
 
         try:
-            sendmail_euskalmoneta(subject="subject", body="body", to_email=data['email'])
+            # Activate user pre-selected language
+            # TODO: Ask member for his prefered lang
+            # activate(data['options_langue'])
+
+            # Translate subject & body for this email
+            subject = _('Votre adhésion à Euskal Moneta')
+            body = render_to_string('mails/create_member.txt', {'user': data})
+
+            sendmail_euskalmoneta(subject=subject, body=body, to_email=data['email'])
         except KeyError:
             log.critical("Oops! No mail sent to the member, we didn't had a email address !")
         return Response(response_obj, status=status.HTTP_201_CREATED)
 
     def list(self, request):
+        email = request.GET.get('email', '')
         login = request.GET.get('login', '')
         name = request.GET.get('name', '')
         valid_login = Member.validate_num_adherent(login)
@@ -85,6 +98,17 @@ class MembersAPIView(BaseAPIView):
             return Response({'error': 'You need to provide a ?name parameter longer than 2 characters!'},
                             status=status.HTTP_400_BAD_REQUEST)
 
+        elif email:
+            try:
+                validate_email(email)
+                user_results = self.dolibarr.get(model='members', email=email, api_key=dolibarr_token)
+                user_data = [item
+                             for item in user_results
+                             if item['email'] == email][0]
+                return Response(user_data)
+            except forms.ValidationError:
+                return Response({'error': 'You need to provide a *VALID* ?email parameter! (Format: E12345)'},
+                                status=status.HTTP_400_BAD_REQUEST)
         else:
             objects = self.dolibarr.get(model=self.model, api_key=dolibarr_token)
             paginator = CustomPagination()
@@ -98,10 +122,32 @@ class MembersAPIView(BaseAPIView):
         pass
 
     def partial_update(self, request, pk=None):
-        data = request.data
-        serializer = MemberSerializer(data=data)
+        serializer = MemberPartialSerializer(data=request.data)
         if serializer.is_valid():
-            data = Member.validate_data(data, mode='update')
+            response = self.dolibarr.get(model='members/{}'.format(pk), api_key=request.user.profile.dolibarr_token)
+
+            # Validate / modify data (serialize to match Dolibarr formats)
+            data = Member.validate_data(request.data, mode='update', base_options=response['array_options'])
+
+            try:
+                # Envoi mail lorsque l'option "Je souhaite être informé..." à été modifiée
+                if (response['array_options']['options_recevoir_actus'] !=
+                   data['array_options']['options_recevoir_actus']):
+                    Member.send_mail_newsletter(
+                        login=str(request.user), profile=request.user.profile,
+                        new_status=data['array_options']['options_recevoir_actus'],
+                        lang=response['array_options']['options_langue'])
+
+                # Envoi mail lorsque l'option "Je souhaite être informé..." à été modifiée
+                if (response['array_options']['options_prelevement_change_montant'] !=
+                   data['array_options']['options_prelevement_change_montant']):
+                    Member.send_mail_change_auto(
+                        login=str(request.user), profile=request.user.profile,
+                        mode=data['mode'], new_amount=data['array_options']['options_prelevement_change_montant'],
+                        comment=data['prelevement_change_comment'], lang=response['array_options']['options_langue'])
+
+            except KeyError:
+                pass
         else:
             log.critical(serializer.errors)
             return Response({'error': 'Oops! Something is wrong in your request data: {}'.format(serializer.errors)},
@@ -222,7 +268,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
         # Cyclos: Register member subscription payment
         try:
-            self.cyclos = CyclosAPI(auth_string=request.user.profile.cyclos_auth_string, mode='bdc')
+            self.cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
         except CyclosAPIException:
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -246,6 +292,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                  'description': 'Cotisation - {} - {}'.format(
                     current_member['login'], member_name),
                  })
+            currency = 'eusko'
         elif 'Euro' in data['payment_mode']:
             query_data.update(
                 {'type': str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_euro']),
@@ -258,6 +305,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                  'description': 'Cotisation - {} - {} - {}'.format(
                     current_member['login'], member_name, payment_label),
                  })
+            currency = '€'
         else:
             return Response({'error': 'This payment_mode is invalid!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -270,7 +318,16 @@ class MembersSubscriptionsAPIView(BaseAPIView):
         self.cyclos.post(method='payment/perform', data=query_data)
 
         try:
-            sendmail_euskalmoneta(subject="subject", body="body", to_email=current_member['email'])
+            # Activate user pre-selected language
+            # TODO: Ask member for his prefered lang
+            # activate(data['options_langue'])
+
+            # Translate subject & body for this email
+            subject = _('Votre cotisation à Euskal Moneta')
+            body = render_to_string('mails/subscription.txt',
+                                    {'user': current_member, 'amount': data['amount'], 'currency': currency})
+
+            sendmail_euskalmoneta(subject=subject, body=body, to_email=current_member['email'])
         except KeyError:
             log.critical("Oops! No mail sent to this member {}, "
                          "we didn't had a email address !".format(current_member['login']))

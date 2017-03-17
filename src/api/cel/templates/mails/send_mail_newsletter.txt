@@ -1,0 +1,24 @@
+{% load staticfiles i18n %}
+Bonjour,
+
+{% if profile_companyname %}
+  {% if new_status == '1' %}
+    {% blocktrans %}
+      {{ profile_companyname }} ({{ login }}) souhaite recevoir les actualités par mail.
+    {% endblocktrans %}
+  {% else %}
+    {% blocktrans %}
+      {{ profile_companyname }} ({{ login }}) ne souhaite plus recevoir les actualités par mail.
+    {% endblocktrans %}
+  {% endif %}
+{% else %}
+  {% if new_status == '1' %}
+    {% blocktrans %}
+      {{ profile_firstname }} {{ profile_lastname }} ({{ login }}) souhaite recevoir les actualités par mail.
+    {% endblocktrans %}
+  {% else %}
+    {% blocktrans %}
+      {{ profile_firstname }} {{ profile_lastname }} ({{ login }}) ne souhaite plus recevoir les actualités par mail.
+    {% endblocktrans %}
+  {% endif %}
+{% endif %}

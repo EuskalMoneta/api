@@ -1,8 +1,11 @@
 import logging
 
+from django import forms
 from django.conf import settings
+from django.core.validators import validate_email
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
+from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
@@ -21,9 +24,36 @@ def login(request):
     serializer = serializers.LoginSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    dolibarr = DolibarrAPI()
-    return Response({'auth_token': dolibarr.login(login=request.data['username'],
-                                                  password=request.data['password'])})
+    try:
+        dolibarr = DolibarrAPI()
+
+        try:
+            # validate (or not) the fact that our "username" variable is an email
+            validate_email(request.data['username'])
+
+            # we detected that our "username" variable is an email, we try to connect to dolibarr with it
+            dolibarr_anonymous_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                                                      password=settings.APPS_ANONYMOUS_PASSWORD)
+            user_results = dolibarr.get(model='members', email=request.data['username'],
+                                        api_key=dolibarr_anonymous_token)
+            user_data = [item
+                         for item in user_results
+                         if item['email'] == request.data['username']][0]
+            if not user_data:
+                raise AuthenticationFailed()
+
+            login = user_data['login']
+
+            token = dolibarr.login(login=user_data['login'], password=request.data['password'])
+        except forms.ValidationError:
+            # we detected that our "username" variable is NOT an email
+            login = request.data['username']
+
+            token = dolibarr.login(login=request.data['username'], password=request.data['password'])
+    except (DolibarrAPIException, KeyError, IndexError):
+        raise AuthenticationFailed()
+
+    return Response({'auth_token': token, 'login': login})
 
 
 @api_view(['GET'])
@@ -37,11 +67,29 @@ def verify_usergroup(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.query_params['api_key'])
-        user_results = dolibarr.get(model='users', login=request.query_params['username'])
+        try:
+            # validate (or not) the fact that our "username" variable is an email
+            validate_email(request.query_params['username'])
 
-        user_id = [item
-                   for item in user_results
-                   if item['login'] == request.query_params['username']][0]['id']
+            user_results = dolibarr.get(model='members', email=request.query_params['username'])
+            user_data = [item
+                         for item in user_results
+                         if item['email'] == request.query_params['username']][0]
+            if not user_data:
+                return Response({'error': 'Unable to get user ID from your username!'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            user_results = dolibarr.get(model='users', login=user_data['login'])
+
+            user_id = [item
+                       for item in user_results
+                       if item['email'] == request.query_params['username']][0]['id']
+        except forms.ValidationError:
+            user_results = dolibarr.get(model='users', login=request.query_params['username'])
+
+            user_id = [item
+                       for item in user_results
+                       if item['login'] == request.query_params['username']][0]['id']
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (KeyError, IndexError):
@@ -142,11 +190,23 @@ def get_bdc_name(request):
 
 
 @api_view(['GET'])
+def get_username(request):
+    """
+    Get the username for the current user.
+    """
+    return Response(str(request.user))
+
+
+@api_view(['GET'])
 def get_member_name(request):
     """
-    Get the member name (firstname + lastname) for the current user.
+    Get the member name (firstname + lastname or companyname) for the current user.
     """
-    return Response('{} {}'.format(request.user.profile.firstname, request.user.profile.lastname))
+    if request.user.profile.companyname:
+        member_name = '{}'.format(request.user.profile.companyname)
+    else:
+        member_name = '{} {}'.format(request.user.profile.firstname, request.user.profile.lastname)
+    return Response(member_name)
 
 
 @api_view(['GET'])
@@ -158,12 +218,17 @@ def get_user_data(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
+        username = serializer.data['username']
+    except KeyError:
+        username = str(request.user)
+
+    try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        user_results = dolibarr.get(model='users', login=request.query_params['username'])
+        user_results = dolibarr.get(model='users', login=username)
 
         user_data = [item
                      for item in user_results
-                     if item['login'] == request.query_params['username']][0]
+                     if item['login'] == username][0]
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except IndexError:
