@@ -40,6 +40,11 @@
             article {
                 margin-top: 75px;
             }
+
+            .align-right {
+                text-align: right;
+            }
+
         </style>
     </head>
     <body>
@@ -90,17 +95,17 @@
                     <td>
                         {{ item|get_item:'description' }}
                     </td>
-                    <td>
+                    <td class="align-right">
                     {% if item|get_item:'amount' < "0" %}
                         {{ item|get_item:'amount' | floatformat:2 }}
                     {% endif %}
                     </td>
-                    <td>
+                    <td class="align-right">
                     {% if item|get_item:'amount' > "0" %}
                         {{ item|get_item:'amount' | floatformat:2 }}
                     {% endif %}
                     </td>
-                    <td>
+                    <td class="align-right">
                         {{ item|get_item:'balance' | floatformat:2 }}
                     </td>
                 </tr>
