@@ -12,9 +12,9 @@
         <section style="width:100%; height:450px">
             <div style="width: 45%; float:left">
                 {% if 'E' in account.owner.shortDisplay %}
-                    <img src="{% static 'img/icon-eusko.jpg' %}" alt="Logo Euskal Moneta" style="width:100px;height:70px;">
+                    <img src="{% static 'img/icon-eusko.jpg' %}" alt="Logo Euskal Moneta" style="width:30%;height:30%;">
                 {% elif 'Z' in account.owner.shortDisplay %}
-                    <img src="{% static 'img/icon-eusko_pro.jpg' %}" alt="Logo Euskal Moneta" style="width:100px;height:70px;">
+                    <img src="{% static 'img/icon-eusko_pro.jpg' %}" alt="Logo Euskal Moneta" style="width:30%;height:30%;">
                 {% endif %}
                 <h2 style="text-align: right">Relevé d'Identité Eusko</h2>
                 <h4>Titulaire du compte :</h4><div style="text-align:center">{{ account.owner.display }}</div>
@@ -22,9 +22,9 @@
             </div>
             <div style="width: 45%; float:right">
                 {% if 'E' in account.owner.shortDisplay %}
-                    <img src="{% static 'img/icon-eusko.jpg' %}" alt="Logo Euskal Moneta" style="width:100px;height:70px;">
+                    <img src="{% static 'img/icon-eusko.jpg' %}" alt="Logo Euskal Moneta" style="width:30%;height:30%;">
                 {% elif 'Z' in account.owner.shortDisplay %}
-                    <img src="{% static 'img/icon-eusko_pro.jpg' %}" alt="Logo Euskal Moneta" style="width:100px;height:70px;">
+                    <img src="{% static 'img/icon-eusko_pro.jpg' %}" alt="Logo Euskal Moneta" style="width:30%;height:30%;">
                 {% endif %}
                 <h2 style="text-align: right">Relevé d'Identité Eusko</h2>
                 <h4>Titulaire du compte :</h4><div style="text-align:center">{{ account.owner.display }}</div>

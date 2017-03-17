@@ -56,6 +56,7 @@ urlpatterns = [
     url(r'^entree-stock/$', bdc_cyclos_views.entree_stock),
     url(r'^sortie-stock/$', bdc_cyclos_views.sortie_stock),
     url(r'^change-euro-eusko/$', bdc_cyclos_views.change_euro_eusko),
+    url(r'^change-euro-eusko-numeriques/$', bdc_cyclos_views.change_euro_eusko_numeriques),
     url(r'^reconversion/$', bdc_cyclos_views.reconversion),
     url(r'^bank-deposit/$', bdc_cyclos_views.bank_deposit),
     url(r'^cash-deposit/$', bdc_cyclos_views.cash_deposit),
@@ -111,6 +112,8 @@ urlpatterns = [
     url(r'^euskokart-unblock/$', cel_views.euskokart_unblock),
     url(r'^euskokart-pin/$', cel_views.euskokart_pin),
     url(r'^euskokart-upd-pin/$', cel_views.euskokart_update_pin),
+    url(r'^member-cel-subscription/$', cel_views.members_cel_subscription),
+
 ]
 
 urlpatterns += router.urls

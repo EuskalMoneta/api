@@ -1,0 +1,12 @@
+{% load staticfiles i18n %}
+Bonjour,
+
+{% if user|get_item:'company' %}
+  {% blocktrans with name=user|get_item:'company' num_adherent=user|get_item:'login' %}
+    {{ name }} ({{ num_adherent }}) a refusé les CGU de l'Eusko numérique.
+  {% endblocktrans %}
+{% else %}
+  {% blocktrans with firstname=user|get_item:'firstname' lastname=user|get_item:'lastname' num_adherent=user|get_item:'login' %}
+    {{ firstname }} {{ lastname }} ({{ num_adherent }}) a refusé les CGU de l'Eusko numérique.
+  {% endblocktrans %}
+{% endif %}

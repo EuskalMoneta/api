@@ -5,6 +5,8 @@ from uuid import uuid4
 
 import arrow
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.translation import activate, gettext as _
 from drf_pdf.renderer import PDFRenderer
 import jwt
 from rest_framework import status
@@ -66,8 +68,14 @@ def first_connection(request):
                 confirm_url = '{}/valide-premiere-connexion?token={}'.format(settings.CEL_PUBLIC_URL,
                                                                              jwt_token.decode("utf-8"))
 
-                sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
-                                      to_email=request.data['email'])
+                # Activate user pre-selected language
+                activate(user_data['array_options']['options_langue'])
+
+                # Translate subject & body for this email
+                subject = _('Première connexion à votre compte en ligne Eusko')
+                body = render_to_string('mails/first_connection.txt', {'token': confirm_url, 'user': user_data})
+
+                sendmail_euskalmoneta(subject=subject, body=body, to_email=request.data['email'])
                 return Response({'member': 'OK'})
             else:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -206,8 +214,14 @@ def lost_password(request):
                 confirm_url = '{}/valide-passe-perdu?token={}'.format(settings.CEL_PUBLIC_URL,
                                                                       jwt_token.decode("utf-8"))
 
-                sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
-                                      to_email=request.data['email'])
+                # Activate user pre-selected language
+                activate(user_data['array_options']['options_langue'])
+
+                # Translate subject & body for this email
+                subject = _('Changement de mot de passe pour votre compte en ligne Eusko')
+                body = render_to_string('mails/lost_password.txt', {'token': confirm_url, 'user': user_data})
+
+                sendmail_euskalmoneta(subject=subject, body=body, to_email=request.data['email'])
                 return Response({'member': 'OK'})
             else:
                 return Response(status=status.HTTP_400_BAD_REQUEST)
@@ -367,7 +381,7 @@ def export_history_adherent(request):
 
     search_history_data = {
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
-        'orderBy': 'DATE_DESC',
+        'orderBy': 'DATE_ASC',
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentpage': 0,
         'period':
@@ -385,13 +399,16 @@ def export_history_adherent(request):
                 line_without_balance['balance'] = line_with_balance['balance']
 
     for line in accounts_history_res['result']['pageItems']:
-        line['date'] = arrow.get(line['date']).format('Le YYYY-MM-DD à HH:mm')
+        line['date'] = arrow.get(line['date']).format('DD-MM-YYYY à HH:mm')
 
     context = {
+        'account_number': accounts_summaries_data['result'][0]['number'],
+        'name': accounts_summaries_data['result'][0]['owner']['display'],
         'account_history': accounts_history_res['result'],
+        'account_login': str(request.user),
         'period': {
-            'begin': serializer.data['begin'].replace(hour=0, minute=0, second=0),
-            'end': serializer.data['end'].replace(hour=23, minute=59, second=59),
+            'begin': arrow.get(serializer.data['begin']).format('DD MMMM YYYY', locale='fr'),
+            'end': arrow.get(serializer.data['end']).format('DD MMMM YYYY', locale='fr'),
         },
     }
     if request.query_params['mode'] == 'pdf':
@@ -408,16 +425,16 @@ def export_history_adherent(request):
     else:
         csv_content = [{'Date': line['date'],
                         'Libellé': line['description'],
-                        'Crédit': line['amount'],
+                        'Crédit': str(line['amount']).replace('.', ','),
                         'Débit': '',
-                        'Solde': line['balance']}
+                        'Solde': str(line['balance']).replace('.', ',')}
                        if float(line['amount']) > float()
                        else
                        {'Date': line['date'],
                         'Libellé': line['description'],
                         'Crédit': '',
-                        'Débit': line['amount'],
-                        'Solde': line['balance']}
+                        'Débit': str(line['amount']).replace('.', ','),
+                        'Solde': str(line['balance']).replace('.', ',')}
                        for line in context['account_history']['pageItems']]
         return Response(csv_content)
 
@@ -497,7 +514,7 @@ def euskokart_list(request):
 
 @api_view(['GET'])
 def euskokart_block(request):
-    serializer = serializers.EuskoKartLockSerializer(data=request.query_params)
+    serializer = serializers.EuskokartLockSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
 
     try:
@@ -513,7 +530,7 @@ def euskokart_block(request):
 
 @api_view(['GET'])
 def euskokart_unblock(request):
-    serializer = serializers.EuskoKartLockSerializer(data=request.query_params)
+    serializer = serializers.EuskokartLockSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)
 
     try:
@@ -530,13 +547,12 @@ def euskokart_unblock(request):
 @api_view(['POST'])
 def one_time_transfer(request):
     """
-    Transfer d'eusko entre compte de particulier.
+    Transfer d'eusko entre compte d'adhérent.
     """
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
     serializer = serializers.OneTimeTransferSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
@@ -621,6 +637,8 @@ def user_rights(request):
         res.update({
             'member_type': member_data['type'],
             'has_valid_membership': True if end_date_arrow > now else False,
+            'lang':
+            member_data['array_options']['options_langue'] if member_data['array_options']['options_langue'] else 'fr',
             'has_accepted_cgu':
             True if member_data['array_options']['options_accepte_cgu_eusko_numerique'] else False})
     except (DolibarrAPIException, KeyError):
@@ -635,11 +653,11 @@ def euskokart_pin(request):
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-    response = (cyclos.post(method='password/getData', data=cyclos.user_id))
-    for item in response['result']['passwords']:
-        if item['type']['name'] == 'PIN':
-            res = item['status']
-    return Response(res)
+    response = cyclos.post(method='password/getData', data=cyclos.user_id)
+    pin_code = [p
+                for p in response['result']['passwords']
+                if p['type']['id'] == str(settings.CYCLOS_CONSTANTS['password_types']['pin'])][0]
+    return Response(pin_code['status'])
 
 
 @api_view(['POST'])
@@ -670,34 +688,31 @@ def euskokart_update_pin(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to set your pin code!'}, status=status.HTTP_401_UNAUTHORIZED)
 
-    if mode == 'modifiy':
-        subject = "Modification de votre code d'eusko carte"
-        body = ("Le code de vos cartes euskos a été modifié le {}. "
-                "Si vous n'êtes pas à l'initiative de cette modification, "
-                "veuillez contacter Euskal Moneta").format(datetime.utcnow())
-    elif mode == 'add':
-        subject = "Ajout du code de votre eusko carte",
-        body = ("Le code de vos cartes euskos a été choisi le {}. "
-                "Si vous n'êtes pas à l'initiative de ce choix, "
-                "veuillez contacter Euskal Moneta").format(datetime.utcnow()),
-
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         response = dolibarr.get(model='members', login=str(request.user))
-        sendmail_euskalmoneta(
-            subject=subject,
-            body=body,
-            to_email=response[0]['email'])
+
+        # Activate user pre-selected language
+        activate(response[0]['array_options']['options_langue'])
+
+        if mode == 'modifiy':
+            subject = _('Modification du code secret de votre euskokart')
+            response_data = {'status': 'Pin modified!'}
+        elif mode == 'add':
+            subject = _('Choix du code secret de votre euskokart')
+            response_data = {'status': 'Pin added!'}
+
+        body = render_to_string('mails/euskokart_update_pin.txt', {'mode': mode, 'user': response[0]})
+
+        sendmail_euskalmoneta(subject=subject, body=body, to_email=response[0]['email'])
     except DolibarrAPIException as e:
         return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
                         status=status.HTTP_400_BAD_REQUEST)
     except Exception as e:
         return Response({'error': 'Unable to send mail! error : {}'.format(e)},
                         status=status.HTTP_400_BAD_REQUEST)
-    if mode == 'modifiy':
-        return Response({'status': 'Pin modified!'}, status=status.HTTP_202_ACCEPTED)
-    elif mode == 'add':
-        return Response({'status': 'Pin added!'}, status=status.HTTP_201_CREATED)
+
+    return Response(response_data, status=status.HTTP_202_ACCEPTED)
 
 
 @api_view(['POST'])
@@ -706,10 +721,10 @@ def accept_cgu(request):
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         member_data = dolibarr.get(model='members', login=str(request.user))[0]
 
-        data = {'array_options': {'options_accepte_cgu_eusko_numerique': True}}
+        data = {'array_options': member_data['array_options']}
+        data['array_options'].update({'options_accepte_cgu_eusko_numerique': True})
 
-        response = dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
-        return Response(response)
+        dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
         return Response({'status': 'OK'})
     except (DolibarrAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -721,14 +736,131 @@ def refuse_cgu(request):
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         member_data = dolibarr.get(model='members', login=str(request.user))[0]
 
-        data = {'array_options': {'options_accepte_cgu_eusko_numerique': False}}
+        data = {'array_options': member_data['array_options']}
+        data['array_options'].update({'options_accepte_cgu_eusko_numerique': False})
 
-        response = dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
-        return Response(response)
-        return Response({'status': 'OK'})
+        dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
 
-        # sendmail_euskalmoneta(subject="subject", body="body blabla, token: {}".format(confirm_url),
-        #                       to_email=request.data['email'])
+        # Activate user pre-selected language
+        activate(member_data['array_options']['options_langue'])
+
+        # Translate subject & body for this email
+        subject = _('Refus des CGU')
+        body = render_to_string('mails/refuse_cgu.txt', {'user': member_data})
+
+        sendmail_euskalmoneta(subject=subject, body=body)
+
         return Response({'status': 'OK'})
     except (DolibarrAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def members_cel_subscription(request):
+
+    serializer = serializers.MembersSubscriptionSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        member = dolibarr.get(model='members', login=str(request.user))
+    except DolibarrAPIException as e:
+        return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    current_member = dolibarr.get(model='members', id=member[0]['id'])
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if current_member['type'].lower() == 'particulier':
+        member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
+    else:
+        member_name = current_member['company']
+
+    try:
+        data = cyclos.post(method='user/search', data={'keywords': 'Z00001'})
+        euskal_moneta_cyclos_id = data['result']['pageItems'][0]['id']
+    except (KeyError, IndexError, CyclosAPIException) as e:
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    query_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
+        'amount': serializer.data['amount'],
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': cyclos.user_id,
+        'to': euskal_moneta_cyclos_id,
+        'description': 'Cotisation - {} - {}'.format(current_member['login'], member_name),
+    }
+    cyclos.post(method='payment/perform', data=query_data)
+
+    # Register new subscription
+    data_res_subscription = {'start_date': serializer.data['start_date'].strftime('%s'),
+                             'end_date': serializer.data['end_date'].strftime('%s'),
+                             'amount': serializer.data['amount'], 'label': serializer.data['label']}
+
+    try:
+        res_id_subscription = dolibarr.post(
+            model='members/{}/subscriptions'.format(member[0]['id']), data=data_res_subscription)
+    except Exception as e:
+        log.critical("data_res_subscription: {}".format(data_res_subscription))
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    if str(res_id_subscription) == '-1':
+        return Response({'data returned': str(res_id_subscription)}, status=status.HTTP_409_CONFLICT)
+    # Register new payment
+    payment_account = 4
+    payment_type = 'VIR'
+    data_res_payment = {'date': arrow.now('Europe/Paris').timestamp, 'type': payment_type,
+                        'label': serializer.data['label'], 'amount': serializer.data['amount']}
+    model_res_payment = 'accounts/{}/lines'.format(payment_account)
+    try:
+        res_id_payment = dolibarr.post(
+            model=model_res_payment, data=data_res_payment)
+
+        log.info("res_id_payment: {}".format(res_id_payment))
+    except DolibarrAPIException as e:
+        log.critical("model: {}".format(model_res_payment))
+        log.critical("data_res_payment: {}".format(data_res_payment))
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Link this new subscription with this new payment
+    data_link_sub_payment = {'fk_bank': res_id_payment}
+    model_link_sub_payment = 'subscriptions/{}'.format(res_id_subscription)
+    try:
+        res_id_link_sub_payment = dolibarr.patch(
+            model=model_link_sub_payment, data=data_link_sub_payment)
+
+        log.info("res_id_link_sub_payment: {}".format(res_id_link_sub_payment))
+    except DolibarrAPIException as e:
+        log.critical("model: {}".format(model_link_sub_payment))
+        log.critical("data_link_sub_payment: {}".format(data_link_sub_payment))
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Link this payment with the related-member
+    data_link_payment_member = {'label': '{} {}'.format(member[0]['firstname'], member[0]['lastname']),
+                                'type': 'member', 'url_id': member[0]['id'],
+                                'url': '{}/adherents/card.php?rowid={}'.format(
+                                    settings.DOLIBARR_PUBLIC_URL, member[0]['id'])}
+    model_link_payment_member = 'accounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
+    try:
+        res_id_link_payment_member = dolibarr.post(
+            model=model_link_payment_member, data=data_link_payment_member)
+
+        log.info("res_id_link_payment_member: {}".format(res_id_link_payment_member))
+    except DolibarrAPIException as e:
+        log.critical("model: {}".format(model_link_payment_member))
+        log.critical("data_link_payment_member: {}".format(data_link_payment_member))
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    res = {'id_subscription': res_id_subscription,
+           'id_payment': res_id_payment,
+           'link_sub_payment': res_id_link_sub_payment,
+           'id_link_payment_member': res_id_link_payment_member,
+           'member': current_member}
+
+    return Response(res, status=status.HTTP_201_CREATED)

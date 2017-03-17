@@ -66,6 +66,8 @@ class MemberPartialSerializer(serializers.Serializer):
     options_recevoir_actus = serializers.CharField(write_only=True, allow_blank=True, required=False)
     # Ajouter association parainée
     options_asso_saisie_libre = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    # Langue
+    options_langue = serializers.CharField(write_only=True, required=False, allow_blank=True)
     fk_asso = serializers.CharField(required=False, allow_blank=True)
     fk_asso2 = serializers.CharField(required=False, allow_blank=True)
 

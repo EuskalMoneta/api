@@ -1,9 +1,14 @@
+import copy
 import datetime
 import logging
 import time
 
 import arrow
 from django.conf import settings
+from django.template.loader import render_to_string
+from django.utils.translation import activate, gettext as _
+
+from misc import sendmail_euskalmoneta
 
 log = logging.getLogger()
 
@@ -18,7 +23,7 @@ class Member:
             return False
 
     @staticmethod
-    def validate_data(data, mode='create'):
+    def validate_data(data, mode='create', base_options=None):
         """
         1. Dolibarr.llx_adherent.fk_adherent_type : typeid in the Dolibarr API = "3" (particulier)
         2. Dolibarr.llx_adherent.morphy = "phy" (personne physique)
@@ -31,8 +36,16 @@ class Member:
             data['statut'] = "1"
             data['public'] = "0"
 
-        data['birth'] = Member.validate_birthdate(data['birth'])
-        data = Member.validate_options(data)
+        try:
+            data['birth'] = Member.validate_birthdate(data['birth'])
+        except KeyError:
+            pass
+
+        if base_options:
+            data = Member.validate_options(data, base_options)
+        else:
+            data = Member.validate_options(data)
+
         data = Member.validate_phones(data)
 
         return data
@@ -52,21 +65,106 @@ class Member:
         return res
 
     @staticmethod
-    def validate_options(data):
+    def send_mail_newsletter(login, profile, new_status, lang):
+        """
+        Envoi mail à Euskal Moneta lorsque l'option "Je souhaite être informé..." à été modifiée.
+        """
+        # Activate user pre-selected language
+        activate(lang)
+
+        # Translate subject & body for this email
+        subject = _("Changement d'option pour l'abonnement aux actualités")
+        body = render_to_string('mails/send_mail_newsletter.txt',
+                                {'login': login, 'profile': profile, 'new_status': new_status})
+
+        sendmail_euskalmoneta(subject=subject, body=body)
+
+    @staticmethod
+    def send_mail_change_auto(login, profile, mode, new_amount, comment, lang):
+        """
+        Envoi mail à Euskal Moneta lorsque le montant du change automatique à été modifié.
+        """
+        # Activate user pre-selected language
+        activate(lang)
+
+        if mode == 'delete':
+            subject = _('Arrêt du change mensuel automatique')
+        else:
+            subject = _('Modification du montant du change mensuel automatique')
+
+        body = render_to_string('mails/send_mail_change_auto.txt',
+                                {'login': login, 'profile': profile, 'mode': mode,
+                                 'new_amount': new_amount, 'comment': comment})
+
+        sendmail_euskalmoneta(subject=subject, body=body)
+
+    @staticmethod
+    def validate_options(data, source=None):
         """
         We don't want to create sub-objects on the front-side, thus our API have to deal with them.
         """
-        data['array_options'] = {}
-
-        # Subscribe newsletter field
-        data['array_options'].update({'options_recevoir_actus': data['options_recevoir_actus']})
-        del data['options_recevoir_actus']
-
-        # If we are in "saisie libre"-mode: we use the options_asso_saisie_libre field,
-        # if not we use the fk_asso field
         try:
+            data['array_options']
+        except KeyError:
+            data['array_options'] = copy.deepcopy(source) if source else {}
+
+        try:
+            # Subscribe newsletter field
+            data['array_options'].update({'options_recevoir_actus': data['options_recevoir_actus']})
+            del data['options_recevoir_actus']
+        except KeyError:
+            pass
+
+        try:
+            # If we are in "saisie libre"-mode: we use the options_asso_saisie_libre field,
+            # if not we use the fk_asso field
             data['array_options'].update({'options_asso_saisie_libre': data['options_asso_saisie_libre']})
             del data['options_asso_saisie_libre']
+        except KeyError:
+            pass
+
+        try:
+            # If we are in "saisie libre"-mode: we use the options_asso_saisie_libre field,
+            # if not we use the fk_asso field
+            data['array_options'].update({'options_langue': data['options_langue']})
+            del data['options_langue']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({
+                'options_prelevement_cotisation_montant': data['options_prelevement_cotisation_montant']})
+            del data['options_prelevement_cotisation_montant']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({
+                'options_prelevement_cotisation_periodicite': data['options_prelevement_cotisation_periodicite']})
+            del data['options_prelevement_cotisation_periodicite']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({
+                'options_prelevement_auto_cotisation_eusko': data['options_prelevement_auto_cotisation_eusko']})
+            del data['options_prelevement_auto_cotisation_eusko']
+        except KeyError:
+            pass
+
+        try:
+            # Change automatique amount field
+            data['array_options'].update(
+                {'options_prelevement_change_montant': data['options_prelevement_change_montant']})
+            del data['options_prelevement_change_montant']
+        except KeyError:
+            pass
+
+        try:
+            # Change automatique periodicite field
+            data['array_options'].update(
+                {'options_prelevement_change_periodicite': data['options_prelevement_change_periodicite']})
+            del data['options_prelevement_change_periodicite']
         except KeyError:
             pass
 

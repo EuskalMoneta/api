@@ -1,0 +1,24 @@
+{% load staticfiles i18n %}
+{% load template_tags %}
+
+{% if user|get_item:'company' %}
+  {% blocktrans with name=user|get_item:'company' %}
+    Bonjour {{ name }},
+  {% endblocktrans %}
+{% else %}
+  {% blocktrans with name=user|get_item:'firstname' %}
+    Bonjour {{ name }},
+  {% endblocktrans %}
+{% endif %}
+
+{% trans "Votre adhésion à Euskal Moneta a bien été enregistrée, merci !" %}
+
+{% trans "Vous pouvez maintenant ouvrir un compte Eusko numérique, en quelques minutes, sur cette page :" %}
+http://www.euskokart.org/ouverture-de-compte.php
+
+{% trans "Vous allez recevoir votre carte d'adhérent ou votre euskokart par courrier dans quelques jours" %}.
+
+{% trans "Pous plus d'informations sur l'Eusko, consulter la liste des entreprises et associations adhérentes, trouver le bureau de change le plus proche de chez vous, etc., rendez-vous sur" %} http://euskalmoneta.org.
+
+{% trans "Bien cordialement" %},
+{% trans "L'équipe d'Euskal Moneta" %}

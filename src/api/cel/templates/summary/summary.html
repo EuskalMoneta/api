@@ -1,55 +1,111 @@
+{% load staticfiles i18n %}
 {% load template_tags %}
 
 <!doctype html>
 <html>
     <head>
         <meta charset="utf-8">
-        <title></title>
+        <title>Historique du {{ period|get_item:'begin' }} au {{ period|get_item:'end' }}</title>
+        <style>
+            table {
+                border-collapse:collapse;
+                width:100%;
+                text-align:center;
+                margin-bottom: 5px;
+            }
+
+            table, th, td {
+                border: 1px solid gray;
+            }
+
+            table > thead > tr > th {
+              vertical-align: bottom;
+              border-bottom: 2px solid #ddd;
+            }
+
+            table tr:nth-child(odd) td {
+              background-color: #F0F0F0;
+            }
+
+            th, td {
+                height: 24px;
+                padding:4px;
+                vertical-align:middle;
+            }
+
+            .rowtitle {
+                font-weight:bold;
+            }
+
+            article {
+                margin-top: 75px;
+            }
+        </style>
     </head>
     <body>
-        <table>
-            <caption>Historique du {{ period|get_item:'begin' }} au {{ period|get_item:'end' }}</caption>
-            <th>
-                <td>
-                    Date
-                </td>
-                <td>
-                    Libellé
-                </td>
-                <td>
-                    Débit
-                </td>
-                <td>
-                    Crédit
-                </td>
-                <td>
-                    Solde
-                </td>
-            </th>
-            {% for item in account_history|get_item:'pageItems' %}
-            <tr>
-                <td></td>
-                <td>
-                    {{ item|get_item:'date' }}
-                </td>
-                <td>
-                    {{ item|get_item:'description' }}
-                </td>
-                <td>
-                {% if item|get_item:'amount' < "0" %}
-                    {{ item|get_item:'amount' }}
-                {% endif %}
-                </td>
-                <td>
-                {% if item|get_item:'amount' > "0" %}
-                    {{ item|get_item:'amount' }}
-                {% endif %}
-                </td>
-                <td>
-                    {{ item|get_item:'balance' }}
-                </td>
-            </tr>
-            {% endfor %}
-        </table>
+        <header>
+            <div style="width:100%">
+                <div style="width:87%;float:left">
+                    <aside>
+                        {% blocktrans %}Nom : {{ name }}{% endblocktrans %}<br />
+                        {% blocktrans %}Identifiant : {{ account_login }}{% endblocktrans %}<br />
+                        {% blocktrans %}Numéro de compte : {{ account_number }}{% endblocktrans %}
+                    </aside>
+                </div>
+                <div>
+                    {% if 'E' in account_login %}
+                        <img src="{% static 'img/icon-eusko.jpg' %}" alt="Logo Euskal Moneta" style="width:100px;">
+                    {% elif 'Z' in account_login %}
+                        <img src="{% static 'img/icon-eusko_pro.jpg' %}" alt="Logo Euskal Moneta" style="width:100px;">
+                    {% endif %}
+                </div>
+            </div>
+        </header>
+        <article>
+            <h4 style="text-align:center">
+                {% blocktrans with begin=period|get_item:'begin' end=period|get_item:'end' %}Historique du {{ begin }} au {{ end }}{% endblocktrans %}</h4>
+            <table>
+                <tr>
+                    <td class="rowtitle">
+                        {% blocktrans %}Date{% endblocktrans %}
+                    </td>
+                    <td class="rowtitle">
+                        {% blocktrans %}Libellé{% endblocktrans %}
+                    </td>
+                    <td class="rowtitle">
+                        {% blocktrans %}Débit{% endblocktrans %}
+                    </td>
+                    <td class="rowtitle">
+                        {% blocktrans %}Crédit{% endblocktrans %}
+                    </td>
+                    <td class="rowtitle">
+                        {% blocktrans %}Solde{% endblocktrans %}
+                    </td>
+                </tr>
+                {% for item in account_history|get_item:'pageItems' %}
+                <tr>
+                    <td>
+                        {{ item|get_item:'date' }}
+                    </td>
+                    <td>
+                        {{ item|get_item:'description' }}
+                    </td>
+                    <td>
+                    {% if item|get_item:'amount' < "0" %}
+                        {{ item|get_item:'amount' | floatformat:2 }}
+                    {% endif %}
+                    </td>
+                    <td>
+                    {% if item|get_item:'amount' > "0" %}
+                        {{ item|get_item:'amount' | floatformat:2 }}
+                    {% endif %}
+                    </td>
+                    <td>
+                        {{ item|get_item:'balance' | floatformat:2 }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </table>
+        </article>
     </body>
 </html>

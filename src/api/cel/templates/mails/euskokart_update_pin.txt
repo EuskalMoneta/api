@@ -1,0 +1,23 @@
+{% load staticfiles i18n %}
+{% load template_tags %}
+
+{% if user|get_item:'company' %}
+  {% blocktrans with name=user|get_item:'company' %}
+    Bonjour {{ name }},
+  {% endblocktrans %}
+{% else %}
+  {% blocktrans with name=user|get_item:'firstname' %}
+    Bonjour {{ name }},
+  {% endblocktrans %}
+{% endif %}
+
+{% if mode == 'add' %}
+  {% trans "Le code secret de votre euskokart vient d'être défini" %}.
+{% else %}
+  {% trans "Le code secret de votre euskokart vient d'être modifié" %}.
+{% endif %}
+
+{% trans "Si vous n'êtes pas à l'initiative de cette action, veuillez nous contacter" %}.
+
+{% trans "Bien cordialement" %},
+{% trans "L'équipe d'Euskal Moneta" %}
