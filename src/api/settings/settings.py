@@ -129,9 +129,9 @@ else:
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': DATABASE_NAME,
-            'USER': os.environment.get('DATABASE_USER'),
-            'PASSWORD': os.environment.get('DATABASE_PASSWORD'),
-            'HOST': os.environment.get('DATABASE_HOST'),
+            'USER': os.environ.get('DATABASE_USER'),
+            'PASSWORD': os.environ.get('DATABASE_PASSWORD'),
+            'HOST': os.environ.get('DATABASE_HOST'),
             'PORT': '5432',
         }
     }
