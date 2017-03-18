@@ -632,7 +632,10 @@ def user_rights(request):
 
         # return Response(member_data)
         now = arrow.now('Europe/Paris')
-        end_date_arrow = arrow.get(member_data['datefin']).to('Europe/Paris')
+        try:
+            end_date_arrow = arrow.get(member_data['datefin']).to('Europe/Paris')
+        except arrow.parser.ParserError:
+            end_date_arrow = now
 
         res.update({
             'member_type': member_data['type'],
