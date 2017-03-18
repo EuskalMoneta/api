@@ -280,7 +280,6 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             member_name = current_member['company']
 
         query_data = {}
-        log.critical(data)
 
         if 'Eusko' in data['payment_mode']:
             query_data.update(
