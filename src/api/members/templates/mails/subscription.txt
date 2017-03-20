@@ -11,10 +11,11 @@
   {% endblocktrans %}
 {% endif %}
 
-{% trans "Votre adhésion à Euskal Moneta a bien été enregistrée, merci !" %}
+{% blocktrans %}Nous avons bien reçu votre cotisation de {{ amount }} {{ currency }}, merci !{% endblocktrans %}
 
-{% trans "Vous pouvez maintenant ouvrir un compte Eusko numérique, en quelques minutes, sur cette page :" %}
-http://www.euskokart.org/ouverture-de-compte.php
+{% blocktrans %}Vous êtes maintenant à jour de cotisation jusqu'au {{ enddate }}{% endblocktrans %}.
+
+{% trans "Si vous le souhaitez (et si vous ne l'avez pas déjà fait), vous pouvez ouvrir un compte Eusko numérique, en quelques minutes, sur cette page :" %} http://www.euskokart.org/ouverture-de-compte.php.
 
 {% trans "Vous allez recevoir votre carte d'adhérent ou votre euskokart par courrier dans quelques jours" %}.
 
