@@ -66,6 +66,8 @@ INSTALLED_APPS = [
 
     'gestioninterne',
 
+    'prestataires',
+
     'corsheaders',
     'wkhtmltopdf',
     # 'raven.contrib.django.raven_compat',
