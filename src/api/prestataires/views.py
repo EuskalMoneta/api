@@ -89,3 +89,35 @@ class CategoriesPrestatairesAPIView(BaseAPIView):
                                 if cat['fk_parent'] == '0'
                                 and cat['label'] not in ('--- Etiquettes', '--- Euskal Moneta')]
         return Response(filtered_categories)
+
+
+class VillesPrestatairesAPIView(BaseAPIView):
+
+    def __init__(self, **kwargs):
+        super(VillesPrestatairesAPIView, self).__init__()
+
+    def list(self, request):
+        """
+        Récupérer la liste des villes dans lesquelles il peut y avoir
+        des prestataires (toutes les communes du Pays Basque Nord, en fait).
+        """
+        # Vérification du paramètre "langue".
+        language = request.GET.get('langue')
+        logger.debug('language=' + str(language))
+        if not language:
+            return Response({'error': 'The "langue" parameter is required.'}, status=status.HTTP_400_BAD_REQUEST)
+        if language not in ('eu', 'fr'):
+            return Response({'error': 'Invalid value for the "langue" parameter.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        language_index = 0 if language == 'eu' else 1
+
+        # Récupération des communes enregistrées dans Dolibarr qui sont
+        # dans le 64 et dont le nom contient '/' (ce sont celles du
+        # Pays Basque Nord car nous avons mis leur nom en bilingue
+        # euskara / français).
+        towns = self.dolibarr.get(model='towns', zipcode='64', town='/', api_key=request.user.profile.dolibarr_token)
+        localized_towns = [ {'id': town['id'],
+                             'code_postal': town['zip'],
+                             'nom': town['town'].split('/')[language_index].strip()}
+                            for town in towns ]
+        return Response(localized_towns)

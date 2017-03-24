@@ -7,7 +7,7 @@ from bureauxdechange.views import BDCAPIView
 from members.views import MembersAPIView, MembersSubscriptionsAPIView
 from cel.beneficiaire import BeneficiaireViewSet
 from cel.security_qa import SecurityQAViewSet
-from prestataires.views import PrestatairesAPIView, CategoriesPrestatairesAPIView
+from prestataires.views import PrestatairesAPIView, CategoriesPrestatairesAPIView, VillesPrestatairesAPIView
 
 from auth_token import views as auth_token_views
 import bdc_cyclos.views as bdc_cyclos_views
@@ -26,6 +26,7 @@ router.register(r'beneficiaires', BeneficiaireViewSet, base_name='beneficiaires'
 router.register(r'securityqa', SecurityQAViewSet, base_name='securityqa')
 router.register(r'prestataires', PrestatairesAPIView, base_name='prestataires')
 router.register(r'categories-prestataires', CategoriesPrestatairesAPIView, base_name='categories-prestataires')
+router.register(r'villes-prestataires', VillesPrestatairesAPIView, base_name='villes-prestataires')
 
 urlpatterns = [
     # Auth token
