@@ -24,7 +24,7 @@ router.register(r'members', MembersAPIView, base_name='members')
 router.register(r'members-subscriptions', MembersSubscriptionsAPIView, base_name='members-subscriptions')
 router.register(r'beneficiaires', BeneficiaireViewSet, base_name='beneficiaires')
 router.register(r'securityqa', SecurityQAViewSet, base_name='securityqa')
-router.register(r'prestataires', PrestatairesAPIView, base_name='prestataires')
+router.register(r'annuaire-prestataires', AnnuairePrestatairesAPIView, base_name='annuaire-prestataires')
 router.register(r'categories-prestataires', CategoriesPrestatairesAPIView, base_name='categories-prestataires')
 router.register(r'villes-prestataires', VillesPrestatairesAPIView, base_name='villes-prestataires')
 

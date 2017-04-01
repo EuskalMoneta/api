@@ -12,14 +12,14 @@ from pagination import CustomPagination
 logger = logging.getLogger()
 
 
-class PrestatairesAPIView(BaseAPIView):
+class AnnuairePrestatairesAPIView(BaseAPIView):
 
     def __init__(self, **kwargs):
         super(PrestatairesAPIView, self).__init__()
 
     def list(self, request):
         """
-        Récupérer la liste des prestataires.
+        Récupérer la liste des prestataires pour l'annuaire.
         """
         # Vérification du paramètre "langue".
         language = request.GET.get('langue')
