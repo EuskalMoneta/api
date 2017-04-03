@@ -323,8 +323,10 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
             # Translate subject & body for this email
             subject = _('Votre cotisation à Euskal Moneta')
-            body = render_to_string('mails/subscription.txt',
-                                    {'user': current_member, 'amount': data['amount'], 'currency': currency})
+            body = render_to_string(
+                'mails/subscription.txt',
+                {'user': current_member, 'amount': data['amount'], 'currency': currency,
+                 'enddate': arrow.get(current_member['datefin']).to('Europe/Paris').format('DD/MM/YYYY')})
 
             sendmail_euskalmoneta(subject=subject, body=body, to_email=current_member['email'])
         except KeyError:

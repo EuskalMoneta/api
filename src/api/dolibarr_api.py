@@ -1,4 +1,5 @@
 import logging
+import urllib
 
 from django.conf import settings
 from rest_framework.exceptions import APIException
@@ -44,7 +45,7 @@ class DolibarrAPI(object):
     def login(self, login=None, password=None, reset=None):
         """ Login function for Dolibarr API users.
         """
-        query = '{}/login?login={}&password={}'.format(self.url, login, password)
+        query = '{}/login?login={}&password={}'.format(self.url, login, urllib.parse.quote_plus(password))
 
         if reset:
             query = '{}&reset=1'.format(query)
