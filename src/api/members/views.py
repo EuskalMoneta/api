@@ -53,7 +53,7 @@ class MembersAPIView(BaseAPIView):
         }
         self.cyclos.post(method='user/register', data=create_user_data)
 
-        try:
+        if data['email']:
             # Activate user pre-selected language
             # TODO: Ask member for his prefered lang
             # activate(data['options_langue'])
@@ -63,8 +63,7 @@ class MembersAPIView(BaseAPIView):
             body = render_to_string('mails/create_member.txt', {'user': data})
 
             sendmail_euskalmoneta(subject=subject, body=body, to_email=data['email'])
-        except KeyError:
-            log.critical("Oops! No mail sent to the member, we didn't had a email address !")
+
         return Response(response_obj, status=status.HTTP_201_CREATED)
 
     def list(self, request):
@@ -316,7 +315,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
         self.cyclos.post(method='payment/perform', data=query_data)
 
-        try:
+        if current_member['email']:
             # Activate user pre-selected language
             # TODO: Ask member for his prefered lang
             # activate(data['options_langue'])
@@ -329,9 +328,6 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                  'enddate': arrow.get(current_member['datefin']).to('Europe/Paris').format('DD/MM/YYYY')})
 
             sendmail_euskalmoneta(subject=subject, body=body, to_email=current_member['email'])
-        except KeyError:
-            log.critical("Oops! No mail sent to this member {}, "
-                         "we didn't had a email address !".format(current_member['login']))
 
         return Response(res, status=status.HTTP_201_CREATED)
 
