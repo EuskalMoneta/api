@@ -36,15 +36,19 @@ class MembersAPIView(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         log.info('posted data: {}'.format(data))
-        response_obj = self.dolibarr.post(model=self.model, data=data, api_key=request.user.profile.dolibarr_token)
-        log.info(response_obj)
 
-        # Cyclos: Register member
+        # #841 : We need to connect to Cyclos before doing Dolibarr calls, making sure Cyclos token is still valid.
+        # This way, we avoid creating a member in Dolibarr if it's not the case.
         try:
             self.cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
         except CyclosAPIException:
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Dolibarr: Register member
+        response_obj = self.dolibarr.post(model=self.model, data=data, api_key=request.user.profile.dolibarr_token)
+        log.info(response_obj)
+
+        # Cyclos: Register member
         create_user_data = {
             'group': str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte']),
             'name': '{} {}'.format(data['firstname'], data['lastname']),
