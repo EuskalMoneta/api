@@ -180,6 +180,13 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             log.critical('A member_id must be provided!')
             return Response({'error': 'A member_id must be provided!'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # #841 : We need to connect to Cyclos before doing Dolibarr calls, making sure Cyclos token is still valid.
+        # This way, we avoid creating a subscription in Dolibarr if it's not the case.
+        try:
+            self.cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
+        except CyclosAPIException:
+            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             member = self.dolibarr.get(model='members', id=member_id, api_key=dolibarr_token)
         except DolibarrAPIException as e:
@@ -270,11 +277,6 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                'member': current_member}
 
         # Cyclos: Register member subscription payment
-        try:
-            self.cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
-        except CyclosAPIException:
-            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
         member_cyclos_id = self.cyclos.get_member_id_from_login(current_member['login'])
 
         if current_member['type'].lower() == 'particulier':
