@@ -36,15 +36,19 @@ class MembersAPIView(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         log.info('posted data: {}'.format(data))
-        response_obj = self.dolibarr.post(model=self.model, data=data, api_key=request.user.profile.dolibarr_token)
-        log.info(response_obj)
 
-        # Cyclos: Register member
+        # #841 : We need to connect to Cyclos before doing Dolibarr calls, making sure Cyclos token is still valid.
+        # This way, we avoid creating a member in Dolibarr if it's not the case.
         try:
             self.cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
         except CyclosAPIException:
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # Dolibarr: Register member
+        response_obj = self.dolibarr.post(model=self.model, data=data, api_key=request.user.profile.dolibarr_token)
+        log.info(response_obj)
+
+        # Cyclos: Register member
         create_user_data = {
             'group': str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte']),
             'name': '{} {}'.format(data['firstname'], data['lastname']),
@@ -53,7 +57,7 @@ class MembersAPIView(BaseAPIView):
         }
         self.cyclos.post(method='user/register', data=create_user_data)
 
-        try:
+        if data['email']:
             # Activate user pre-selected language
             # TODO: Ask member for his prefered lang
             # activate(data['options_langue'])
@@ -63,8 +67,7 @@ class MembersAPIView(BaseAPIView):
             body = render_to_string('mails/create_member.txt', {'user': data})
 
             sendmail_euskalmoneta(subject=subject, body=body, to_email=data['email'])
-        except KeyError:
-            log.critical("Oops! No mail sent to the member, we didn't had a email address !")
+
         return Response(response_obj, status=status.HTTP_201_CREATED)
 
     def list(self, request):
@@ -177,6 +180,13 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             log.critical('A member_id must be provided!')
             return Response({'error': 'A member_id must be provided!'}, status=status.HTTP_400_BAD_REQUEST)
 
+        # #841 : We need to connect to Cyclos before doing Dolibarr calls, making sure Cyclos token is still valid.
+        # This way, we avoid creating a subscription in Dolibarr if it's not the case.
+        try:
+            self.cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
+        except CyclosAPIException:
+            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
         try:
             member = self.dolibarr.get(model='members', id=member_id, api_key=dolibarr_token)
         except DolibarrAPIException as e:
@@ -267,11 +277,6 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                'member': current_member}
 
         # Cyclos: Register member subscription payment
-        try:
-            self.cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
-        except CyclosAPIException:
-            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
         member_cyclos_id = self.cyclos.get_member_id_from_login(current_member['login'])
 
         if current_member['type'].lower() == 'particulier':
@@ -316,7 +321,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
         self.cyclos.post(method='payment/perform', data=query_data)
 
-        try:
+        if current_member['email']:
             # Activate user pre-selected language
             # TODO: Ask member for his prefered lang
             # activate(data['options_langue'])
@@ -329,9 +334,6 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                  'enddate': arrow.get(current_member['datefin']).to('Europe/Paris').format('DD/MM/YYYY')})
 
             sendmail_euskalmoneta(subject=subject, body=body, to_email=current_member['email'])
-        except KeyError:
-            log.critical("Oops! No mail sent to this member {}, "
-                         "we didn't had a email address !".format(current_member['login']))
 
         return Response(res, status=status.HTTP_201_CREATED)
 
