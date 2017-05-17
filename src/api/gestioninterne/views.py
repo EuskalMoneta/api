@@ -492,8 +492,6 @@ def validate_depots_retraits(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # 1) Enregistrer le virement :
-
-    # Si montant_total_depots > montant_total_retraits
     if request.data['montant_total_depots'] > request.data['montant_total_retraits']:
         virement_query = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_entre_comptes_dedies']),
@@ -504,9 +502,7 @@ def validate_depots_retraits(request):
             'description': "Régularisation entre comptes dédiés suite à des dépôts et retraits d'eusko.",
         }
         cyclos.post(method='payment/perform', data=virement_query)
-
-    elif request.data['montant_total_depots'] > request.data['montant_total_retraits']:
-        # Si montant_total_depots < montant_total_retraits
+    elif request.data['montant_total_depots'] < request.data['montant_total_retraits']:
         virement_query = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_entre_comptes_dedies']),
             'amount': request.data['montant_total_retraits'] - request.data['montant_total_depots'],
