@@ -15,7 +15,7 @@ logger = logging.getLogger()
 class AnnuairePrestatairesAPIView(BaseAPIView):
 
     def __init__(self, **kwargs):
-        super(PrestatairesAPIView, self).__init__()
+        super(AnnuairePrestatairesAPIView, self).__init__()
 
     def list(self, request):
         """

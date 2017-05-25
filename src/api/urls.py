@@ -7,7 +7,7 @@ from bureauxdechange.views import BDCAPIView
 from members.views import MembersAPIView, MembersSubscriptionsAPIView
 from cel.beneficiaire import BeneficiaireViewSet
 from cel.security_qa import SecurityQAViewSet
-from prestataires.views import PrestatairesAPIView, CategoriesPrestatairesAPIView, VillesPrestatairesAPIView
+from prestataires.views import AnnuairePrestatairesAPIView, CategoriesPrestatairesAPIView, VillesPrestatairesAPIView
 
 from auth_token import views as auth_token_views
 import bdc_cyclos.views as bdc_cyclos_views
