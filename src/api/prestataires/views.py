@@ -96,11 +96,6 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
                           'site_web': thirdparty['url'],
                          }
 
-                logger.debug('keyword = ' + keyword)
-                logger.debug("prestataire['description'] = " + prestataire['description'])
-                logger.debug("prestataire['horaires'] = " + prestataire['horaires'])
-                logger.debug("prestataire['autres_lieux_activite'] = " + prestataire['autres_lieux_activite'])
-
                 # Si le filtre "mot_cle" est actif, on ignore les prestataires
                 # dont la description (horaires et autres lieux d'acticité inclus)
                 # ne contient pas ce mot-clé. Le filtre est insensible à la casse.
@@ -136,7 +131,7 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
                 logger.debug('len(activites) = ' + str(len(activites)))
 
                 etiquettes = [ {'id': cat['id'],
-                                'nom': cat['label'].split(' / ')[language_index]}
+                                'nom': cat['label'].split(' / ')[language_index] if cat['label'].find(' / ') != -1 else cat['label']}
                                for cat in categories
                                # 360 = '--- Etiquettes'
                                if cat['fk_parent'] == '360' ]
