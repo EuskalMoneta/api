@@ -81,14 +81,34 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
             if thirdparty['status'] == '1':
                 logger.debug('thirdparty = ' + thirdparty['id'] + ' - ' + thirdparty['nom'])
 
+                # Si le champ est vide, il vaut None. Dans ce cas, on
+                # met une chaine vide dans la réponse.
+                description = thirdparty['array_options']['options_description_'+language_name]
+                horaires = thirdparty['array_options']['options_horaires_'+language_name]
+                autres_lieux_activite = thirdparty['array_options']['options_autres_lieux_activite_'+language_name]
+
                 prestataire = {
                           'id': thirdparty['id'],
                           'nom': thirdparty['nom'],
-                          'description': thirdparty['array_options']['options_description_'+language_name],
-                          'horaires': thirdparty['array_options']['options_horaires_'+language_name],
-                          'autres_lieux_activite': thirdparty['array_options']['options_autres_lieux_activite_'+language_name],
+                          'description': description if description else '',
+                          'horaires': horaires if horaires else '',
+                          'autres_lieux_activite': autres_lieux_activite if autres_lieux_activite else '',
                           'site_web': thirdparty['url'],
                          }
+
+                logger.debug('keyword = ' + keyword)
+                logger.debug("prestataire['description'] = " + prestataire['description'])
+                logger.debug("prestataire['horaires'] = " + prestataire['horaires'])
+                logger.debug("prestataire['autres_lieux_activite'] = " + prestataire['autres_lieux_activite'])
+
+                # Si le filtre "mot_cle" est actif, on ignore les prestataires
+                # dont la description (horaires et autres lieux d'acticité inclus)
+                # ne contient pas ce mot-clé. Le filtre est insensible à la casse.
+                if (keyword
+                    and keyword.lower() not in prestataire['description'].lower()
+                    and keyword.lower() not in prestataire['horaires'].lower()
+                    and keyword.lower() not in prestataire['autres_lieux_activite'].lower()):
+                    continue
 
                 # Le prestataire est-il équipé pour accepter les paiements par Euskokart ?
                 champ_perso_euskokart = thirdparty['array_options']['options_equipement_pour_euskokart']
@@ -122,6 +142,10 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
                                if cat['fk_parent'] == '360' ]
                 prestataire['etiquettes'] = etiquettes
                 logger.debug('len(etiquettes) = ' + str(len(etiquettes)))
+
+                # Si le filtre "categorie" est actif, on l'applique.
+                if category_id and category_id not in [ cat['id'] for cat in activites ] :
+                    continue
 
                 # Le prestataire est-il bureau de change ?
                 prestataire['bdc'] = len([ cat for cat in categories if cat['label'] == 'Bureau de change' ]) > 0
