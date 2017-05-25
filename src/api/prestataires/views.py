@@ -47,14 +47,30 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
         logger.debug('bdc=' + str(bdc))
         logger.debug('euskokart=' + str(euskokart))
 
-        # Récupération de la liste de tous les prestataires agréés.
-        # On filtre ensuite cette liste pour ne garder que les
-        # prestataires agréés en activité et pour chacun d'entre eux, on
-        # récupère la ou les adresse(s) d'activité.
-        # On ne garde que les informations dans la langue demandée puis
-        # on applique les filtres passés en paramètre (c'est important
-        # d'appliquer le filtre par mot-clé après n'avoir gardé que les
-        # textes dans la langue demandée, sinon on fausse le résultat).
+        # Récupération des prestataires correspondant aux filtres passés
+        # en paramètre.
+        #
+        # On récupère d'abord la liste de tous les prestataires agréés
+        # et on ne garde que ceux qui sont en activité.
+        # Pour chacun d'entre eux, on récupère ensuite toutes les
+        # autres informations dont on va avoir besoin soit pour les
+        # mettre dans la réponse, soit pour filtrer les résultats :
+        #     - le prestataire est-il équipé pour accepter les paiements par Euskokart ?
+        #     - les catégories (les catégories d'activité, et les
+        #       étiquettes comme "Bai Euskarari" ou "Idoki")
+        #     - le prestataire est-il bureau de change ?
+        #     - les adresses d'activité; en fait ce sont ces adresses
+        #       d'activité qui sont les éléments de base du résultat (si
+        #       un prestataire a 2 adresses d'activité, il apparaitra
+        #       2 fois dans le résultat; s'il n'a pas d'adresse
+        #       d'activité, il n'apparaitra jamais dans les résultats).
+        # A chaque fois, on ne garde que les informations dans la langue
+        # demandée. C'est important de faire cela avant d'appliquer le
+        # filtre par mot-clé, sinon cela peut fausser le résultat.
+        #
+        # Enfin, on applique les filtres passés en paramètre (ce n'est
+        # peut-être pas optimal mais c'est le plus simple; s'il y a des
+        # problèmes de performance, il faudra revoir cela).
         thirdparties = self.dolibarr.get(model='thirdparties',
                                          mode='1',
                                          api_key=request.user.profile.dolibarr_token)
@@ -68,7 +84,7 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
                           'horaires': thirdparty['array_options']['options_horaires_'+language_name],
                           'autres_lieux_activite': thirdparty['array_options']['options_autres_lieux_activite_'+language_name],
                           'adresse': 'TODO',
-                          'longitute': 'TODO',
+                          'longitude': 'TODO',
                           'latitude': 'TODO',
                           'telephone': 'TODO',
                           'telephone2': 'TODO',
@@ -76,7 +92,13 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
                           'site_web': thirdparty['url'],
                          }
 
-                # On charge la liste des catégories de ce prestataire.
+                # Le prestataire est-il équipé pour accepter les paiements par Euskokart ?
+                champ_perso_euskokart = thirdparty['array_options']['options_equipement_pour_euskokart']
+                euskokart = champ_perso_euskokart and champ_perso_euskokart.startswith('Oui')
+                prestataire['euskokart'] = euskokart
+
+                # On charge la liste des catégories de ce prestataire et
+                # on récupère ses activités et ses étiquettes.
                 categories = self.dolibarr.get(model='thirdparties',
                                                id=prestataire['id']+'/categories',
                                                api_key=request.user.profile.dolibarr_token)
@@ -95,11 +117,6 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
 
                 # Le prestataire est-il bureau de change ?
                 prestataire['bdc'] = len([ cat for cat in categories if cat['label'] == 'Bureau de change' ]) > 0
-
-                # Le prestataire est-il équipé pour accepter les paiements par Euskokart ?
-                champ_perso_euskokart = thirdparty['array_options']['options_equipement_pour_euskokart']
-                euskokart = champ_perso_euskokart and champ_perso_euskokart.startswith('Oui')
-                prestataire['euskokart'] = euskokart
 
                 # On charge la liste des contacts de ce prestataire et
                 # on filtre cette liste pour ne garder que les adresses
