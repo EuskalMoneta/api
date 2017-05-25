@@ -142,6 +142,10 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
                 # Chaque adresse d'activité peut être un élément du résultat (s'il correspond aux filtres).
                 for adresse in adresses:
 
+                    # Si le filtre "code_postal" est actif, on l'applique.
+                    if zipcode and adresse['zip'] != zipcode:
+                        continue
+
                     # Recopie de toutes les infos venant du prestataire
                     prestataire_pour_annuaire = prestataire
                     # Recopie de toutes les infos venant de l'adresse d'activité
@@ -154,11 +158,9 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
                     prestataire_pour_annuaire['telephone2'] = adresse['phone_mobile']
                     prestataire_pour_annuaire['email'] = adresse['mail']
 
-                    # Si le filtre "code_postal" est actif, on l'applique.
-                    if zipcode and prestataire_pour_annuaire['zip'] != zipcode:
-                        continue
-
-                    # Si le filtre "ville" est actif, on l'applique.
+                    # Si le filtre "ville" est actif, on l'applique
+                    # (on l'applique après la recopie des infos car il faut que le nom
+                    # de la ville ait été extrait dans la langue demandée).
                     if town and prestataire_pour_annuaire['ville'] != town:
                         continue
 
