@@ -33,16 +33,16 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
         language_name = 'euskara' if language == 'eu' else 'francais'
 
         # Récupération des autres paramètres (qui sont optionnels).
-        keyword = request.GET.get('mot-cle')
+        keyword = request.GET.get('mot_cle')
         category_id = request.GET.get('categorie')
-        town_id = request.GET.get('ville')
-        zipcode = request.GET.get('code-postal')
-        bdc = request.GET.get('bdc', False)
-        euskokart = request.GET.get('euskokart', False)
+        town = request.GET.get('ville')
+        zipcode = request.GET.get('code_postal')
+        bdc = True if request.GET.get('bdc') == '1' else False
+        euskokart = True if request.GET.get('euskokart') == '1' else False
 
         logger.debug('keyword=' + str(keyword))
         logger.debug('category_id=' + str(category_id))
-        logger.debug('town_id=' + str(town_id))
+        logger.debug('town=' + str(town))
         logger.debug('zipcode=' + str(zipcode))
         logger.debug('bdc=' + str(bdc))
         logger.debug('euskokart=' + str(euskokart))
@@ -68,69 +68,104 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
         # demandée. C'est important de faire cela avant d'appliquer le
         # filtre par mot-clé, sinon cela peut fausser le résultat.
         #
-        # Enfin, on applique les filtres passés en paramètre (ce n'est
-        # peut-être pas optimal mais c'est le plus simple; s'il y a des
-        # problèmes de performance, il faudra revoir cela).
+        # Les filtres sont appliqués le plus tôt possible, pour réduire
+        # le temps de traitement.
         thirdparties = self.dolibarr.get(model='thirdparties',
                                          mode='1',
                                          api_key=request.user.profile.dolibarr_token)
-        prestataires = []
+
+        logger.debug('len(thirdparties) = ' + str(len(thirdparties)))
+
+        resultat = []
         for thirdparty in thirdparties:
             if thirdparty['status'] == '1':
+                logger.debug('thirdparty = ' + thirdparty['id'] + ' - ' + thirdparty['nom'])
+
                 prestataire = {
                           'id': thirdparty['id'],
                           'nom': thirdparty['nom'],
                           'description': thirdparty['array_options']['options_description_'+language_name],
                           'horaires': thirdparty['array_options']['options_horaires_'+language_name],
                           'autres_lieux_activite': thirdparty['array_options']['options_autres_lieux_activite_'+language_name],
-                          'adresse': 'TODO',
-                          'longitude': 'TODO',
-                          'latitude': 'TODO',
-                          'telephone': 'TODO',
-                          'telephone2': 'TODO',
-                          'email': 'TODO',
                           'site_web': thirdparty['url'],
                          }
 
                 # Le prestataire est-il équipé pour accepter les paiements par Euskokart ?
                 champ_perso_euskokart = thirdparty['array_options']['options_equipement_pour_euskokart']
-                euskokart = champ_perso_euskokart and champ_perso_euskokart.startswith('Oui')
-                prestataire['euskokart'] = euskokart
+                logger.debug('champ_perso_euskokart = ' + champ_perso_euskokart)
+                prestataire['euskokart'] = champ_perso_euskokart and champ_perso_euskokart.startswith('oui')
+
+                # Si le filtre "euskokart" est actif, on ignore les prestataires
+                # qui ne sont pas équipés pour accepter les paiements par Euskokart.
+                if euskokart and not prestataire['euskokart']:
+                    continue
 
                 # On charge la liste des catégories de ce prestataire et
                 # on récupère ses activités et ses étiquettes.
                 categories = self.dolibarr.get(model='thirdparties',
                                                id=prestataire['id']+'/categories',
                                                api_key=request.user.profile.dolibarr_token)
+                logger.debug('len(categories) = ' + str(len(categories)))
+
                 activites = [ {'id': cat['id'],
                                'nom': cat['label'].split(' / ')[language_index]}
                               for cat in categories
                               if cat['fk_parent'] == '0'
                               and cat['label'] not in ('--- Etiquettes', '--- Euskal Moneta') ]
                 prestataire['categories'] = activites
+                logger.debug('len(activites) = ' + str(len(activites)))
+
                 etiquettes = [ {'id': cat['id'],
                                 'nom': cat['label'].split(' / ')[language_index]}
                                for cat in categories
                                # 360 = '--- Etiquettes'
                                if cat['fk_parent'] == '360' ]
                 prestataire['etiquettes'] = etiquettes
+                logger.debug('len(etiquettes) = ' + str(len(etiquettes)))
 
                 # Le prestataire est-il bureau de change ?
                 prestataire['bdc'] = len([ cat for cat in categories if cat['label'] == 'Bureau de change' ]) > 0
 
+                # Si le filtre "bdc" est actif, on ignore les prestataires
+                # qui ne sont pas des bureaux de change.
+                if bdc and not prestataire['bdc']:
+                    continue
+
                 # On charge la liste des contacts de ce prestataire et
                 # on filtre cette liste pour ne garder que les adresses
                 # d'activité.
-                # TODO ajouter GET /thirdparties/{id}/contacts dans l'API de Dolibarr.
-                contacts = self.dolibarr.get(model='thirdparties',
-                                             id=prestataire['id']+'/contacts',
+                contacts = self.dolibarr.get(model='contacts',
+                                             socid=prestataire['id'],
                                              api_key=request.user.profile.dolibarr_token)
-                adresses = [ c for c in contacts if c['label'] == "Adresse d'activité" ]
+                adresses = [ c for c in contacts if c['lastname'] == "Adresse d'activité" ]
 
-                prestataires.append(prestataire)
+                # Chaque adresse d'activité peut être un élément du résultat (s'il correspond aux filtres).
+                for adresse in adresses:
+
+                    # Recopie de toutes les infos venant du prestataire
+                    prestataire_pour_annuaire = prestataire
+                    # Recopie de toutes les infos venant de l'adresse d'activité
+                    prestataire_pour_annuaire['adresse'] = adresse['address']
+                    prestataire_pour_annuaire['code_postal'] = adresse['zip']
+                    prestataire_pour_annuaire['ville'] = adresse['town'].split('/')[language_index].strip()
+                    prestataire_pour_annuaire['latitude'] = adresse['array_options']['options_latitude']
+                    prestataire_pour_annuaire['longitude'] = adresse['array_options']['options_longitude']
+                    prestataire_pour_annuaire['telephone'] = adresse['phone_pro']
+                    prestataire_pour_annuaire['telephone2'] = adresse['phone_mobile']
+                    prestataire_pour_annuaire['email'] = adresse['mail']
+
+                    # Si le filtre "code_postal" est actif, on l'applique.
+                    if zipcode and prestataire_pour_annuaire['zip'] != zipcode:
+                        continue
+
+                    # Si le filtre "ville" est actif, on l'applique.
+                    if town and prestataire_pour_annuaire['ville'] != town:
+                        continue
+
+                    resultat.append(prestataire_pour_annuaire)
 
         paginator = CustomPagination()
-        result_page = paginator.paginate_queryset(prestataires, request)
+        result_page = paginator.paginate_queryset(resultat, request)
         return paginator.get_paginated_response(result_page)
 
     def retrieve(self, request, pk):
