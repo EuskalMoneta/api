@@ -29,6 +29,9 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
         if language not in ('eu', 'fr'):
             return Response({'error': 'Invalid value for the "langue" parameter.'}, status=status.HTTP_400_BAD_REQUEST)
 
+        language_index = 0 if language == 'eu' else 1
+        language_name = 'euskara' if language == 'eu' else 'francais'
+
         # Récupération des autres paramètres (qui sont optionnels).
         keyword = request.GET.get('mot-cle')
         category_id = request.GET.get('categorie')
@@ -44,12 +47,73 @@ class AnnuairePrestatairesAPIView(BaseAPIView):
         logger.debug('bdc=' + str(bdc))
         logger.debug('euskokart=' + str(euskokart))
 
-        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-#        return Response(dolibarr.get(model='towns', zipcode=search))
+        # Récupération de la liste de tous les prestataires agréés.
+        # On filtre ensuite cette liste pour ne garder que les
+        # prestataires agréés en activité et pour chacun d'entre eux, on
+        # récupère la ou les adresse(s) d'activité.
+        # On ne garde que les informations dans la langue demandée puis
+        # on applique les filtres passés en paramètre (c'est important
+        # d'appliquer le filtre par mot-clé après n'avoir gardé que les
+        # textes dans la langue demandée, sinon on fausse le résultat).
+        thirdparties = self.dolibarr.get(model='thirdparties',
+                                         mode='1',
+                                         api_key=request.user.profile.dolibarr_token)
+        prestataires = []
+        for thirdparty in thirdparties:
+            if thirdparty['status'] == '1':
+                prestataire = {
+                          'id': thirdparty['id'],
+                          'nom': thirdparty['nom'],
+                          'description': thirdparty['array_options']['options_description_'+language_name],
+                          'horaires': thirdparty['array_options']['options_horaires_'+language_name],
+                          'autres_lieux_activite': thirdparty['array_options']['options_autres_lieux_activite_'+language_name],
+                          'adresse': 'TODO',
+                          'longitute': 'TODO',
+                          'latitude': 'TODO',
+                          'telephone': 'TODO',
+                          'telephone2': 'TODO',
+                          'email': 'TODO',
+                          'site_web': thirdparty['url'],
+                         }
 
-        objects = []
+                # On charge la liste des catégories de ce prestataire.
+                categories = self.dolibarr.get(model='thirdparties',
+                                               id=prestataire['id']+'/categories',
+                                               api_key=request.user.profile.dolibarr_token)
+                activites = [ {'id': cat['id'],
+                               'nom': cat['label'].split(' / ')[language_index]}
+                              for cat in categories
+                              if cat['fk_parent'] == '0'
+                              and cat['label'] not in ('--- Etiquettes', '--- Euskal Moneta') ]
+                prestataire['categories'] = activites
+                etiquettes = [ {'id': cat['id'],
+                                'nom': cat['label'].split(' / ')[language_index]}
+                               for cat in categories
+                               # 360 = '--- Etiquettes'
+                               if cat['fk_parent'] == '360' ]
+                prestataire['etiquettes'] = etiquettes
+
+                # Le prestataire est-il bureau de change ?
+                prestataire['bdc'] = len([ cat for cat in categories if cat['label'] == 'Bureau de change' ]) > 0
+
+                # Le prestataire est-il équipé pour accepter les paiements par Euskokart ?
+                champ_perso_euskokart = thirdparty['array_options']['options_equipement_pour_euskokart']
+                euskokart = champ_perso_euskokart and champ_perso_euskokart.startswith('Oui')
+                prestataire['euskokart'] = euskokart
+
+                # On charge la liste des contacts de ce prestataire et
+                # on filtre cette liste pour ne garder que les adresses
+                # d'activité.
+                # TODO ajouter GET /thirdparties/{id}/contacts dans l'API de Dolibarr.
+                contacts = self.dolibarr.get(model='thirdparties',
+                                             id=prestataire['id']+'/contacts',
+                                             api_key=request.user.profile.dolibarr_token)
+                adresses = [ c for c in contacts if c['label'] == "Adresse d'activité" ]
+
+                prestataires.append(prestataire)
+
         paginator = CustomPagination()
-        result_page = paginator.paginate_queryset(objects, request)
+        result_page = paginator.paginate_queryset(prestataires, request)
         return paginator.get_paginated_response(result_page)
 
     def retrieve(self, request, pk):
@@ -84,7 +148,7 @@ class CategoriesPrestatairesAPIView(BaseAPIView):
         # chaque catégorie.
         customer_categories = self.dolibarr.get(model='categories', type='customer', api_key=request.user.profile.dolibarr_token)
         filtered_categories = [ {'id': cat['id'],
-                                'nom': cat['label'].split(' / ')[language_index]}
+                                 'nom': cat['label'].split(' / ')[language_index]}
                                 for cat in customer_categories
                                 if cat['fk_parent'] == '0'
                                 and cat['label'] not in ('--- Etiquettes', '--- Euskal Moneta')]
