@@ -981,6 +981,12 @@ ID_TYPE_PAIEMENT_IMPRESSION_BILLETS = create_payment_transfer_type(
     from_account_type_id=ID_COMPTE_DE_DEBIT_EUSKO_BILLET,
     to_account_type_id=ID_STOCK_DE_BILLETS,
 )
+ID_TYPE_PAIEMENT_DESTRUCTION_BILLETS = create_payment_transfer_type(
+    name="Destruction de billets d'eusko",
+    direction='SYSTEM_TO_SYSTEM',
+    from_account_type_id=ID_STOCK_DE_BILLETS,
+    to_account_type_id=ID_COMPTE_DE_DEBIT_EUSKO_BILLET,
+)
 ID_TYPE_PAIEMENT_SORTIE_COFFRE = create_payment_transfer_type(
     name='Sortie coffre',
     direction='SYSTEM_TO_SYSTEM',
@@ -1559,6 +1565,7 @@ ID_TYPE_PAIEMENT_DE_RETOURS_EUSKO_BDC_VERS_STOCK_DE_BILLETS_BDC = create_payment
 
 all_system_to_system_payments = [
     ID_TYPE_PAIEMENT_IMPRESSION_BILLETS,
+    ID_TYPE_PAIEMENT_DESTRUCTION_BILLETS,
     ID_TYPE_PAIEMENT_SORTIE_COFFRE,
     ID_TYPE_PAIEMENT_ENTREE_COFFRE,
 ]
