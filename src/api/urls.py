@@ -86,6 +86,7 @@ urlpatterns = [
     url(r'^validate-depots-retraits/$', gi_views.validate_depots_retraits),
     url(r'^payments-available-reconversions/$', gi_views.payments_available_for_reconversions),
     url(r'^validate-reconversions/$', gi_views.validate_reconversions),
+    url(r'^calculate-3-percent/$', gi_views.calculate_3_percent),
 
     # Crédit des comptes Eusko par prélèvement automatique
     url(r'^credits-comptes-prelevement-auto/import/(?P<filename>[^/]+)$', credits_views.import_csv),
