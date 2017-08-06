@@ -836,7 +836,10 @@ def calculate_3_percent(request):
             # Si c'est une asso 3%, c'est elle qui reçoit les dons.
             member_data = dolibarr.get(model='members', login=member_id)[0]
             fk_asso = member_data['fk_asso']
-            asso1 = dolibarr_id_2_member_id[fk_asso] if fk_asso else None
+            try:
+                asso1 = dolibarr_id_2_member_id[fk_asso]
+            except KeyError:
+                asso1 = None
             log.debug("asso1 = %s", asso1)
             if asso1 and asso1 in assos_3_pourcent.keys():
                 asso_beneficiaire = asso1
@@ -845,19 +848,22 @@ def calculate_3_percent(request):
                 # (ou s'il n'y a pas d'asso parrainée en 1er choix),
                 # on regarde celle parrainée en 2è choix.
                 fk_asso2 = member_data['fk_asso2']
-                asso2 = dolibarr_id_2_member_id[fk_asso2] if fk_asso2 else None
+                try:
+                    asso2 = dolibarr_id_2_member_id[fk_asso2]
+                except KeyError:
+                    asso2 = None
                 log.debug("asso2 = %s", asso2)
                 if asso2 and asso2 in assos_3_pourcent.keys():
                     asso_beneficiaire = asso2
                 else:
                     # Si ni l'asso 1 ni l'asso 2 ne sont des assos 3%,
                     # c'est Euskal Moneta qui reçoit les dons de cet adhérent.
-                    asso_beneficiaire = 'Z000001'
+                    asso_beneficiaire = 'Z00001'
             # On enregistre ce résultat pour ne pas avoir à le
             # recalculer pour chaque change de cet adhérent.
             assos_beneficiaires[member_id] = asso_beneficiaire
+            nb_parrainages[asso_beneficiaire] += 1
         dons[asso_beneficiaire] += change['amount'] * 0.03
-        nb_parrainages[asso_beneficiaire] += 1
 
     log.debug("dons = %s", dons)
     log.debug("nb_parrainages = %s", nb_parrainages)
