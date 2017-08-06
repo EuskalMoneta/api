@@ -811,16 +811,16 @@ def calculate_3_percent(request):
     ]
     changes.extend(filtered_results)
 
-    # On crée 2 dictionnaires qui vont servir pour la suite du calcul:
+    # On crée 3 dictionnaires qui vont servir pour la suite du calcul:
     # 1) un pour mémoriser quelle asso bénéficie des dons de chaque adhérent-e;
     #     numéro d'adhérent de l'adhérent-e -> numéro d'adhérent de l'asso
     assos_beneficiaires = {}
     # 2) un pour additionner les dons pour chaque asso
     #     numéro d'adhérent de l'asso -> montant du don
-    dons = {}
-    for asso in assos_3_pourcent.keys():
-        dons[asso] = float(0)
-    log.debug("dons = %s", dons)
+    dons = {id_asso : 0.0 for id_asso in assos_3_pourcent.keys()}
+    # 3) un pour compter le nombre de parrainages de chaque asso
+    #     numéro d'adhérent de l'asso -> nb de parrainages
+    nb_parrainages = {id_asso : 0 for id_asso in assos_3_pourcent.keys()}
 
     # Pour chaque change, on regarde qui est l'adhérent qui a fait le change,
     # on récupère l'association bénéficiaire des dons de cet adhérent
@@ -857,24 +857,27 @@ def calculate_3_percent(request):
             # recalculer pour chaque change de cet adhérent.
             assos_beneficiaires[member_id] = asso_beneficiaire
         dons[asso_beneficiaire] += change['amount'] * 0.03
+        nb_parrainages[asso_beneficiaire] += 1
 
     log.debug("dons = %s", dons)
+    log.debug("nb_parrainages = %s", nb_parrainages)
 
     # On construit l'objet qui sera envoyé dans la réponse.
-    donations = [{
-            'association': {
-                'id': id,
-                'name': name,
-            },
-            'amount': amount,
-        }
-        for id, name in assos_3_pourcent.items()
-        for id_asso, amount in dons.items() if id == id_asso
-    ]
-    log.debug("donations = %s", donations)
     response_data = {
-        'begin': begin_date,
-        'end': end_date,
-        'donations': donations,
+        'debut': begin_date,
+        'fin': end_date,
+        'dons': [{
+                'association': {
+                    'num_adherent': id_asso1,
+                    'nom': name,
+                },
+                'montant_don': amount,
+                'nb_parrainages': nb,
+            }
+            for id_asso1, name in assos_3_pourcent.items()
+            for id_asso2, amount in dons.items() if id_asso1 == id_asso2
+            for id_asso3, nb in nb_parrainages.items() if id_asso1 == id_asso3
+        ],
     }
+    log.debug("response_data = %s", response_data)
     return Response(response_data)
