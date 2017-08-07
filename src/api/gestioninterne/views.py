@@ -743,73 +743,42 @@ def calculate_3_percent(request):
     # 1) et 2) On récupère tous les débits du Compte de débit € pour la
     # période puis on filtre le résultat pour ne garder que les 2 types
     # de paiements "change billets" et "change numérique en BDC".
-    current_page = 0
-    results = []
-    while True:
-        search_history_data = {
-            'account': settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_euro'],
-            'direction': 'DEBIT',
-            'period':
-            {
-                'begin': search_begin_date,
-                'end': search_end_date,
-            },
-            'orderBy': 'DATE_ASC',
-            'pageSize': 1000,  # maximum pageSize: 1000
-            'currentpage': current_page,
-        }
-        search_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
-        results.extend(search_history_res['result']['pageItems'])
-        page_count = search_history_res['result']['pageCount']
-        if page_count == 0 or current_page + 1 == page_count:
-            break
-        else:
-           current_page += 1
-    filtered_results = [
-        {'member_id' : value['linkedEntityValue']['internalName'],
-         'amount' : abs(float(item['amount']))}
-        for item in results
-        if item['type']['id'] in (
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_euro'],
+        direction='DEBIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payments_types=[
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_billets_versement_des_euro']),
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_bdc_versement_des_euro']),
-        )
-        for value in item['customValues']
+        ]
+    )
+    changes.extend([
+        {'amount' : abs(float(payment['amount'])),
+         'member_id' : value['linkedEntityValue']['internalName'],}
+        for payment in payments
+        for value in payment['customValues']
         if value['field']['internalName'] == 'adherent'
-    ]
-    changes.extend(filtered_results)
+    ])
     # 3) On récupère tous les débits du Compte de débit eusko numérique
     # pour la période puis on filtre le résultat pour ne garder que les
     # paiements de type "change numérique en ligne".
-    current_page = 0
-    results = []
-    while True:
-        search_history_data = {
-            'account': settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_eusko_numerique'],
-            'direction': 'DEBIT',
-            'period':
-            {
-                'begin': search_begin_date,
-                'end': search_end_date,
-            },
-            'orderBy': 'DATE_ASC',
-            'pageSize': 1000,  # maximum pageSize: 1000
-            'currentpage': current_page,
-        }
-        search_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
-        results.extend(search_history_res['result']['pageItems'])
-        page_count = search_history_res['result']['pageCount']
-        if page_count == 0 or current_page + 1 == page_count:
-            break
-        else:
-           current_page += 1
-    filtered_results = [
-        {'member_id' : item['relatedAccount']['owner']['shortDisplay'],
-         'amount' : abs(float(item['amount']))}
-        for item in results
-        if item['type']['id'] ==
-           str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko'])
-    ]
-    changes.extend(filtered_results)
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_eusko_numerique'],
+        direction='DEBIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payments_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),
+        ]
+    )
+    changes.extend([
+        {'amount' : abs(float(payment['amount'])),
+         'member_id' : payment['relatedAccount']['owner']['shortDisplay'],}
+        for payment in payments
+    ])
 
     # On crée 3 dictionnaires qui vont servir pour la suite du calcul:
     # 1) un pour mémoriser quelle asso bénéficie des dons de chaque adhérent-e;
@@ -887,3 +856,45 @@ def calculate_3_percent(request):
     }
     log.debug("response_data = %s", response_data)
     return Response(response_data)
+
+
+def _search_account_history(cyclos, account, direction, begin_date, end_date, payments_types=[]):
+    """
+    Search an account history for payments of the given types, ignoring
+    the chargedbacked (canceled) ones.
+    """
+    current_page = 0
+    account_history = []
+    while True:
+        search_history_data = {
+            'account': account,
+            'direction': direction,
+            'period':
+            {
+                'begin': begin_date,
+                'end': end_date,
+            },
+            'orderBy': 'DATE_ASC',
+            'pageSize': 1000,  # maximum pageSize: 1000
+            'currentpage': current_page,
+        }
+        search_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+        account_history.extend(search_history_res['result']['pageItems'])
+        page_count = search_history_res['result']['pageCount']
+        if page_count == 0 or current_page + 1 == page_count:
+            break
+        else:
+           current_page += 1
+    filtered_history = []
+    for entry in account_history:
+        # On filtre d'abord par type de paiement et ensuite on regarde
+        # si le paiement a fait l'objet d'une opposition de paiement
+        # (dans cet ordre car pour voir s'il y a une oppostion de
+        # paiement, il faut faire une requête au serveur).
+        # On récupère les données de la transaction et on vérifie si la
+        # donnée 'chargedBackBy' est présente dans le transfert associé.
+        if entry['type']['id'] in payments_types:
+            transaction_res = cyclos.get(method='transaction/getData/{}'.format(entry['transactionId']))
+            if 'chargedBackBy' not in transaction_res['result']['transfer'].keys():
+                filtered_history.append(entry)
+    return filtered_history
