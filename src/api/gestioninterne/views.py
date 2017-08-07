@@ -749,7 +749,7 @@ def calculate_3_percent(request):
         direction='DEBIT',
         begin_date=search_begin_date,
         end_date=search_end_date,
-        payments_types=[
+        payment_types=[
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_billets_versement_des_euro']),
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_bdc_versement_des_euro']),
         ]
@@ -770,7 +770,7 @@ def calculate_3_percent(request):
         direction='DEBIT',
         begin_date=search_begin_date,
         end_date=search_end_date,
-        payments_types=[
+        payment_types=[
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),
         ]
     )
@@ -806,31 +806,39 @@ def calculate_3_percent(request):
             # Pour cela on récupère l'adhérent dans Dolibarr et on regarde quelle
             # association il parraine en 1er choix.
             # Si c'est une asso 3%, c'est elle qui reçoit les dons.
-            member_data = dolibarr.get(model='members', login=member_id)[0]
-            fk_asso = member_data['fk_asso']
             try:
-                asso1 = dolibarr_id_2_member_id[fk_asso]
-            except KeyError:
-                asso1 = None
-            log.debug("asso1 = %s", asso1)
-            if asso1 and asso1 in assos_3_pourcent.keys():
-                asso_beneficiaire = asso1
-            else:
-                # Si l'association parrainée en 1er choix n'est pas une asso 3%
-                # (ou s'il n'y a pas d'asso parrainée en 1er choix),
-                # on regarde celle parrainée en 2è choix.
-                fk_asso2 = member_data['fk_asso2']
+                member_data = dolibarr.get(model='members', login=member_id)[0]
+                fk_asso = member_data['fk_asso']
                 try:
-                    asso2 = dolibarr_id_2_member_id[fk_asso2]
+                    asso1 = dolibarr_id_2_member_id[fk_asso]
                 except KeyError:
-                    asso2 = None
-                log.debug("asso2 = %s", asso2)
-                if asso2 and asso2 in assos_3_pourcent.keys():
-                    asso_beneficiaire = asso2
+                    asso1 = None
+                log.debug("asso1 = %s", asso1)
+                if asso1 and asso1 in assos_3_pourcent.keys():
+                    asso_beneficiaire = asso1
                 else:
-                    # Si ni l'asso 1 ni l'asso 2 ne sont des assos 3%,
-                    # c'est Euskal Moneta qui reçoit les dons de cet adhérent.
-                    asso_beneficiaire = 'Z00001'
+                    # Si l'association parrainée en 1er choix n'est pas une asso 3%
+                    # (ou s'il n'y a pas d'asso parrainée en 1er choix),
+                    # on regarde celle parrainée en 2è choix.
+                    fk_asso2 = member_data['fk_asso2']
+                    try:
+                        asso2 = dolibarr_id_2_member_id[fk_asso2]
+                    except KeyError:
+                        asso2 = None
+                    log.debug("asso2 = %s", asso2)
+                    if asso2 and asso2 in assos_3_pourcent.keys():
+                        asso_beneficiaire = asso2
+                    else:
+                        # Si ni l'asso 1 ni l'asso 2 ne sont des assos 3%,
+                        # c'est Euskal Moneta qui reçoit les dons de cet adhérent.
+                        asso_beneficiaire = 'Z00001'
+            except DolibarrAPIException:
+                # Si on ne parvient pas à récupérer l'adhérent dans Dolibarr,
+                # c'est Euskal Moneta qui reçoit les dons de cet adhérent
+                # (c'est le cas par exemple avec l'adhérent 'E00000' qui
+                # n'existe que dans Cyclos; cela pourrait arriver aussi
+                # pour un adhérent supprimé de Dolibarr du fait d'un doublon).
+                asso_beneficiaire = 'Z00001'
             # On enregistre ce résultat pour ne pas avoir à le
             # recalculer pour chaque change de cet adhérent.
             assos_beneficiaires[member_id] = asso_beneficiaire
@@ -866,7 +874,7 @@ def calculate_3_percent(request):
     return Response(response_data)
 
 
-def _search_account_history(cyclos, account, direction, begin_date, end_date, payments_types=[]):
+def _search_account_history(cyclos, account, direction, begin_date, end_date, payment_types=[]):
     """
     Search an account history for payments of the given types, ignoring
     the chargedbacked (canceled) ones.
@@ -884,7 +892,7 @@ def _search_account_history(cyclos, account, direction, begin_date, end_date, pa
             },
             'orderBy': 'DATE_ASC',
             'pageSize': 1000,  # maximum pageSize: 1000
-            'currentpage': current_page,
+            'currentPage': current_page,
         }
         search_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
         account_history.extend(search_history_res['result']['pageItems'])
@@ -901,8 +909,20 @@ def _search_account_history(cyclos, account, direction, begin_date, end_date, pa
         # paiement, il faut faire une requête au serveur).
         # On récupère les données de la transaction et on vérifie si la
         # donnée 'chargedBackBy' est présente dans le transfert associé.
-        if entry['type']['id'] in payments_types:
-            transaction_res = cyclos.get(method='transaction/getData/{}'.format(entry['transactionId']))
-            if 'chargedBackBy' not in transaction_res['result']['transfer'].keys():
+        #
+        # Note : Les transactions importées lors de la migration de
+        # Cyclos 3 à Cyclos 4 sont de type ImportedTransactionData et
+        # n'ont pas de transfert associé. Elles ne peuvent pas être
+        # annulées. Les transactions enregistrées depuis (les
+        # transactions "normales" en quelque sorte), sont de type
+        # PaymentData.
+        if entry['type']['id'] in payment_types:
+            get_data_res = cyclos.get(method='transaction/getData/{}'.format(entry['transactionId']))
+            transaction_data = get_data_res['result']
+            if (transaction_data['class'] ==
+                    'org.cyclos.model.banking.transactions.ImportedTransactionData'
+                    or (transaction_data['class'] ==
+                    'org.cyclos.model.banking.transactions.PaymentData'
+                    and'chargedBackBy' not in transaction_data['transfer'].keys())):
                 filtered_history.append(entry)
     return filtered_history
