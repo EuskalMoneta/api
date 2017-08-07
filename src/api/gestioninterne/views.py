@@ -791,6 +791,9 @@ def calculate_3_percent(request):
     #     numéro d'adhérent de l'asso -> nb de parrainages
     nb_parrainages = {id_asso : 0 for id_asso in assos_3_pourcent.keys()}
 
+    montant_total_changes = 0.0
+    montant_total_dons = 0.0
+
     # Pour chaque change, on regarde qui est l'adhérent qui a fait le change,
     # on récupère l'association bénéficiaire des dons de cet adhérent
     # et on ajoute à cette asso 3% du montant du change.
@@ -832,7 +835,10 @@ def calculate_3_percent(request):
             # recalculer pour chaque change de cet adhérent.
             assos_beneficiaires[member_id] = asso_beneficiaire
             nb_parrainages[asso_beneficiaire] += 1
-        dons[asso_beneficiaire] += change['amount'] * 0.03
+        don = change['amount'] * 0.03
+        dons[asso_beneficiaire] += don
+        montant_total_changes += change['amount']
+        montant_total_dons += don
 
     log.debug("dons = %s", dons)
     log.debug("nb_parrainages = %s", nb_parrainages)
@@ -853,6 +859,8 @@ def calculate_3_percent(request):
             for id_asso2, amount in dons.items() if id_asso1 == id_asso2
             for id_asso3, nb in nb_parrainages.items() if id_asso1 == id_asso3
         ],
+        'montant_total_changes': montant_total_changes,
+        'montant_total_dons': montant_total_dons,
     }
     log.debug("response_data = %s", response_data)
     return Response(response_data)
