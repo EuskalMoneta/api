@@ -318,7 +318,7 @@ def payments_available_for_adherents(request):
     search_history_data = {
         'orderBy': 'DATE_DESC',
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
         'period':
         {
             'begin': begin_date,
@@ -364,7 +364,7 @@ def export_history_adherent(request):
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
         'orderBy': 'DATE_DESC',
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
         'period':
         {
             'begin': begin_date,
@@ -383,7 +383,7 @@ def export_history_adherent(request):
         'account': accounts_summaries_data['result'][0]['status']['accountId'],
         'orderBy': 'DATE_ASC',
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
         'period':
         {
             'begin': begin_date,

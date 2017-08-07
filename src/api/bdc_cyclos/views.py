@@ -447,7 +447,7 @@ def accounts_history(request):
         'account': data['id'],  # ID du compte
         'orderBy': 'DATE_DESC',
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
 
     try:
@@ -1001,7 +1001,7 @@ def payments_available_for_entree_stock(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher'])
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     accounts_summaries_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
 

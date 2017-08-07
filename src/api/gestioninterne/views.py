@@ -68,7 +68,7 @@ def payments_available_for_entree_coffre(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     query_data = cyclos.post(method='account/searchAccountHistory', data=entree_coffre_query)
     if query_data['result']['totalCount'] == 0:
@@ -207,7 +207,7 @@ def payments_available_for_entrees_euro(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
 
     query_data = cyclos.post(method='account/searchAccountHistory', data=query)
@@ -242,7 +242,7 @@ def payments_available_for_entrees_eusko(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
 
     query_data = cyclos.post(method='account/searchAccountHistory', data=query)
@@ -314,7 +314,7 @@ def payments_available_for_banques(request):
         'account': bank_account_id,  # ID du compte
         'orderBy': 'DATE_DESC',
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
 
     if request.query_params['mode'] == 'virement':
@@ -445,7 +445,7 @@ def payments_available_depots_retraits(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     depots_data = cyclos.post(method='account/searchAccountHistory', data=depots_query)
 
@@ -466,7 +466,7 @@ def payments_available_depots_retraits(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     retraits_data = cyclos.post(method='account/searchAccountHistory', data=retraits_query)
 
@@ -549,7 +549,7 @@ def payments_available_for_reconversions(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     query_billets_data = cyclos.post(method='account/searchAccountHistory', data=query_billets)
 
@@ -571,7 +571,7 @@ def payments_available_for_reconversions(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     query_numeriques_data = cyclos.post(method='account/searchAccountHistory', data=query_numeriques)
 
