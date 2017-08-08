@@ -774,8 +774,12 @@ def calculate_3_percent(request):
     dolibarr_id_2_member_id = {item['id'] : item['code_client']
                               for item in results}
     log.debug("dolibarr_id_2_member_id = %s", dolibarr_id_2_member_id)
-    # On récupère aussi la liste des associations bénéficiaires des 3%.
-    assos_3_pourcent = {item['code_client'] : item['nom']
+    # On récupère aussi la liste des associations bénéficiaires des 3%,
+    # avec le nombre de parrainages de chaque asso.
+    assos_3_pourcent = {item['code_client'] : {
+                           'nom': item['nom'],
+                           'nb_parrainages': int(item['nb_parrains']),
+                       }
                        for item in results
                        if int(item['nb_parrains']) >= settings.MINIMUM_PARRAINAGES_3_POURCENTS}
     log.debug("assos_3_pourcent = %s", assos_3_pourcent)
@@ -787,9 +791,11 @@ def calculate_3_percent(request):
     # 2) un pour additionner les dons pour chaque asso
     #     numéro d'adhérent de l'asso -> montant du don
     dons = {id_asso : 0.0 for id_asso in assos_3_pourcent.keys()}
-    # 3) un pour compter le nombre de parrainages de chaque asso
+    # 3) un pour compter le nombre de parrainages supplémentaires de
+    # chaque asso, c'est-à-dire le nombre de parrainages en 2è choix
+    # qui bénéficient à chaque asso.
     #     numéro d'adhérent de l'asso -> nb de parrainages
-    nb_parrainages = {id_asso : 0 for id_asso in assos_3_pourcent.keys()}
+    nb_parrainages_asso2 = {id_asso : 0 for id_asso in assos_3_pourcent.keys()}
 
     montant_total_changes = 0.0
     montant_total_dons = 0.0
@@ -837,6 +843,7 @@ def calculate_3_percent(request):
                 log.debug("asso2 = %s", asso2)
                 if asso2 and asso2 in assos_3_pourcent.keys():
                     asso_beneficiaire = asso2
+                    nb_parrainages_asso2[asso2] += 1
                 else:
                     # Si ni l'asso 1 ni l'asso 2 ne sont des assos 3%,
                     # c'est Euskal Moneta qui reçoit les dons de cet adhérent.
@@ -844,30 +851,37 @@ def calculate_3_percent(request):
             # On enregistre ce résultat pour ne pas avoir à le
             # recalculer pour chaque change de cet adhérent.
             assos_beneficiaires[member_id] = asso_beneficiaire
-            nb_parrainages[asso_beneficiaire] += 1
         don = change['amount'] * 0.03
         dons[asso_beneficiaire] += don
         montant_total_changes += change['amount']
         montant_total_dons += don
 
     log.debug("dons = %s", dons)
-    log.debug("nb_parrainages = %s", nb_parrainages)
+    log.debug("nb_parrainages_asso2 = %s", nb_parrainages_asso2)
 
     # On construit l'objet qui sera envoyé dans la réponse.
+    # Pour le nombre de parrainages de chaque association, on compte :
+    # - les parrainages en 1er choix, que les adhérent-e-s aient fait du
+    #   change ou pas
+    # - plus les parrainages en 2è choix lorsque ceux-ci s'appliquent
+    #   (ils s'agit donc d'adhérent-e-s qui ont fait du change).
+    # Cette manière de calculer est plus proche de ce qui était fait
+    # avant la migration de Cyclos 3 à Cyclos 4 et avant l'introduction
+    # du 2è choix pour le parrainage.
     response_data = {
         'debut': begin_date,
         'fin': end_date,
         'dons': [{
                 'association': {
                     'num_adherent': id_asso1,
-                    'nom': name,
+                    'nom': asso['nom'],
                 },
-                'montant_don': amount,
-                'nb_parrainages': nb,
+                'montant_don': montant_don,
+                'nb_parrainages': asso['nb_parrainages'] + nb_asso2,
             }
-            for id_asso1, name in assos_3_pourcent.items()
-            for id_asso2, amount in dons.items() if id_asso1 == id_asso2
-            for id_asso3, nb in nb_parrainages.items() if id_asso1 == id_asso3
+            for id_asso1, asso in assos_3_pourcent.items()
+            for id_asso2, montant_don in dons.items() if id_asso1 == id_asso2
+            for id_asso3, nb_asso2 in nb_parrainages_asso2.items() if id_asso1 == id_asso3
         ],
         'montant_total_changes': montant_total_changes,
         'montant_total_dons': montant_total_dons,
