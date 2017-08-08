@@ -876,7 +876,7 @@ def calculate_3_percent(request):
                     'num_adherent': id_asso1,
                     'nom': asso['nom'],
                 },
-                'montant_don': montant_don,
+                'montant_don': round(montant_don, 2),
                 'nb_parrainages': asso['nb_parrainages'] + nb_asso2,
             }
             for id_asso1, asso in assos_3_pourcent.items()
@@ -884,7 +884,7 @@ def calculate_3_percent(request):
             for id_asso3, nb_asso2 in nb_parrainages_asso2.items() if id_asso1 == id_asso3
         ],
         'montant_total_changes': montant_total_changes,
-        'montant_total_dons': montant_total_dons,
+        'montant_total_dons': round(montant_total_dons, 2),
     }
     log.debug("response_data = %s", response_data)
     return Response(response_data)
