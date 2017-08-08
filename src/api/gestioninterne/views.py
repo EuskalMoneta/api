@@ -713,19 +713,6 @@ def calculate_3_percent(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # On récupère la liste de toutes les associations
-    # et on construit un dictionnaire qui va donner la correspondance :
-    #     id de l'asso dans Dolibarr -> numéro d'adhérent
-    results = dolibarr.get(model='associations')
-    dolibarr_id_2_member_id = {item['id'] : item['code_client']
-                              for item in results}
-    log.debug("dolibarr_id_2_member_id = %s", dolibarr_id_2_member_id)
-    # On récupère aussi la liste des associations bénéficiaires des 3%.
-    assos_3_pourcent = {item['code_client'] : item['nom']
-                       for item in results
-                       if int(item['nb_parrains']) >= settings.MINIMUM_PARRAINAGES_3_POURCENTS}
-    log.debug("assos_3_pourcent = %s", assos_3_pourcent)
-
     # On récupère la liste de tous les changes d'€ en eusko pour la
     # période demandée et on détermine à chaque fois qui est l'adhérent
     # qui a fait le change.
@@ -780,6 +767,19 @@ def calculate_3_percent(request):
         for payment in payments
     ])
 
+    # On récupère la liste de toutes les associations
+    # et on construit un dictionnaire qui va donner la correspondance :
+    #     id de l'asso dans Dolibarr -> numéro d'adhérent
+    results = dolibarr.get(model='associations')
+    dolibarr_id_2_member_id = {item['id'] : item['code_client']
+                              for item in results}
+    log.debug("dolibarr_id_2_member_id = %s", dolibarr_id_2_member_id)
+    # On récupère aussi la liste des associations bénéficiaires des 3%.
+    assos_3_pourcent = {item['code_client'] : item['nom']
+                       for item in results
+                       if int(item['nb_parrains']) >= settings.MINIMUM_PARRAINAGES_3_POURCENTS}
+    log.debug("assos_3_pourcent = %s", assos_3_pourcent)
+
     # On crée 3 dictionnaires qui vont servir pour la suite du calcul:
     # 1) un pour mémoriser quelle asso bénéficie des dons de chaque adhérent-e;
     #     numéro d'adhérent de l'adhérent-e -> numéro d'adhérent de l'asso
@@ -808,37 +808,39 @@ def calculate_3_percent(request):
             # Si c'est une asso 3%, c'est elle qui reçoit les dons.
             try:
                 member_data = dolibarr.get(model='members', login=member_id)[0]
-                fk_asso = member_data['fk_asso']
-                try:
-                    asso1 = dolibarr_id_2_member_id[fk_asso]
-                except KeyError:
-                    asso1 = None
-                log.debug("asso1 = %s", asso1)
-                if asso1 and asso1 in assos_3_pourcent.keys():
-                    asso_beneficiaire = asso1
-                else:
-                    # Si l'association parrainée en 1er choix n'est pas une asso 3%
-                    # (ou s'il n'y a pas d'asso parrainée en 1er choix),
-                    # on regarde celle parrainée en 2è choix.
-                    fk_asso2 = member_data['fk_asso2']
-                    try:
-                        asso2 = dolibarr_id_2_member_id[fk_asso2]
-                    except KeyError:
-                        asso2 = None
-                    log.debug("asso2 = %s", asso2)
-                    if asso2 and asso2 in assos_3_pourcent.keys():
-                        asso_beneficiaire = asso2
-                    else:
-                        # Si ni l'asso 1 ni l'asso 2 ne sont des assos 3%,
-                        # c'est Euskal Moneta qui reçoit les dons de cet adhérent.
-                        asso_beneficiaire = 'Z00001'
             except DolibarrAPIException:
-                # Si on ne parvient pas à récupérer l'adhérent dans Dolibarr,
-                # c'est Euskal Moneta qui reçoit les dons de cet adhérent
-                # (c'est le cas par exemple avec l'adhérent 'E00000' qui
-                # n'existe que dans Cyclos; cela pourrait arriver aussi
-                # pour un adhérent supprimé de Dolibarr du fait d'un doublon).
-                asso_beneficiaire = 'Z00001'
+                # Si on ne parvient pas à récupérer l'adhérent-e dans Dolibarr,
+                # on ignore l'erreur et on considère simplement qu'on n'a
+                # aucune information sur cet adhérent-e. Du coup c'est
+                # Euskal Moneta qui recevra ses dons.
+                # C'est le cas par exemple avec l'adhérent 'E00000' qui
+                # n'existe que dans Cyclos. Cela pourrait arriver aussi
+                # pour un adhérent supprimé de Dolibarr du fait d'un doublon.
+                member_data = []
+            fk_asso = member_data['fk_asso']
+            try:
+                asso1 = dolibarr_id_2_member_id[fk_asso]
+            except KeyError:
+                asso1 = None
+            log.debug("asso1 = %s", asso1)
+            if asso1 and asso1 in assos_3_pourcent.keys():
+                asso_beneficiaire = asso1
+            else:
+                # Si l'association parrainée en 1er choix n'est pas une asso 3%
+                # (ou s'il n'y a pas d'asso parrainée en 1er choix),
+                # on regarde celle parrainée en 2è choix.
+                fk_asso2 = member_data['fk_asso2']
+                try:
+                    asso2 = dolibarr_id_2_member_id[fk_asso2]
+                except KeyError:
+                    asso2 = None
+                log.debug("asso2 = %s", asso2)
+                if asso2 and asso2 in assos_3_pourcent.keys():
+                    asso_beneficiaire = asso2
+                else:
+                    # Si ni l'asso 1 ni l'asso 2 ne sont des assos 3%,
+                    # c'est Euskal Moneta qui reçoit les dons de cet adhérent.
+                    asso_beneficiaire = 'Z00001'
             # On enregistre ce résultat pour ne pas avoir à le
             # recalculer pour chaque change de cet adhérent.
             assos_beneficiaires[member_id] = asso_beneficiaire
