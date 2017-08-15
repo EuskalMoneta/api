@@ -822,9 +822,9 @@ def calculate_3_percent(request):
                 # C'est le cas par exemple avec l'adhérent 'E00000' qui
                 # n'existe que dans Cyclos. Cela pourrait arriver aussi
                 # pour un adhérent supprimé de Dolibarr du fait d'un doublon.
-                member_data = []
-            fk_asso = member_data['fk_asso']
+                member_data = {}
             try:
+                fk_asso = member_data['fk_asso']
                 asso1 = dolibarr_id_2_member_id[fk_asso]
             except KeyError:
                 asso1 = None
@@ -835,8 +835,8 @@ def calculate_3_percent(request):
                 # Si l'association parrainée en 1er choix n'est pas une asso 3%
                 # (ou s'il n'y a pas d'asso parrainée en 1er choix),
                 # on regarde celle parrainée en 2è choix.
-                fk_asso2 = member_data['fk_asso2']
                 try:
+                    fk_asso2 = member_data['fk_asso2']
                     asso2 = dolibarr_id_2_member_id[fk_asso2]
                 except KeyError:
                     asso2 = None
