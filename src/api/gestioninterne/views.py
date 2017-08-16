@@ -1,11 +1,14 @@
 import logging
 
+from datetime import datetime, timedelta
+
 from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from cyclos_api import CyclosAPI, CyclosAPIException
+from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from gestioninterne import serializers
 
 log = logging.getLogger()
@@ -65,7 +68,7 @@ def payments_available_for_entree_coffre(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     query_data = cyclos.post(method='account/searchAccountHistory', data=entree_coffre_query)
     if query_data['result']['totalCount'] == 0:
@@ -204,7 +207,7 @@ def payments_available_for_entrees_euro(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
 
     query_data = cyclos.post(method='account/searchAccountHistory', data=query)
@@ -239,7 +242,7 @@ def payments_available_for_entrees_eusko(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['a_rapprocher']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
 
     query_data = cyclos.post(method='account/searchAccountHistory', data=query)
@@ -311,7 +314,7 @@ def payments_available_for_banques(request):
         'account': bank_account_id,  # ID du compte
         'orderBy': 'DATE_DESC',
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
 
     if request.query_params['mode'] == 'virement':
@@ -442,7 +445,7 @@ def payments_available_depots_retraits(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     depots_data = cyclos.post(method='account/searchAccountHistory', data=depots_query)
 
@@ -463,7 +466,7 @@ def payments_available_depots_retraits(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     retraits_data = cyclos.post(method='account/searchAccountHistory', data=retraits_query)
 
@@ -546,7 +549,7 @@ def payments_available_for_reconversions(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     query_billets_data = cyclos.post(method='account/searchAccountHistory', data=query_billets)
 
@@ -568,7 +571,7 @@ def payments_available_for_reconversions(request):
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
         ],
         'pageSize': 1000,  # maximum pageSize: 1000
-        'currentpage': 0,
+        'currentPage': 0,
     }
     query_numeriques_data = cyclos.post(method='account/searchAccountHistory', data=query_numeriques)
 
@@ -668,3 +671,274 @@ def validate_reconversions(request):
                 cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     return Response(request.data['selected_payments'])
+
+
+@api_view(['GET'])
+def calculate_3_percent(request):
+    """
+    calculate_3_percent
+    """
+    # On valide et on récupère les paramètres de la requête.
+    log.debug("calculate_3_percent")
+    serializer = serializers.Calculate3PercentSerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    begin_date = serializer.data['begin']
+    end_date = serializer.data['end']
+    log.debug("begin_date = %s", begin_date)
+    log.debug("end_date = %s", end_date)
+
+    # Pour les recherches dans les historiques de compte de Cyclos, on
+    # prend le lendemain de la date de fin demandée car Cyclos utilise
+    # des DateTime et si l'heure n'est pas précisée, c'est minuit (heure
+    # zéro, début de la journée).
+    # Donc si on a end_date = 2017-06-30 par exemple, Cyclos fera la
+    # recherche jusqu'à 2017-06-30T00:00 et les paiements du 30 juin
+    # seront exclus. Pour avoir les paiements du 30 juin, il faut faire
+    # la recherche jusqu'au 1er juillet à minuit.
+    # D'autre part on convertit les dates en chaines de caractères pour
+    # pouvoir les intégrer dans les données JSON de de la recherche.
+    search_begin_date = begin_date.isoformat()
+    search_end_date = (end_date + timedelta(days=1)).isoformat()
+    log.debug("search_begin_date = %s", search_begin_date)
+    log.debug("search_end_date = %s", search_end_date)
+
+    # Connexion à Dolibarr et Cyclos.
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On récupère la liste de tous les changes d'€ en eusko pour la
+    # période demandée et on détermine à chaque fois qui est l'adhérent
+    # qui a fait le change.
+    # Il y a 3 types d'opérations à prendre en compte :
+    # 1) change billets
+    # 2) change numérique en BDC
+    # 3) change numérique en ligne
+    # Pour 1) et 2) on considère le paiement correspondant au versement
+    # des € : le compte d'origine est le Compte de débit €, le numéro
+    # d'adhérent est dans un champ personnalisé du paiement.
+    # Pour 3) on considère le versement des eusko : le compte d'origine
+    # est le Compte de débit eusko numérique, le compte destinataire est
+    # le compte de l'adhérent.
+    changes = []
+    # 1) et 2) On récupère tous les débits du Compte de débit € pour la
+    # période puis on filtre le résultat pour ne garder que les 2 types
+    # de paiements "change billets" et "change numérique en BDC".
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_euro'],
+        direction='DEBIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_billets_versement_des_euro']),
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_bdc_versement_des_euro']),
+        ]
+    )
+    changes.extend([
+        {'amount' : abs(float(payment['amount'])),
+         'member_id' : value['linkedEntityValue']['internalName'],}
+        for payment in payments
+        for value in payment['customValues']
+        if value['field']['internalName'] == 'adherent'
+    ])
+    # 3) On récupère tous les débits du Compte de débit eusko numérique
+    # pour la période puis on filtre le résultat pour ne garder que les
+    # paiements de type "change numérique en ligne".
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_eusko_numerique'],
+        direction='DEBIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),
+        ]
+    )
+    changes.extend([
+        {'amount' : abs(float(payment['amount'])),
+         'member_id' : payment['relatedAccount']['owner']['shortDisplay'],}
+        for payment in payments
+    ])
+
+    # On récupère la liste de toutes les associations
+    # et on construit un dictionnaire qui va donner la correspondance :
+    #     id de l'asso dans Dolibarr -> numéro d'adhérent
+    results = dolibarr.get(model='associations')
+    dolibarr_id_2_member_id = {item['id'] : item['code_client']
+                              for item in results}
+    log.debug("dolibarr_id_2_member_id = %s", dolibarr_id_2_member_id)
+    # On récupère aussi la liste des associations bénéficiaires des 3%,
+    # avec le nombre de parrainages de chaque asso.
+    assos_3_pourcent = {item['code_client'] : {
+                           'nom': item['nom'],
+                           'nb_parrainages': int(item['nb_parrains']),
+                       }
+                       for item in results
+                       if int(item['nb_parrains']) >= settings.MINIMUM_PARRAINAGES_3_POURCENTS}
+    log.debug("assos_3_pourcent = %s", assos_3_pourcent)
+
+    # On crée 3 dictionnaires qui vont servir pour la suite du calcul:
+    # 1) un pour mémoriser quelle asso bénéficie des dons de chaque adhérent-e;
+    #     numéro d'adhérent de l'adhérent-e -> numéro d'adhérent de l'asso
+    assos_beneficiaires = {}
+    # 2) un pour additionner les dons pour chaque asso
+    #     numéro d'adhérent de l'asso -> montant du don
+    dons = {id_asso : 0.0 for id_asso in assos_3_pourcent.keys()}
+    # 3) un pour compter le nombre de parrainages supplémentaires de
+    # chaque asso, c'est-à-dire le nombre de parrainages en 2è choix
+    # qui bénéficient à chaque asso.
+    #     numéro d'adhérent de l'asso -> nb de parrainages
+    nb_parrainages_asso2 = {id_asso : 0 for id_asso in assos_3_pourcent.keys()}
+
+    montant_total_changes = 0.0
+    montant_total_dons = 0.0
+
+    # Pour chaque change, on regarde qui est l'adhérent qui a fait le change,
+    # on récupère l'association bénéficiaire des dons de cet adhérent
+    # et on ajoute à cette asso 3% du montant du change.
+    for change in changes:
+        member_id = change['member_id']
+        try:
+            asso_beneficiaire = assos_beneficiaires[member_id]
+        except KeyError:
+            # On doit déterminer quelle association va recevoir les dons de cet adhérent.
+            # Pour cela on récupère l'adhérent dans Dolibarr et on regarde quelle
+            # association il parraine en 1er choix.
+            # Si c'est une asso 3%, c'est elle qui reçoit les dons.
+            try:
+                member_data = dolibarr.get(model='members', login=member_id)[0]
+            except DolibarrAPIException:
+                # Si on ne parvient pas à récupérer l'adhérent-e dans Dolibarr,
+                # on ignore l'erreur et on considère simplement qu'on n'a
+                # aucune information sur cet adhérent-e. Du coup c'est
+                # Euskal Moneta qui recevra ses dons.
+                # C'est le cas par exemple avec l'adhérent 'E00000' qui
+                # n'existe que dans Cyclos. Cela pourrait arriver aussi
+                # pour un adhérent supprimé de Dolibarr du fait d'un doublon.
+                member_data = {}
+            try:
+                fk_asso = member_data['fk_asso']
+                asso1 = dolibarr_id_2_member_id[fk_asso]
+            except KeyError:
+                asso1 = None
+            log.debug("asso1 = %s", asso1)
+            if asso1 and asso1 in assos_3_pourcent.keys():
+                asso_beneficiaire = asso1
+            else:
+                # Si l'association parrainée en 1er choix n'est pas une asso 3%
+                # (ou s'il n'y a pas d'asso parrainée en 1er choix),
+                # on regarde celle parrainée en 2è choix.
+                try:
+                    fk_asso2 = member_data['fk_asso2']
+                    asso2 = dolibarr_id_2_member_id[fk_asso2]
+                except KeyError:
+                    asso2 = None
+                log.debug("asso2 = %s", asso2)
+                if asso2 and asso2 in assos_3_pourcent.keys():
+                    asso_beneficiaire = asso2
+                    nb_parrainages_asso2[asso2] += 1
+                else:
+                    # Si ni l'asso 1 ni l'asso 2 ne sont des assos 3%,
+                    # c'est Euskal Moneta qui reçoit les dons de cet adhérent.
+                    asso_beneficiaire = 'Z00001'
+            # On enregistre ce résultat pour ne pas avoir à le
+            # recalculer pour chaque change de cet adhérent.
+            assos_beneficiaires[member_id] = asso_beneficiaire
+        don = change['amount'] * 0.03
+        dons[asso_beneficiaire] += don
+        montant_total_changes += change['amount']
+        montant_total_dons += don
+
+    log.debug("dons = %s", dons)
+    log.debug("nb_parrainages_asso2 = %s", nb_parrainages_asso2)
+
+    # On construit l'objet qui sera envoyé dans la réponse.
+    # Pour le nombre de parrainages de chaque association, on compte :
+    # - les parrainages en 1er choix, que les adhérent-e-s aient fait du
+    #   change ou pas
+    # - plus les parrainages en 2è choix lorsque ceux-ci s'appliquent
+    #   (ils s'agit donc d'adhérent-e-s qui ont fait du change).
+    # Cette manière de calculer est plus proche de ce qui était fait
+    # avant la migration de Cyclos 3 à Cyclos 4 et avant l'introduction
+    # du 2è choix pour le parrainage.
+    response_data = {
+        'debut': begin_date,
+        'fin': end_date,
+        'dons': [{
+                'association': {
+                    'num_adherent': id_asso1,
+                    'nom': asso['nom'],
+                },
+                'montant_don': round(montant_don, 2),
+                'nb_parrainages': asso['nb_parrainages'] + nb_asso2,
+            }
+            for id_asso1, asso in assos_3_pourcent.items()
+            for id_asso2, montant_don in dons.items() if id_asso1 == id_asso2
+            for id_asso3, nb_asso2 in nb_parrainages_asso2.items() if id_asso1 == id_asso3
+        ],
+        'montant_total_changes': montant_total_changes,
+        'montant_total_dons': round(montant_total_dons, 2),
+    }
+    log.debug("response_data = %s", response_data)
+    return Response(response_data)
+
+
+def _search_account_history(cyclos, account, direction, begin_date, end_date, payment_types=[]):
+    """
+    Search an account history for payments of the given types, ignoring
+    the chargedbacked (canceled) ones.
+    """
+    current_page = 0
+    account_history = []
+    while True:
+        search_history_data = {
+            'account': account,
+            'direction': direction,
+            'period':
+            {
+                'begin': begin_date,
+                'end': end_date,
+            },
+            'orderBy': 'DATE_ASC',
+            'pageSize': 1000,  # maximum pageSize: 1000
+            'currentPage': current_page,
+        }
+        search_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+        account_history.extend(search_history_res['result']['pageItems'])
+        page_count = search_history_res['result']['pageCount']
+        if page_count == 0 or current_page + 1 == page_count:
+            break
+        else:
+           current_page += 1
+    filtered_history = []
+    for entry in account_history:
+        # On filtre d'abord par type de paiement et ensuite on regarde
+        # si le paiement a fait l'objet d'une opposition de paiement
+        # (dans cet ordre car pour voir s'il y a une oppostion de
+        # paiement, il faut faire une requête au serveur).
+        # On récupère les données de la transaction et on vérifie si la
+        # donnée 'chargedBackBy' est présente dans le transfert associé.
+        #
+        # Note : Les transactions importées lors de la migration de
+        # Cyclos 3 à Cyclos 4 sont de type ImportedTransactionData et
+        # n'ont pas de transfert associé. Elles ne peuvent pas être
+        # annulées. Les transactions enregistrées depuis (les
+        # transactions "normales" en quelque sorte), sont de type
+        # PaymentData.
+        if entry['type']['id'] in payment_types:
+            get_data_res = cyclos.get(method='transaction/getData/{}'.format(entry['transactionId']))
+            transaction_data = get_data_res['result']
+            if (transaction_data['class'] ==
+                    'org.cyclos.model.banking.transactions.ImportedTransactionData'
+                    or (transaction_data['class'] ==
+                    'org.cyclos.model.banking.transactions.PaymentData'
+                    and'chargedBackBy' not in transaction_data['transfer'].keys())):
+                filtered_history.append(entry)
+    return filtered_history

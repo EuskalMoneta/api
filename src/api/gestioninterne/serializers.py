@@ -42,3 +42,12 @@ class ValidateReconversionsSerializer(serializers.Serializer):
     selected_payments = serializers.ListField()
     montant_total_billets = serializers.CharField()
     montant_total_numerique = serializers.CharField()
+
+
+class Calculate3PercentSerializer(serializers.Serializer):
+
+    # Setting format=None indicates that Python date objects should be
+    # returned by to_representation (instead of strings).
+    # http://www.django-rest-framework.org/api-guide/fields/#datefield
+    begin = serializers.DateField(format=None)
+    end = serializers.DateField(format=None)

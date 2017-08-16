@@ -379,7 +379,7 @@ new_pos_config['defined'] = True
 new_pos_config['enabled'] = True
 new_pos_config['userAccess'] = 'DEFAULT_ENABLED'
 new_pos_config['confirmationPassword'] = ID_PASSWORD_PIN
-logger.info('Sauvegarde de la nouvelle configuration...')
+logger.info('Sauvegarde de la nouvelle configuration de canal...')
 r = requests.post(
     eusko_web_services + 'channelConfiguration/save',
     headers=headers,
@@ -402,11 +402,59 @@ new_mobile_app_config['principalTypes'] = [
 new_mobile_app_config['receivePaymentPrincipalTypes'] = [
     ID_TOKEN_CARTE_NFC,
 ]
-logger.info('Sauvegarde de la nouvelle configuration...')
+logger.info('Sauvegarde de la nouvelle configuration de canal...')
 r = requests.post(
     eusko_web_services + 'channelConfiguration/save',
     headers=headers,
     json=new_mobile_app_config
+)
+check_request_status(r)
+
+
+########################################################################
+# Création d'une configuration spécifique pour les opérateurs BDC.
+#
+# Par défaut le délai de validité des sessions via les services web est
+# de 5 minutes. Ce délai est trop court pour les bureaux de change et
+# rend l'utilisation de l'application BDC pénible.
+# On crée donc une nouvelle configuration identique à celle par défaut
+# mais dans laquelle les sessions créées vis les services web sont
+# valables 2h.
+#
+def get_data_for_new_configuration(parent_configuration):
+    logger.debug("get_data_for_new_configuration(%s)", parent_configuration)
+    r = requests.post(eusko_web_services + 'configuration/getDataForNew/',
+                      headers=headers,
+                      json=[parent_configuration])
+    check_request_status(r)
+    return r.json()['result']['dto']
+
+# D'abord on crée une nouvelle configuration qui hérite de la config par
+# défaut.
+logger.info("Création d'une nouvelle configuration pour les opérateurs BDC...")
+operateur_bdc_config = get_data_for_new_configuration(eusko_default_config_id)
+operateur_bdc_config['name'] = 'Opérateurs BDC'
+logger.info('Sauvegarde de la nouvelle configuration...')
+r = requests.post(
+    eusko_web_services + 'configuration/save',
+    headers=headers,
+    json=operateur_bdc_config
+)
+check_request_status(r)
+ID_CONFIG_OPERATEURS_BDC = r.json()['result']
+# Puis on crée une nouvelle configuration pour le canal "Web services".
+logger.info('Création d\'une nouvelle configuration pour le canal "Web services"...')
+operateur_bdc_ws_config = get_data_for_new_channel_configuration(
+    channel=ID_CANAL_WEB_SERVICES,
+    configuration=ID_CONFIG_OPERATEURS_BDC)
+operateur_bdc_ws_config['defined'] = True
+operateur_bdc_ws_config['sessionTimeout']['amount'] = 2
+operateur_bdc_ws_config['sessionTimeout']['field'] = 'HOURS'
+logger.info('Sauvegarde de la nouvelle configuration de canal...')
+r = requests.post(
+    eusko_web_services + 'channelConfiguration/save',
+    headers=headers,
+    json=operateur_bdc_ws_config
 )
 check_request_status(r)
 
@@ -932,6 +980,12 @@ ID_TYPE_PAIEMENT_IMPRESSION_BILLETS = create_payment_transfer_type(
     direction='SYSTEM_TO_SYSTEM',
     from_account_type_id=ID_COMPTE_DE_DEBIT_EUSKO_BILLET,
     to_account_type_id=ID_STOCK_DE_BILLETS,
+)
+ID_TYPE_PAIEMENT_DESTRUCTION_BILLETS = create_payment_transfer_type(
+    name="Destruction de billets d'eusko",
+    direction='SYSTEM_TO_SYSTEM',
+    from_account_type_id=ID_STOCK_DE_BILLETS,
+    to_account_type_id=ID_COMPTE_DE_DEBIT_EUSKO_BILLET,
 )
 ID_TYPE_PAIEMENT_SORTIE_COFFRE = create_payment_transfer_type(
     name='Sortie coffre',
@@ -1511,6 +1565,7 @@ ID_TYPE_PAIEMENT_DE_RETOURS_EUSKO_BDC_VERS_STOCK_DE_BILLETS_BDC = create_payment
 
 all_system_to_system_payments = [
     ID_TYPE_PAIEMENT_IMPRESSION_BILLETS,
+    ID_TYPE_PAIEMENT_DESTRUCTION_BILLETS,
     ID_TYPE_PAIEMENT_SORTIE_COFFRE,
     ID_TYPE_PAIEMENT_ENTREE_COFFRE,
 ]
@@ -1893,6 +1948,15 @@ def create_member_group(name,
         assign_product_to_group(product_id, group_id)
     return group_id
 
+
+def change_group_configuration(group_id, configuration_id):
+    logger.info("Affectation d'une nouvelle configuration à un groupe...")
+    r = requests.post(eusko_web_services + 'group/changeConfiguration',
+                      headers=headers,
+                      json=[group_id, configuration_id])
+    check_request_status(r)
+
+
 # Gestion interne :
 # Les membres de ce groupe ont accès à l'application de gestion interne.
 # Ils ont aussi accès à Cyclos, où ils ont toutes les permissions, ce
@@ -1912,6 +1976,8 @@ ID_GROUPE_GESTION_INTERNE = create_admin_group(
 ID_GROUPE_OPERATEURS_BDC = create_admin_group(
     name='Opérateurs BDC',
 )
+change_group_configuration(ID_GROUPE_OPERATEURS_BDC,
+                           ID_CONFIG_OPERATEURS_BDC)
 
 # Anonyme :
 # Ce groupe ne va contenir qu'un utilisateur : l'utilisateur "anonyme"
