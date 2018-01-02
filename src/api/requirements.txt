@@ -1,5 +1,5 @@
 arrow
-django
+django==1.11.*
 django-cors-middleware
 djangorestframework
 djangorestframework-csv
