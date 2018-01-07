@@ -87,7 +87,7 @@
                         {% blocktrans %}Solde{% endblocktrans %}
                     </td>
                 </tr>
-                {% for item in account_history|get_item:'pageItems' %}
+                {% for item in account_history %}
                 <tr>
                     <td>
                         {{ item|get_item:'date' }}

@@ -354,33 +354,23 @@ def export_history_adherent(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    query_data = [cyclos.user_id, None]
-    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
-
-    begin_date = serializer.data['begin'].isoformat()
+    begin_date = serializer.data['begin'].replace(hour=0, minute=0, second=0).isoformat()
     end_date = serializer.data['end'].replace(hour=23, minute=59, second=59).isoformat()
 
-    search_history_data_with_balance = {
-        'account': accounts_summaries_data['result'][0]['status']['accountId'],
-        'orderBy': 'DATE_DESC',
-        'pageSize': 1000,  # maximum pageSize: 1000
-        'currentPage': 0,
-        'period':
-        {
-            'begin': begin_date,
-            'end': end_date,
-        },
-    }
-    accounts_history_res_with_balance = cyclos.post(
-        method='account/searchAccountHistory', data=search_history_data_with_balance)
+    # On récupère un résumé des comptes de l'utilisateur à la date
+    # begin_date, ce qui nous permet d'avoir l'id du compte et son solde
+    # à cette date (càd le solde initial pour l'historique).
+    # On ne garde que le premier élément de la réponse car on sait qu'un
+    # adhérent n'a qu'un compte.
+    accounts_summary_query_data = [cyclos.user_id, begin_date]
+    accounts_summary_res = cyclos.post(method='account/getAccountsSummary', data=accounts_summary_query_data)
+    account_summary = accounts_summary_res['result'][0]
+    initial_balance = account_summary['status']['balance']
 
-    balance = accounts_summaries_data['result'][0]['status']['balance']
-    for line in accounts_history_res_with_balance['result']['pageItems']:
-        line['balance'] = balance
-        balance = float(balance) - float(line['amount'])
-
-    search_history_data = {
-        'account': accounts_summaries_data['result'][0]['status']['accountId'],
+    # On récupère l'historique du compte pour la période demandée, avec
+    # les opérations triées par ordre chronologique.
+    account_history_query_data = {
+        'account': account_summary['status']['accountId'],
         'orderBy': 'DATE_ASC',
         'pageSize': 1000,  # maximum pageSize: 1000
         'currentPage': 0,
@@ -389,22 +379,33 @@ def export_history_adherent(request):
             'begin': begin_date,
             'end': end_date,
         },
-        'description': request.query_params['description']
     }
-    accounts_history_res = cyclos.post(method='account/searchAccountHistory', data=search_history_data)
+    account_history_res = cyclos.post(method='account/searchAccountHistory', data=account_history_query_data)
+    account_history = account_history_res['result']['pageItems']
 
-    for line_without_balance in accounts_history_res['result']['pageItems']:
-        for line_with_balance in accounts_history_res_with_balance['result']['pageItems']:
-            if line_without_balance['id'] == line_with_balance['id']:
-                line_without_balance['balance'] = line_with_balance['balance']
+    # On calcule le solde pour chaque ligne de l'historique.
+    balance = initial_balance
+    for line in account_history:
+        balance = float(balance) + float(line['amount'])
+        line['balance'] = balance
 
-    for line in accounts_history_res['result']['pageItems']:
+    # On ajoute une première ligne avec le solde initial du compte.
+    account_history.insert(0, {
+        'date': begin_date,
+        'description': 'Solde initial',
+        'amount': 0,
+        'balance': initial_balance,
+    })
+
+    # On formate les dates pour les rendre plus lisibles.
+    for line in account_history:
         line['date'] = arrow.get(line['date']).format('DD-MM-YYYY à HH:mm')
 
+    # On fabrique l'objet qui va servir à l'export PDF ou CSV.
     context = {
-        'account_number': accounts_summaries_data['result'][0]['number'],
-        'name': accounts_summaries_data['result'][0]['owner']['display'],
-        'account_history': accounts_history_res['result'],
+        'account_number': account_summary['number'],
+        'name': account_summary['owner']['display'],
+        'account_history': account_history,
         'account_login': str(request.user),
         'period': {
             'begin': arrow.get(serializer.data['begin']).format('DD MMMM YYYY', locale='fr'),
@@ -425,17 +426,12 @@ def export_history_adherent(request):
     else:
         csv_content = [{'Date': line['date'],
                         'Libellé': line['description'],
-                        'Crédit': "{0:.2f}".format(float(line['amount'])).replace('.', ','),
-                        'Débit': '',
+                        'Crédit': "{0:.2f}".format(float(line['amount'])).replace('.', ',')
+                                  if float(line['amount']) > float() else '',
+                        'Débit': "{0:.2f}".format(float(line['amount'])).replace('.', ',')
+                                  if float(line['amount']) < float() else '',
                         'Solde': "{0:.2f}".format(float(line['balance'])).replace('.', ',')}
-                       if float(line['amount']) > float()
-                       else
-                       {'Date': line['date'],
-                        'Libellé': line['description'],
-                        'Crédit': '',
-                        'Débit': "{0:.2f}".format(float(line['amount'])).replace('.', ','),
-                        'Solde': "{0:.2f}".format(float(line['balance'])).replace('.', ',')}
-                       for line in context['account_history']['pageItems']]
+                       for line in context['account_history']]
         return Response(csv_content)
 
 
