@@ -320,6 +320,7 @@ def payments_available_for_banques(request):
     if request.query_params['mode'] == 'virement':
         bank_history_query.update({'statuses': [
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['rapproche']),
         ], 'fromNature': 'USER'})
     elif request.query_params['mode'] == 'rapprochement':
         bank_history_query.update({'statuses': [
@@ -328,7 +329,7 @@ def payments_available_for_banques(request):
     elif request.query_params['mode'] == 'historique':
         pass
     else:
-        return Response({'error': 'The mode you privded is not supported by this endpoint!'},
+        return Response({'error': 'The mode you provided is not supported by this endpoint!'},
                         status=status.HTTP_400_BAD_REQUEST)
 
     bank_history_data = cyclos.post(method='account/searchAccountHistory', data=bank_history_query)
