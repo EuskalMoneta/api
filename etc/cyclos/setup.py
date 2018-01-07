@@ -412,11 +412,12 @@ check_request_status(r)
 
 
 ########################################################################
-# Création d'une configuration spécifique pour les opérateurs BDC.
+# Création d'une configuration spécifique pour les groupes "Opérateurs
+# BDC" et "Gestion interne".
 #
 # Par défaut le délai de validité des sessions via les services web est
-# de 5 minutes. Ce délai est trop court pour les bureaux de change et
-# rend l'utilisation de l'application BDC pénible.
+# de 5 minutes. Ce délai est trop court et rend l'utilisation des
+# applications BDC et Gestion Interne pénible.
 # On crée donc une nouvelle configuration identique à celle par défaut
 # mais dans laquelle les sessions créées vis les services web sont
 # valables 2h.
@@ -455,6 +456,33 @@ r = requests.post(
     eusko_web_services + 'channelConfiguration/save',
     headers=headers,
     json=operateur_bdc_ws_config
+)
+check_request_status(r)
+
+# On fait la même chose pour Gestion interne.
+logger.info("Création d'une nouvelle configuration pour Gestion interne...")
+gestion_interne = get_data_for_new_configuration(eusko_default_config_id)
+gestion_interne['name'] = 'Gestion interne'
+logger.info('Sauvegarde de la nouvelle configuration...')
+r = requests.post(
+    eusko_web_services + 'configuration/save',
+    headers=headers,
+    json=gestion_interne
+)
+check_request_status(r)
+ID_CONFIG_GESTION_INTERNE = r.json()['result']
+logger.info('Création d\'une nouvelle configuration pour le canal "Web services"...')
+gestion_interne_ws_config = get_data_for_new_channel_configuration(
+    channel=ID_CANAL_WEB_SERVICES,
+    configuration=ID_CONFIG_GESTION_INTERNE)
+gestion_interne_ws_config['defined'] = True
+gestion_interne_ws_config['sessionTimeout']['amount'] = 2
+gestion_interne_ws_config['sessionTimeout']['field'] = 'HOURS'
+logger.info('Sauvegarde de la nouvelle configuration de canal...')
+r = requests.post(
+    eusko_web_services + 'channelConfiguration/save',
+    headers=headers,
+    json=gestion_interne_ws_config
 )
 check_request_status(r)
 
@@ -1965,6 +1993,8 @@ def change_group_configuration(group_id, configuration_id):
 ID_GROUPE_GESTION_INTERNE = create_admin_group(
     name='Gestion interne',
 )
+change_group_configuration(ID_GROUPE_GESTION_INTERNE,
+                           ID_CONFIG_GESTION_INTERNE)
 
 # Opérateurs BDC :
 # Les membres de ce groupe ont accès à l'application des bureaux de
