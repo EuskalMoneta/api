@@ -51,3 +51,11 @@ class Calculate3PercentSerializer(serializers.Serializer):
     # http://www.django-rest-framework.org/api-guide/fields/#datefield
     begin = serializers.DateField(format=None)
     end = serializers.DateField(format=None)
+
+
+class PaiementCotisationEuskoNumeriqueSerializer(serializers.Serializer):
+    member_login = serializers.CharField()
+    start_date = serializers.DateTimeField(format=None)
+    end_date = serializers.DateTimeField(format=None)
+    amount = serializers.FloatField()
+    label = serializers.CharField()
