@@ -309,7 +309,7 @@ def payments_available_for_adherents(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    begin_date = serializer.data['begin'].isoformat()
+    begin_date = serializer.data['begin'].replace(hour=0, minute=0, second=0).isoformat()
     end_date = serializer.data['end'].replace(hour=23, minute=59, second=59).isoformat()
 
     query_data = [cyclos.user_id, end_date]
