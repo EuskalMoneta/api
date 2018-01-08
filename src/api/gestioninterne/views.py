@@ -1,7 +1,7 @@
+from datetime import datetime, timedelta
 import logging
 
-from datetime import datetime, timedelta
-
+import arrow
 from django.conf import settings
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -320,6 +320,7 @@ def payments_available_for_banques(request):
     if request.query_params['mode'] == 'virement':
         bank_history_query.update({'statuses': [
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
+            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['rapproche']),
         ], 'fromNature': 'USER'})
     elif request.query_params['mode'] == 'rapprochement':
         bank_history_query.update({'statuses': [
@@ -328,7 +329,7 @@ def payments_available_for_banques(request):
     elif request.query_params['mode'] == 'historique':
         pass
     else:
-        return Response({'error': 'The mode you privded is not supported by this endpoint!'},
+        return Response({'error': 'The mode you provided is not supported by this endpoint!'},
                         status=status.HTTP_400_BAD_REQUEST)
 
     bank_history_data = cyclos.post(method='account/searchAccountHistory', data=bank_history_query)
@@ -942,3 +943,135 @@ def _search_account_history(cyclos, account, direction, begin_date, end_date, pa
                     and'chargedBackBy' not in transaction_data['transfer'].keys())):
                 filtered_history.append(entry)
     return filtered_history
+
+
+@api_view(['POST'])
+def paiement_cotisation_eusko_numerique(request):
+    """
+    Paiement de la cotisation d'un membre en Eusko numérique.
+
+    Le paiement se fait par virement du compte Eusko du membre à celui
+    d'Euskal Moneta, et la cotisation est enregistrée dans Dolibarr.
+    """
+    serializer = serializers.PaiementCotisationEuskoNumeriqueSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # On se connecte à Cyclos.
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On se connecte à Dolibarr et on récupère les données de l'adhérent.
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        member = dolibarr.get(model='members', login=serializer.data['member_login'])[0]
+    except DolibarrAPIException as e:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    except:
+        return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    if member['type'].lower() == 'particulier':
+        member_name = '{} {}'.format(member['firstname'], member['lastname'])
+    else:
+        member_name = member['company']
+
+    # On récupère l'id de l'adhérent dans Cyclos (on en a besoin pour le paiement).
+    try:
+        data = cyclos.post(method='user/search', data={'keywords': member['login']})
+        member_cyclos_id = data['result']['pageItems'][0]['id']
+    except (KeyError, IndexError, CyclosAPIException) as e:
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On récupère l'id d'Euskal Moneta dans Cyclos (on en a besoin pour le paiement).
+    try:
+        data = cyclos.post(method='user/search', data={'keywords': 'Z00001'})
+        euskal_moneta_cyclos_id = data['result']['pageItems'][0]['id']
+    except (KeyError, IndexError, CyclosAPIException) as e:
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On fait le paiement dans Cyclos.
+    query_data = {
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
+        'amount': serializer.data['amount'],
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'from': member_cyclos_id,
+        'to': euskal_moneta_cyclos_id,
+        'description': 'Cotisation - {} - {}'.format(member['login'], member_name),
+    }
+    cyclos.post(method='payment/perform', data=query_data)
+
+    # Dans Dolibarr :
+    # 1) on enregistre la cotisation
+    data_res_subscription = {'start_date': serializer.data['start_date'].strftime('%s'),
+                             'end_date': serializer.data['end_date'].strftime('%s'),
+                             'amount': serializer.data['amount'], 'label': serializer.data['label']}
+
+    try:
+        res_id_subscription = dolibarr.post(
+            model='members/{}/subscriptions'.format(member['id']), data=data_res_subscription)
+    except Exception as e:
+        log.critical("data_res_subscription: {}".format(data_res_subscription))
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    if str(res_id_subscription) == '-1':
+        return Response({'data returned': str(res_id_subscription)}, status=status.HTTP_409_CONFLICT)
+
+    # 2) on enregistre le paiement
+    payment_account = 4
+    payment_type = 'VIR'
+    data_res_payment = {'date': arrow.now('Europe/Paris').timestamp, 'type': payment_type,
+                        'label': serializer.data['label'], 'amount': serializer.data['amount']}
+    model_res_payment = 'accounts/{}/lines'.format(payment_account)
+    try:
+        res_id_payment = dolibarr.post(
+            model=model_res_payment, data=data_res_payment)
+
+        log.info("res_id_payment: {}".format(res_id_payment))
+    except DolibarrAPIException as e:
+        log.critical("model: {}".format(model_res_payment))
+        log.critical("data_res_payment: {}".format(data_res_payment))
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # 3) on lie la cotisation au paiement
+    data_link_sub_payment = {'fk_bank': res_id_payment}
+    model_link_sub_payment = 'subscriptions/{}'.format(res_id_subscription)
+    try:
+        res_id_link_sub_payment = dolibarr.patch(
+            model=model_link_sub_payment, data=data_link_sub_payment)
+
+        log.info("res_id_link_sub_payment: {}".format(res_id_link_sub_payment))
+    except DolibarrAPIException as e:
+        log.critical("model: {}".format(model_link_sub_payment))
+        log.critical("data_link_sub_payment: {}".format(data_link_sub_payment))
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # 4) on lie le paiement à l'adhérent
+    data_link_payment_member = {'label': '{} {}'.format(member['firstname'], member['lastname']),
+                                'type': 'member', 'url_id': member['id'],
+                                'url': '{}/adherents/card.php?rowid={}'.format(
+                                    settings.DOLIBARR_PUBLIC_URL, member['id'])}
+    model_link_payment_member = 'accounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
+    try:
+        res_id_link_payment_member = dolibarr.post(
+            model=model_link_payment_member, data=data_link_payment_member)
+
+        log.info("res_id_link_payment_member: {}".format(res_id_link_payment_member))
+    except DolibarrAPIException as e:
+        log.critical("model: {}".format(model_link_payment_member))
+        log.critical("data_link_payment_member: {}".format(data_link_payment_member))
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On construit l'objet qui sera envoyé dans la réponse.
+    res = {'id_subscription': res_id_subscription,
+           'id_payment': res_id_payment,
+           'link_sub_payment': res_id_link_sub_payment,
+           'id_link_payment_member': res_id_link_payment_member,
+           'member': member}
+
+    return Response(res, status=status.HTTP_201_CREATED)
