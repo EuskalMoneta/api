@@ -321,7 +321,6 @@ def payments_available_for_banques(request):
     if request.query_params['mode'] == 'virement':
         bank_history_query.update({'statuses': [
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
-            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['rapproche']),
         ], 'fromNature': 'USER'})
     elif request.query_params['mode'] == 'rapprochement':
         bank_history_query.update({'statuses': [
@@ -337,12 +336,18 @@ def payments_available_for_banques(request):
     if bank_history_data['result']['totalCount'] == 0:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # Il faut filtrer et ne garder que les paiements de type depot_en_banque
-    filtered_data = [
-        item
-        for item in bank_history_data['result']['pageItems']
-    ]
-    return Response(filtered_data)
+    data = bank_history_data['result']['pageItems']
+
+    # Dans le cas des virements, on ne garde que les paiements rapprochés.
+    if request.query_params['mode'] == 'virement':
+        data = [
+            item
+            for item in data
+            for status in item['statuses']
+            if status['id'] == str(settings.CYCLOS_CONSTANTS['transfer_statuses']['rapproche'])
+        ]
+
+    return Response(data)
 
 
 @api_view(['POST'])
