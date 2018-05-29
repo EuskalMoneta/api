@@ -1325,7 +1325,7 @@ def export_compta_odoo(request):
 def _search_account_history(cyclos, account, direction, begin_date, end_date, payment_types=[]):
     """
     Search an account history for payments of the given types, ignoring
-    the chargedbacked (canceled) ones.
+    the chargedbacked (cancelled) ones.
     """
     current_page = 0
     account_history = []
