@@ -53,6 +53,11 @@ class Calculate3PercentSerializer(serializers.Serializer):
     end = serializers.DateField(format=None)
 
 
+class ExportVersOdooSerializer(serializers.Serializer):
+    begin = serializers.DateField(format=None)
+    end = serializers.DateField(format=None)
+
+
 class PaiementCotisationEuskoNumeriqueSerializer(serializers.Serializer):
     member_login = serializers.CharField()
     start_date = serializers.DateTimeField(format=None)

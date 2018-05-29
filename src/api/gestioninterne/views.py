@@ -897,13 +897,13 @@ def calculate_3_percent(request):
     return Response(response_data)
 
 
-class ExportComptaOdooCSVRenderer(CSVRenderer):
+class ExportVersOdooCSVRenderer(CSVRenderer):
     header = ['journal_id', 'date', 'ref', 'line_ids/account_id', 'line_ids/name', 'line_ids/debit', 'line_ids/credit']
 
 
 @api_view(['GET'])
-@renderer_classes((ExportComptaOdooCSVRenderer,))
-def export_compta_odoo(request):
+@renderer_classes((ExportVersOdooCSVRenderer,))
+def export_vers_odoo(request):
     """
     Fait un export pour la comptabilité, pour une période donnée, des
     opérations enregistrées dans Cyclos.
@@ -944,20 +944,15 @@ def export_compta_odoo(request):
     COMPTE_778800 = '778800'
 
     # On valide et on récupère les paramètres de la requête.
-    log.debug("calculate_3_percent")
-    serializer = serializers.Calculate3PercentSerializer(data=request.query_params)
+    serializer = serializers.ExportVersOdooSerializer(data=request.query_params)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     begin_date = serializer.data['begin']
     end_date = serializer.data['end']
-    log.debug("begin_date = %s", begin_date)
-    log.debug("end_date = %s", end_date)
 
     # Voir le commentaire du même code ci-dessus dans calculate_3_percent.
     search_begin_date = begin_date.isoformat()
     search_end_date = (end_date + timedelta(days=1)).isoformat()
-    log.debug("search_begin_date = %s", search_begin_date)
-    log.debug("search_end_date = %s", search_end_date)
 
     # Connexion à Dolibarr et Cyclos.
     try:
