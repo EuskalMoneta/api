@@ -88,6 +88,7 @@ urlpatterns = [
     url(r'^validate-reconversions/$', gi_views.validate_reconversions),
     url(r'^calculate-3-percent/$', gi_views.calculate_3_percent),
     url(r'^export-vers-odoo/$', gi_views.export_vers_odoo),
+    url(r'^change-par-virement/$', gi_views.change_par_virement),
     url(r'^paiement-cotisation-eusko-numerique/$', gi_views.paiement_cotisation_eusko_numerique),
 
     # Crédit des comptes Eusko par prélèvement automatique

@@ -1392,6 +1392,85 @@ def _add_account_entry(csv_content, journal_id, date, description, lines):
 
 
 @api_view(['POST'])
+def change_par_virement(request):
+    """
+    Enregistrement d'un change d'eusko numériques par virement.
+    """
+    serializer = serializers.ChangeParVirementSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # Connexion à Dolibarr et Cyclos.
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On récupère les données de l'adhérent.
+    try:
+        member = dolibarr.get(model='members', login=serializer.data['member_login'])[0]
+    except:
+        return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Le code ci-dessous est un gros copier-coller venant de la fonction
+    # perform() de credits_comptes_prelevements_auto.py. Il faudrait
+    # factoriser tout ça mais je n'ai pas le temps de tout tester
+    # correctement maintenant donc je minimise les risques.
+    try:
+        adherent_cyclos_id = cyclos.get_member_id_from_login(member_login=member['login'])
+
+        # Determine whether or not our user is part of the appropriate group
+        group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
+
+        # Fetching info for our current user (we look for his groups)
+        user_data = cyclos.post(method='user/load', data=[adherent_cyclos_id])
+
+        if not user_data['result']['group']['id'] in group_constants_with_account:
+            error = "{} n'a pas de compte Eusko numérique...".format(member['login'])
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Payment in Euro
+        change_numerique_euro = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_euro']),  # noqa
+            'amount': float(serializer.data['amount']),
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': 'SYSTEM',
+            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+            'customValues': [{
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
+                'stringValue': serializer.data['bank_transfer_reference']
+            }],
+            'description': 'Change par virement'
+        }
+        res_change_numerique_euro = cyclos.post(method='payment/perform', data=change_numerique_euro)
+
+        # Payment in Eusko
+        change_numerique_eusko = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),  # noqa
+            'amount': float(serializer.data['amount']),
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+            'from': 'SYSTEM',
+            'to': adherent_cyclos_id,
+            'customValues': [{
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
+                'stringValue': serializer.data['bank_transfer_reference']
+            }],
+            'description': 'Change par virement'
+        }
+        res_change_numerique_eusko = cyclos.post(method='payment/perform', data=change_numerique_eusko)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    res = {'res_change_numerique_euro': res_change_numerique_euro,
+           'res_change_numerique_eusko': res_change_numerique_eusko}
+    return Response(res)
+
+
+@api_view(['POST'])
 def paiement_cotisation_eusko_numerique(request):
     """
     Paiement de la cotisation d'un membre en Eusko numérique.
