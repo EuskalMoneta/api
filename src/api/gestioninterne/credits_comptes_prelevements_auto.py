@@ -37,11 +37,10 @@ def import_csv(request, filename):
     """
 
     # DictReader needs a file-like object, I need to use StringIO to create one from the uploaded file
-    # I also need to decode data from iso-8859-15 to utf-8
-    f = io.StringIO(request.data['file'].read().decode('iso-8859-15'))
+    f = io.StringIO(request.data['file'].read().decode('utf-8'))
 
-    csv.register_dialect('credit-coop', delimiter=';')
-    reader = csv.DictReader(f, dialect='credit-coop')
+    csv.register_dialect('collect.online', delimiter=';')
+    reader = csv.DictReader(f, dialect='collect.online')
 
     # I don't like 'Sentences with Spaces And Random Caps' as key in my dicts, I slugify every key here
     reader.fieldnames = [slugify(name) for name in reader.fieldnames]
@@ -50,19 +49,19 @@ def import_csv(request, filename):
     csv_data = [{k: row[k].strip()
                  for k in row}
                 for row in reader
-                if row['statut-echeance'] == 'exécutée avec succès']
+                if row['statut-echeance'] == 'Exécutée']
 
     res = {'errors': [], 'ignore': 0, 'ok': []}
 
     for row in csv_data:
         try:
             echeance = models.Echeance(
-                ref=row['reference-echeance'],
-                adherent_name='{} {}'.format(row['prenom-ou-siren'], row['nom-ou-raison-sociale']).strip(),
-                adherent_id=row['numero-du-debiteur'],
-                montant=float(row['montant-de-lecheance-en-euro'].replace(',', '.')),
-                date=datetime.strptime(row['date-decheance'], '%d/%m/%Y'),
-                operation_date=datetime.strptime(row['date-doperation'], '%d/%m/%Y'))
+                ref=row['reference-de-bout-en-bout'],
+                adherent_name='{} {}'.format(row['prenom-ou-siren'], row['nom-ou-raisons-sociale']).strip(),
+                adherent_id=row['reference-debiteur'],
+                montant=float(row['montant-en']),
+                date=datetime.strptime(row['date-decheance'], '%d/%m/%y'),
+                operation_date=datetime.strptime(row['date-doperation'], '%d/%m/%y'))
 
             echeance.save()
 
@@ -78,10 +77,10 @@ def import_csv(request, filename):
                 res['errors'].append(echeance_dict)
             except Exception as err_two:
                 echeance_dict = {
-                    'ref': row['reference-echeance'],
-                    'adherent_name': '{} {}'.format(row['prenom-ou-siren'], row['nom-ou-raison-sociale']).strip(),
-                    'adherent_id': row['numero-du-debiteur'],
-                    'montant': row['montant-de-lecheance-en-euro'].replace(',', '.'),
+                    'ref': row['reference-de-bout-en-bout'],
+                    'adherent_name': '{} {}'.format(row['prenom-ou-siren'], row['nom-ou-raisons-sociale']).strip(),
+                    'adherent_id': row['reference-debiteur'],
+                    'montant': row['montant-en'],
                     'date': row['date-decheance'],
                     'operation_date': row['date-doperation'],
                     'error': '{} {}'.format(e, err_two),

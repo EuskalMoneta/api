@@ -4,8 +4,9 @@ import logging
 import arrow
 from django.conf import settings
 from rest_framework import status
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.response import Response
+from rest_framework_csv.renderers import CSVRenderer
 
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
@@ -320,7 +321,6 @@ def payments_available_for_banques(request):
     if request.query_params['mode'] == 'virement':
         bank_history_query.update({'statuses': [
             str(settings.CYCLOS_CONSTANTS['transfer_statuses']['virements_a_faire']),
-            str(settings.CYCLOS_CONSTANTS['transfer_statuses']['rapproche']),
         ], 'fromNature': 'USER'})
     elif request.query_params['mode'] == 'rapprochement':
         bank_history_query.update({'statuses': [
@@ -336,12 +336,18 @@ def payments_available_for_banques(request):
     if bank_history_data['result']['totalCount'] == 0:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # Il faut filtrer et ne garder que les paiements de type depot_en_banque
-    filtered_data = [
-        item
-        for item in bank_history_data['result']['pageItems']
-    ]
-    return Response(filtered_data)
+    data = bank_history_data['result']['pageItems']
+
+    # Dans le cas des virements, on ne garde que les paiements rapprochés.
+    if request.query_params['mode'] == 'virement':
+        data = [
+            item
+            for item in data
+            for status in item['statuses']
+            if status['id'] == str(settings.CYCLOS_CONSTANTS['transfer_statuses']['rapproche'])
+        ]
+
+    return Response(data)
 
 
 @api_view(['POST'])
@@ -698,7 +704,7 @@ def calculate_3_percent(request):
     # seront exclus. Pour avoir les paiements du 30 juin, il faut faire
     # la recherche jusqu'au 1er juillet à minuit.
     # D'autre part on convertit les dates en chaines de caractères pour
-    # pouvoir les intégrer dans les données JSON de de la recherche.
+    # pouvoir les intégrer dans les données JSON de la recherche.
     search_begin_date = begin_date.isoformat()
     search_end_date = (end_date + timedelta(days=1)).isoformat()
     log.debug("search_begin_date = %s", search_begin_date)
@@ -891,10 +897,430 @@ def calculate_3_percent(request):
     return Response(response_data)
 
 
+class ExportVersOdooCSVRenderer(CSVRenderer):
+    header = ['journal_id', 'date', 'ref', 'line_ids/account_id', 'line_ids/name', 'line_ids/debit', 'line_ids/credit']
+
+
+@api_view(['GET'])
+@renderer_classes((ExportVersOdooCSVRenderer,))
+def export_vers_odoo(request):
+    """
+    Fait un export pour la comptabilité, pour une période donnée, des
+    opérations enregistrées dans Cyclos.
+
+    Cette fonction génère un fichier CSV qui peut être importé comme
+    pièces comptables dans le module comptabilité de Odoo. Le ficher
+    généré contient une pièce pour chaque opération enregistrée dans
+    Cyclos pour la période demandée et qui doit être enregistrée en
+    comptabilité. La transposition des opérations Cyclos en écritures
+    dans la comptabilité est détaillée dans le document "Comptabilité
+    des eusko".
+    """
+
+    # Pseudo-constantes pour les noms des journaux et les comptes dans Odoo.
+    JOURNAL_OPERATIONS_DIVERSES = 'Opérations diverses'
+    JOURNAL_CCOOP_GESTION = 'Crédit Coopératif - Gestion'
+    JOURNAL_CCOOP_DEDIE_BILLET = 'Crédit Coopératif - Compte dédié billet'
+    JOURNAL_CCOOP_CHANGE_NUMERIQUE = 'Crédit Coopératif - Change numérique'
+    JOURNAL_CCOOP_DEDIE_NUMERIQUE = 'Crédit Coopératif - Compte dédié numérique'
+    JOURNAL_CREDIT_AGRICOLE = 'Crédit Agricole'
+    JOURNAL_BANQUE_POSTALE = 'La Banque Postale'
+    JOURNAL_CAISSE_EUROS = 'Caisse en euros (€)'
+    JOURNAL_CAISSE_EUSKO = 'Caisse en eusko'
+    COMPTE_463100 = '463100'
+    COMPTE_463200 = '463200'
+    COMPTE_463300 = '463300'
+    COMPTE_512100 = '512100'
+    COMPTE_512200 = '512200'
+    COMPTE_512300 = '512300'
+    COMPTE_512400 = '512400'
+    COMPTE_512600 = '512600'
+    COMPTE_512700 = '512700'
+    COMPTE_531000 = '531000'
+    COMPTE_532000 = '532000'
+    COMPTE_580000 = '580000'
+    COMPTE_756100 = '756100'
+    COMPTE_678800 = '678800'
+    COMPTE_778800 = '778800'
+
+    # On valide et on récupère les paramètres de la requête.
+    serializer = serializers.ExportVersOdooSerializer(data=request.query_params)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    begin_date = serializer.data['begin']
+    end_date = serializer.data['end']
+
+    # Voir le commentaire du même code ci-dessus dans calculate_3_percent.
+    search_begin_date = begin_date.isoformat()
+    search_end_date = (end_date + timedelta(days=1)).isoformat()
+
+    # Connexion à Dolibarr et Cyclos.
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On traite successivement tous les types d'opérations de Cyclos qui
+    # doivent être enregistrées en comptabilité. Pour chaque opération,
+    # une pièce comptable au format CSV va être créée. Chaque pièce
+    # comptable est enregistrée dans un journal avec une date et une
+    # référence, et contient plusieurs lignes (au moins deux) de débit
+    # et de crédit. Chaque pièce comptable doit être équilibrée.
+    # Toutes les pièces comptables générées pour la période demandée
+    # sont enregistrées dans un seul et même fichier CSV, qui sera
+    # importé en une fois dans Odoo.
+    # Pour éviter de devoir faires des conversions pour avoir la valeur
+    # absolue du montant, on fait la recherche des paiements à partir du
+    # compte qui est crédité, sauf si la recherche est plus simple à
+    # partir du compte débité (ce qui est le cas par exemple pour les
+    # cotisations en eusko car c'est toujours le même compte qui est
+    # débité alors qu'en faisant la recherche des crédits, il faudrait
+    # passer en revue tous les bureaux de change).
+    csv_content = []
+
+    # Impressions de billets.
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['stock_de_billets'],
+        direction='CREDIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['impression_de_billets_d_eusko']),
+        ]
+    )
+    for payment in payments:
+        _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_463200, 'debit': payment['amount'] },
+                            { 'account_id': COMPTE_463100, 'credit': payment['amount'] }])
+
+    # Destructions de billets.
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_eusko_billet'],
+        direction='CREDIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['destruction_de_billets_d_eusko']),
+        ]
+    )
+    for payment in payments:
+        _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_463100, 'debit': payment['amount'] },
+                            { 'account_id': COMPTE_463200, 'credit': payment['amount'] }])
+
+    # Cotisations en eusko.
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation'],
+        direction='DEBIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_eusko']),
+        ]
+    )
+    for payment in payments:
+        amount = abs(float(payment['amount']))
+        _add_account_entry(csv_content, JOURNAL_CAISSE_EUSKO,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_532000, 'debit': amount },
+                            { 'account_id': COMPTE_756100, 'credit': amount }])
+
+    # Gains de billets d'eusko.
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation'],
+        direction='DEBIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['gain_de_billets']),
+        ]
+    )
+    for payment in payments:
+        amount = abs(float(payment['amount']))
+        _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_463200, 'debit': amount },
+                            { 'account_id': COMPTE_778800, 'credit': amount }])
+        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_BILLET,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_580000, 'debit': amount },
+                            { 'account_id': COMPTE_512200, 'credit': amount }])
+        _add_account_entry(csv_content, JOURNAL_CCOOP_GESTION,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_512100, 'debit': amount },
+                            { 'account_id': COMPTE_580000, 'credit': amount }])
+
+    # Pertes de billets d'eusko.
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation'],
+        direction='CREDIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['perte_de_billets']),
+        ]
+    )
+    for payment in payments:
+        _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_678800, 'debit': payment['amount'] },
+                            { 'account_id': COMPTE_463200, 'credit': payment['amount'] }])
+        _add_account_entry(csv_content, JOURNAL_CCOOP_GESTION,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_580000, 'debit': payment['amount'] },
+                            { 'account_id': COMPTE_512100, 'credit': payment['amount'] }])
+        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_BILLET,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_512200, 'debit': payment['amount'] },
+                            { 'account_id': COMPTE_580000, 'credit': payment['amount'] }])
+
+    # Opérations concernant les banques de dépôt.
+    for banque in ('CAMPG', 'LBPO',) :
+        # On commence par récupérer l'identifiant du compte de la banque.
+        bank_user_data = cyclos.post(method='user/search', data={'keywords': banque})['result']['pageItems'][0]
+        bank_account_query = [bank_user_data['id'], None]
+        bank_account_data = cyclos.post(method='account/getAccountsSummary', data=bank_account_query)['result'][0]
+        bank_account_id = bank_account_data['id']
+        # Identifiant du journal et numéro du compte (dans Odoo) correspondant à la banque.
+        if banque == 'CAMPG':
+            journal_banque = JOURNAL_CREDIT_AGRICOLE
+            compte_banque = COMPTE_512600
+        elif banque == 'LBPO':
+            journal_banque = JOURNAL_BANQUE_POSTALE
+            compte_banque = COMPTE_512700
+        # 1) On récupère tous les dépôts en banque et on en extraie les
+        # montants des cotisations, changes billet et changes numérique.
+        payments = _search_account_history(
+            cyclos=cyclos,
+            account=bank_account_id,
+            direction='CREDIT',
+            begin_date=search_begin_date,
+            end_date=search_end_date,
+            payment_types=[
+                str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque']),
+            ]
+        )
+        for payment in payments:
+            montant_cotisations = float()
+            montant_changes_billet = float()
+            montant_changes_numerique = float()
+            for value in payment['customValues']:
+                if value['field']['internalName'] == 'montant_cotisations':
+                    montant_cotisations = float(value['decimalValue'])
+                elif value['field']['internalName'] == 'montant_changes_billet':
+                    montant_changes_billet = float(value['decimalValue'])
+                elif value['field']['internalName'] == 'montant_changes_numerique':
+                    montant_changes_numerique = float(value['decimalValue'])
+            # Cotisations en €.
+            if montant_cotisations > float():
+                _add_account_entry(csv_content, journal_banque,
+                                   payment['date'], payment['description'],
+                                   [{ 'account_id': compte_banque, 'debit': montant_cotisations },
+                                    { 'account_id': COMPTE_756100, 'credit': montant_cotisations }])
+            # Changes d'eusko billet.
+            if montant_changes_billet > float():
+                _add_account_entry(csv_content, journal_banque,
+                                   payment['date'], payment['description'],
+                                   [{ 'account_id': compte_banque, 'debit': montant_changes_billet },
+                                    { 'account_id': COMPTE_463200, 'credit': montant_changes_billet }])
+            # Changes d'eusko numérique.
+            if montant_changes_numerique > float():
+                _add_account_entry(csv_content, journal_banque,
+                                   payment['date'], payment['description'],
+                                   [{ 'account_id': compte_banque, 'debit': montant_changes_numerique },
+                                    { 'account_id': COMPTE_463300, 'credit': montant_changes_numerique }])
+        # 2) On récupère tous les virements faits depuis la banque de
+        # dépôt. Ces paiements correspondent à des virements faits à la
+        # banque :
+        #  - paiement vers le Compte de débit € = virement vers le
+        #    Compte de gestion
+        #  - paiement vers un Compté dédié = virement vers le compte
+        #    dédié correspondant au user destinataire du paiement
+        payments = _search_account_history(
+            cyclos=cyclos,
+            account=bank_account_id,
+            direction='DEBIT',
+            begin_date=search_begin_date,
+            end_date=search_end_date,
+            payment_types=[
+                str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_debit_euro']),
+            ]
+        )
+        for payment in payments:
+            amount = abs(float(payment['amount']))
+            _add_account_entry(csv_content, journal_banque,
+                               payment['date'], payment['description'],
+                               [{ 'account_id': COMPTE_580000, 'debit': amount },
+                                { 'account_id': compte_banque, 'credit': amount }])
+            _add_account_entry(csv_content, JOURNAL_CCOOP_GESTION,
+                               payment['date'], payment['description'],
+                               [{ 'account_id': COMPTE_512100, 'debit': amount },
+                                { 'account_id': COMPTE_580000, 'credit': amount }])
+        payments = _search_account_history(
+            cyclos=cyclos,
+            account=bank_account_id,
+            direction='DEBIT',
+            begin_date=search_begin_date,
+            end_date=search_end_date,
+            payment_types=[
+                str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_dedie']),
+            ]
+        )
+        for payment in payments:
+            amount = abs(float(payment['amount']))
+            if payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']):
+                journal_compte_dedie = JOURNAL_CCOOP_DEDIE_BILLET
+                compte_compte_dedie = COMPTE_512200
+            elif payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']):
+                journal_compte_dedie = JOURNAL_CCOOP_DEDIE_NUMERIQUE
+                compte_compte_dedie = COMPTE_512400
+            _add_account_entry(csv_content, journal_banque,
+                               payment['date'], payment['description'],
+                               [{ 'account_id': COMPTE_580000, 'debit': amount },
+                                { 'account_id': compte_banque, 'credit': amount }])
+            _add_account_entry(csv_content, journal_compte_dedie,
+                               payment['date'], payment['description'],
+                               [{ 'account_id': compte_compte_dedie, 'debit': amount },
+                                { 'account_id': COMPTE_580000, 'credit': amount }])
+
+    # Reconversions d’eusko en €.
+    # On se base sur les virements de remboursement faits depuis les
+    # comptes dédiés.
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_euro'],
+        direction='CREDIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
+        ]
+    )
+    for payment in payments:
+        amount = abs(float(payment['amount']))
+        if payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']):
+            journal_compte_dedie = JOURNAL_CCOOP_DEDIE_BILLET
+            compte_compte_dedie = COMPTE_512200
+            compte_stock_eusko = COMPTE_463200
+        elif payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']):
+            journal_compte_dedie = JOURNAL_CCOOP_DEDIE_NUMERIQUE
+            compte_compte_dedie = COMPTE_512400
+            compte_stock_eusko = COMPTE_463300
+        _add_account_entry(csv_content, journal_compte_dedie,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': compte_stock_eusko, 'debit': amount },
+                            { 'account_id': compte_compte_dedie, 'credit': amount }])
+
+    # Change d’eusko numérique par virement ou prélèvement.
+    # Pour ne pas avoir tous les changes de manière individuelle, afin
+    # de réduire le nombre d'écritures comptables, on regroupe les
+    # paiements par date et selon leur description (de manière à
+    # regrouper les changes par virement d'un côté et ceux par
+    # prélèvement de l'autre).
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_eusko_numerique'],
+        direction='DEBIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),
+        ]
+    )
+    grouped_payments = {}
+    for payment in payments:
+        date = arrow.get(payment['date']).format('YYYY-MM-DD')
+        description = payment['description']
+        amount = abs(float(payment['amount']))
+        key = date + '#' + description
+        try:
+            grouped_payments[key] += amount
+        except KeyError:
+            grouped_payments[key] = amount
+    for key, amount in grouped_payments.items():
+        date = key[:len('YYYY-MM-DD')]
+        description = key[len('YYYY-MM-DD#'):]
+        _add_account_entry(csv_content, JOURNAL_CCOOP_CHANGE_NUMERIQUE,
+                           date, description,
+                           [{ 'account_id': COMPTE_512300, 'debit': amount },
+                            { 'account_id': COMPTE_463300, 'credit': amount }])
+
+    # Dépôts et retraits et régularisation entre comptes dédiés.
+    # 1) Si retraits > dépôts, virement du Compte dédié numérique vers le Compte dédié billet.
+    account_query = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]
+    account_data = cyclos.post(method='account/getAccountsSummary', data=account_query)['result'][0]
+    compte_dedie_eusko_numerique_id = account_data['id']
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=compte_dedie_eusko_numerique_id,
+        direction='DEBIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['virement_entre_comptes_dedies']),
+        ]
+    )
+    for payment in payments:
+        amount = abs(float(payment['amount']))
+        _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_463300, 'debit': amount },
+                            { 'account_id': COMPTE_463200, 'credit': amount }])
+        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_NUMERIQUE,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_580000, 'debit': amount },
+                            { 'account_id': COMPTE_512400, 'credit': amount }])
+        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_BILLET,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_512200, 'debit': amount },
+                            { 'account_id': COMPTE_580000, 'credit': amount }])
+    # 2) Si dépôts > retraits, virement du Compte dédié billet vers le Compte dédié numérique.
+    account_query = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
+    account_data = cyclos.post(method='account/getAccountsSummary', data=account_query)['result'][0]
+    compte_dedie_eusko_billet_id = account_data['id']
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=compte_dedie_eusko_billet_id,
+        direction='DEBIT',
+        begin_date=search_begin_date,
+        end_date=search_end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['virement_entre_comptes_dedies']),
+        ]
+    )
+    for payment in payments:
+        amount = abs(float(payment['amount']))
+        _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_463200, 'debit': amount },
+                            { 'account_id': COMPTE_463300, 'credit': amount }])
+        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_BILLET,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_580000, 'debit': amount },
+                            { 'account_id': COMPTE_512200, 'credit': amount }])
+        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_NUMERIQUE,
+                           payment['date'], payment['description'],
+                           [{ 'account_id': COMPTE_512400, 'debit': amount },
+                            { 'account_id': COMPTE_580000, 'credit': amount }])
+
+    return Response(csv_content)
+
+
 def _search_account_history(cyclos, account, direction, begin_date, end_date, payment_types=[]):
     """
     Search an account history for payments of the given types, ignoring
-    the chargedbacked (canceled) ones.
+    the chargedbacked (cancelled) ones.
     """
     current_page = 0
     account_history = []
@@ -943,6 +1369,105 @@ def _search_account_history(cyclos, account, direction, begin_date, end_date, pa
                     and'chargedBackBy' not in transaction_data['transfer'].keys())):
                 filtered_history.append(entry)
     return filtered_history
+
+
+def _add_account_entry(csv_content, journal_id, date, description, lines):
+    """
+    Add an account entry to the given list, in order to generate a CSV
+    file that will be imported in Odoo.
+    The account entry is created in the given journal and with the given
+    lines. A line is a dictionary:
+    { 'account_id': xxx, 'debit' or 'credit': xxx }
+    """
+    for counter, line in enumerate(lines):
+        csv_content.extend([
+                {'journal_id': journal_id if counter == 0 else '',
+                'date': arrow.get(date).format('YYYY-MM-DD') if counter == 0 else '',
+                'ref': description if counter == 0 else '',
+                'line_ids/account_id': line['account_id'],
+                'line_ids/name': description,
+                'line_ids/debit': line['debit'] if 'debit' in line else '',
+                'line_ids/credit': line['credit'] if 'credit' in line else ''}
+        ])
+
+
+@api_view(['POST'])
+def change_par_virement(request):
+    """
+    Enregistrement d'un change d'eusko numériques par virement.
+    """
+    serializer = serializers.ChangeParVirementSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # Connexion à Dolibarr et Cyclos.
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On récupère les données de l'adhérent.
+    try:
+        member = dolibarr.get(model='members', login=serializer.data['member_login'])[0]
+    except:
+        return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Le code ci-dessous est un gros copier-coller venant de la fonction
+    # perform() de credits_comptes_prelevements_auto.py. Il faudrait
+    # factoriser tout ça mais je n'ai pas le temps de tout tester
+    # correctement maintenant donc je minimise les risques.
+    try:
+        adherent_cyclos_id = cyclos.get_member_id_from_login(member_login=member['login'])
+
+        # Determine whether or not our user is part of the appropriate group
+        group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
+
+        # Fetching info for our current user (we look for his groups)
+        user_data = cyclos.post(method='user/load', data=[adherent_cyclos_id])
+
+        if not user_data['result']['group']['id'] in group_constants_with_account:
+            error = "{} n'a pas de compte Eusko numérique...".format(member['login'])
+            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Payment in Euro
+        change_numerique_euro = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_euro']),  # noqa
+            'amount': float(serializer.data['amount']),
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+            'from': 'SYSTEM',
+            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+            'customValues': [{
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
+                'stringValue': serializer.data['bank_transfer_reference']
+            }],
+            'description': 'Change par virement'
+        }
+        res_change_numerique_euro = cyclos.post(method='payment/perform', data=change_numerique_euro)
+
+        # Payment in Eusko
+        change_numerique_eusko = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),  # noqa
+            'amount': float(serializer.data['amount']),
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+            'from': 'SYSTEM',
+            'to': adherent_cyclos_id,
+            'customValues': [{
+                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
+                'stringValue': serializer.data['bank_transfer_reference']
+            }],
+            'description': 'Change par virement'
+        }
+        res_change_numerique_eusko = cyclos.post(method='payment/perform', data=change_numerique_eusko)
+    except Exception as e:
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    res = {'res_change_numerique_euro': res_change_numerique_euro,
+           'res_change_numerique_eusko': res_change_numerique_eusko}
+    return Response(res)
 
 
 @api_view(['POST'])

@@ -40,43 +40,44 @@ payment_modes:
   prelevement: -7371965193010364629
   virement: -7371965197305331925
 payment_types:
-  change_billets_versement_des_euro: -7371965184420430037
-  change_numerique_en_bdc_versement_des_euro: -7371965231665070293
-  change_numerique_en_ligne_versement_des_euro: -7371965257434874069
-  change_numerique_en_ligne_versement_des_eusko: -7371965227370102997
-  cotisation_en_euro: -7371965162945593557
-  cotisation_en_eusko: -7371965167240560853
-  credit_du_compte: -7371965347629187285
-  de_retours_d_eusko_bdc_vers_stock_de_billets_bdc: -7371965339039252693
-  de_stock_de_billets_bdc_vers_retours_d_eusko_bdc: -7371965334744285397
-  depot_de_billets: -7371965240255004885
-  depot_en_banque: -7371965283204677845
-  entree_coffre: -7371965223075135701
-  entree_stock_bdc: -7371965193010364629
-  gain_de_billets: -7371965180125462741
+  change_billets_versement_des_euro: -7371965188715397333
+  change_numerique_en_bdc_versement_des_euro: -7371965235960037589
+  change_numerique_en_ligne_versement_des_euro: -7371965227370102997
+  change_numerique_en_ligne_versement_des_eusko: -7371965231665070293
+  cotisation_en_euro: -7371965167240560853
+  cotisation_en_eusko: -7371965171535528149
+  credit_du_compte: -7371965351924154581
+  de_retours_d_eusko_bdc_vers_stock_de_billets_bdc: -7371965343334219989
+  de_stock_de_billets_bdc_vers_retours_d_eusko_bdc: -7371965339039252693
+  depot_de_billets: -7371965347629187285
+  depot_en_banque: -7371965287499645141
+  destruction_de_billets_d_eusko: -7371965218780168405
+  entree_coffre: -7371965193010364629
+  entree_stock_bdc: -7371965197305331925
+  gain_de_billets: -7371965184420430037
   impression_de_billets_d_eusko: -7371965214485201109
-  paiement_de_banque_de_depot_vers_caisse_euro_bdc: -7371965291794612437
-  paiement_de_caisse_euro_bdc_vers_banque_de_depot: -7371965261729841365
-  paiement_par_carte: -7371965330449318101
-  perte_de_billets: -7371965175830495445
-  reconversion_billets_versement_des_eusko: -7371965158650626261
-  reconversion_numerique: -7371965235960037589
-  regularisation_depot_excessif: -7371965266024808661
-  regularisation_depot_insuffisant: -7371965287499645141
-  remise_d_euro_en_caisse: -7371965270319775957
-  retrait_de_billets: -7371965351924154581
-  retrait_du_compte: -7371965356219121877
-  sortie_caisse_eusko_bdc: -7371965201600299221
-  sortie_coffre: -7371965218780168405
-  sortie_retours_eusko_bdc: -7371965205895266517
-  sortie_stock_bdc: -7371965197305331925
-  vente_en_euro: -7371965171535528149
-  vente_en_eusko: -7371965278909710549
-  virement_de_banque_de_depot_vers_compte_debit_euro: -7371965274614743253
-  virement_de_banque_de_depot_vers_compte_dedie: -7371965244549972181
-  virement_de_compte_dedie_vers_compte_debit_euro: -7371965248844939477
-  virement_entre_comptes_dedies: -7371965253139906773
-  virement_inter_adherent: -7371965360514089173
+  paiement_de_banque_de_depot_vers_caisse_euro_bdc: -7371965261729841365
+  paiement_de_caisse_euro_bdc_vers_banque_de_depot: -7371965266024808661
+  paiement_par_carte: -7371965334744285397
+  perte_de_billets: -7371965180125462741
+  reconversion_billets_versement_des_eusko: -7371965162945593557
+  reconversion_numerique: -7371965240255004885
+  regularisation_depot_excessif: -7371965270319775957
+  regularisation_depot_insuffisant: -7371965291794612437
+  remise_d_euro_en_caisse: -7371965274614743253
+  retrait_de_billets: -7371965356219121877
+  retrait_du_compte: -7371965360514089173
+  sortie_caisse_eusko_bdc: -7371965205895266517
+  sortie_coffre: -7371965223075135701
+  sortie_retours_eusko_bdc: -7371965175830495445
+  sortie_stock_bdc: -7371965201600299221
+  vente_en_euro: -7371965278909710549
+  vente_en_eusko: -7371965283204677845
+  virement_de_banque_de_depot_vers_compte_debit_euro: -7371965244549972181
+  virement_de_banque_de_depot_vers_compte_dedie: -7371965248844939477
+  virement_de_compte_dedie_vers_compte_debit_euro: -7371965253139906773
+  virement_entre_comptes_dedies: -7371965257434874069
+  virement_inter_adherent: -7371965330449318101
 products:
   foulard: -7371965201600299221
 system_accounts:
