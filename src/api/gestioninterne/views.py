@@ -1122,24 +1122,21 @@ def export_vers_odoo(request):
                     montant_changes_billet = float(value['decimalValue'])
                 elif value['field']['internalName'] == 'montant_changes_numerique':
                     montant_changes_numerique = float(value['decimalValue'])
-            # Cotisations en €.
+            # On génère _une_ pièce comptable pour chaque dépôt, avec le
+            # dépôt (une ligne) au débit et les cotisations et les
+            # changes (une ou plusieurs lignes) au crédit.
+            account_lines = [
+                { 'account_id': compte_banque, 'debit': payment['amount'] },
+            ]
             if montant_cotisations > float():
-                _add_account_entry(csv_content, journal_banque,
-                                   payment['date'], payment['description'],
-                                   [{ 'account_id': compte_banque, 'debit': montant_cotisations },
-                                    { 'account_id': COMPTE_756100, 'credit': montant_cotisations }])
-            # Changes d'eusko billet.
+                account_lines.append({ 'account_id': COMPTE_756100, 'credit': montant_cotisations })
             if montant_changes_billet > float():
-                _add_account_entry(csv_content, journal_banque,
-                                   payment['date'], payment['description'],
-                                   [{ 'account_id': compte_banque, 'debit': montant_changes_billet },
-                                    { 'account_id': COMPTE_463200, 'credit': montant_changes_billet }])
-            # Changes d'eusko numérique.
+                account_lines.append({ 'account_id': COMPTE_463200, 'credit': montant_changes_billet })
             if montant_changes_numerique > float():
-                _add_account_entry(csv_content, journal_banque,
-                                   payment['date'], payment['description'],
-                                   [{ 'account_id': compte_banque, 'debit': montant_changes_numerique },
-                                    { 'account_id': COMPTE_463300, 'credit': montant_changes_numerique }])
+                account_lines.append({ 'account_id': COMPTE_463300, 'credit': montant_changes_numerique })
+            _add_account_entry(csv_content, journal_banque,
+                               payment['date'], payment['description'],
+                               account_lines)
         # 2) On récupère tous les virements faits depuis la banque de
         # dépôt. Ces paiements correspondent à des virements faits à la
         # banque :
