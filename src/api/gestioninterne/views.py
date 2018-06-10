@@ -1035,10 +1035,6 @@ def export_vers_odoo(request):
                            payment['date'], payment['description'],
                            [{ 'account_id': COMPTE_580000, 'debit': amount },
                             { 'account_id': COMPTE_512200, 'credit': amount }])
-        _add_account_entry(csv_content, JOURNAL_CCOOP_GESTION,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_512100, 'debit': amount },
-                            { 'account_id': COMPTE_580000, 'credit': amount }])
 
     # Pertes de billets d'eusko.
     payments = _search_account_history(
@@ -1056,10 +1052,6 @@ def export_vers_odoo(request):
                            payment['date'], payment['description'],
                            [{ 'account_id': COMPTE_678800, 'debit': payment['amount'] },
                             { 'account_id': COMPTE_463200, 'credit': payment['amount'] }])
-        _add_account_entry(csv_content, JOURNAL_CCOOP_GESTION,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_580000, 'debit': payment['amount'] },
-                            { 'account_id': COMPTE_512100, 'credit': payment['amount'] }])
         _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_BILLET,
                            payment['date'], payment['description'],
                            [{ 'account_id': COMPTE_512200, 'debit': payment['amount'] },
@@ -1118,12 +1110,9 @@ def export_vers_odoo(request):
                                payment['date'], payment['description'],
                                account_lines)
         # 2) On récupère tous les virements faits depuis la banque de
-        # dépôt. Ces paiements correspondent à des virements faits à la
-        # banque :
-        #  - paiement vers le Compte de débit € = virement vers le
-        #    Compte de gestion
-        #  - paiement vers un Compté dédié = virement vers le compte
-        #    dédié correspondant au user destinataire du paiement
+        # dépôt. Il s'agit toujours de virements internes à Euskal
+        # Moneta (soit vers le compte de gestion, soit vers un compte
+        # dédié).
         payments = _search_account_history(
             cyclos=cyclos,
             account=bank_account_id,
@@ -1140,10 +1129,6 @@ def export_vers_odoo(request):
                                payment['date'], payment['description'],
                                [{ 'account_id': COMPTE_580000, 'debit': amount },
                                 { 'account_id': compte_banque, 'credit': amount }])
-            _add_account_entry(csv_content, JOURNAL_CCOOP_GESTION,
-                               payment['date'], payment['description'],
-                               [{ 'account_id': COMPTE_512100, 'debit': amount },
-                                { 'account_id': COMPTE_580000, 'credit': amount }])
         payments = _search_account_history(
             cyclos=cyclos,
             account=bank_account_id,
@@ -1156,20 +1141,10 @@ def export_vers_odoo(request):
         )
         for payment in payments:
             amount = abs(float(payment['amount']))
-            if payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']):
-                journal_compte_dedie = JOURNAL_CCOOP_DEDIE_BILLET
-                compte_compte_dedie = COMPTE_512200
-            elif payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']):
-                journal_compte_dedie = JOURNAL_CCOOP_DEDIE_NUMERIQUE
-                compte_compte_dedie = COMPTE_512400
             _add_account_entry(csv_content, journal_banque,
                                payment['date'], payment['description'],
                                [{ 'account_id': COMPTE_580000, 'debit': amount },
                                 { 'account_id': compte_banque, 'credit': amount }])
-            _add_account_entry(csv_content, journal_compte_dedie,
-                               payment['date'], payment['description'],
-                               [{ 'account_id': compte_compte_dedie, 'debit': amount },
-                                { 'account_id': COMPTE_580000, 'credit': amount }])
 
     # Reconversions d’eusko en €.
     # On se base sur les virements de remboursement faits depuis les
@@ -1258,10 +1233,6 @@ def export_vers_odoo(request):
                            payment['date'], payment['description'],
                            [{ 'account_id': COMPTE_580000, 'debit': amount },
                             { 'account_id': COMPTE_512400, 'credit': amount }])
-        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_BILLET,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_512200, 'debit': amount },
-                            { 'account_id': COMPTE_580000, 'credit': amount }])
     # 2) Si dépôts > retraits, virement du Compte dédié billet vers le Compte dédié numérique.
     account_query = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
     account_data = cyclos.post(method='account/getAccountsSummary', data=account_query)['result'][0]
@@ -1286,10 +1257,6 @@ def export_vers_odoo(request):
                            payment['date'], payment['description'],
                            [{ 'account_id': COMPTE_580000, 'debit': amount },
                             { 'account_id': COMPTE_512200, 'credit': amount }])
-        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_NUMERIQUE,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_512400, 'debit': amount },
-                            { 'account_id': COMPTE_580000, 'credit': amount }])
 
     return Response(csv_content)
 
