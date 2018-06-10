@@ -925,8 +925,6 @@ def export_vers_odoo(request):
     JOURNAL_CCOOP_DEDIE_NUMERIQUE = 'Crédit Coopératif - Compte dédié numérique'
     JOURNAL_CREDIT_AGRICOLE = 'Crédit Agricole'
     JOURNAL_BANQUE_POSTALE = 'La Banque Postale'
-    JOURNAL_CAISSE_EUROS = 'Caisse en euros (€)'
-    JOURNAL_CAISSE_EUSKO = 'Caisse en eusko'
     COMPTE_463100 = '463100'
     COMPTE_463200 = '463200'
     COMPTE_463300 = '463300'
@@ -1015,24 +1013,6 @@ def export_vers_odoo(request):
                            payment['date'], payment['description'],
                            [{ 'account_id': COMPTE_463100, 'debit': payment['amount'] },
                             { 'account_id': COMPTE_463200, 'credit': payment['amount'] }])
-
-    # Cotisations en eusko.
-    payments = _search_account_history(
-        cyclos=cyclos,
-        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation'],
-        direction='DEBIT',
-        begin_date=search_begin_date,
-        end_date=search_end_date,
-        payment_types=[
-            str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_eusko']),
-        ]
-    )
-    for payment in payments:
-        amount = abs(float(payment['amount']))
-        _add_account_entry(csv_content, JOURNAL_CAISSE_EUSKO,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_532000, 'debit': amount },
-                            { 'account_id': COMPTE_756100, 'credit': amount }])
 
     # Gains de billets d'eusko.
     payments = _search_account_history(
