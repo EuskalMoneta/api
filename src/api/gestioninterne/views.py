@@ -919,27 +919,12 @@ def export_vers_odoo(request):
 
     # Pseudo-constantes pour les noms des journaux et les comptes dans Odoo.
     JOURNAL_OPERATIONS_DIVERSES = 'Opérations diverses'
-    JOURNAL_CCOOP_GESTION = 'Crédit Coopératif - Gestion'
-    JOURNAL_CCOOP_DEDIE_BILLET = 'Crédit Coopératif - Compte dédié billet'
-    JOURNAL_CCOOP_CHANGE_NUMERIQUE = 'Crédit Coopératif - Change numérique'
-    JOURNAL_CCOOP_DEDIE_NUMERIQUE = 'Crédit Coopératif - Compte dédié numérique'
-    JOURNAL_CREDIT_AGRICOLE = 'Crédit Agricole'
-    JOURNAL_BANQUE_POSTALE = 'La Banque Postale'
-    COMPTE_463100 = '463100'
-    COMPTE_463200 = '463200'
-    COMPTE_463300 = '463300'
-    COMPTE_512100 = '512100'
-    COMPTE_512200 = '512200'
-    COMPTE_512300 = '512300'
-    COMPTE_512400 = '512400'
-    COMPTE_512600 = '512600'
-    COMPTE_512700 = '512700'
-    COMPTE_531000 = '531000'
-    COMPTE_532000 = '532000'
-    COMPTE_580000 = '580000'
-    COMPTE_756100 = '756100'
-    COMPTE_678800 = '678800'
-    COMPTE_778800 = '778800'
+    COMPTE_EUSKO_BILLETS_EN_CIRCULATION = '463300'
+    COMPTE_FACTURATION_EUSKO_BILLETS = '463309'
+    COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION = '463400'
+    COMPTE_FACTURATION_EUSKO_NUMERIQUES = '463409'
+    COMPTE_FACTURATION_COTISATIONS = '463500'
+    COMPTE_COTISATIONS_PARTICULIERS = '756100'
 
     # On valide et on récupère les paramètres de la requête.
     serializer = serializers.ExportVersOdooSerializer(data=request.query_params)
@@ -980,40 +965,6 @@ def export_vers_odoo(request):
     # passer en revue tous les bureaux de change).
     csv_content = []
 
-    # Impressions de billets.
-    payments = _search_account_history(
-        cyclos=cyclos,
-        account=settings.CYCLOS_CONSTANTS['system_accounts']['stock_de_billets'],
-        direction='CREDIT',
-        begin_date=search_begin_date,
-        end_date=search_end_date,
-        payment_types=[
-            str(settings.CYCLOS_CONSTANTS['payment_types']['impression_de_billets_d_eusko']),
-        ]
-    )
-    for payment in payments:
-        _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_463200, 'debit': payment['amount'] },
-                            { 'account_id': COMPTE_463100, 'credit': payment['amount'] }])
-
-    # Destructions de billets.
-    payments = _search_account_history(
-        cyclos=cyclos,
-        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_eusko_billet'],
-        direction='CREDIT',
-        begin_date=search_begin_date,
-        end_date=search_end_date,
-        payment_types=[
-            str(settings.CYCLOS_CONSTANTS['payment_types']['destruction_de_billets_d_eusko']),
-        ]
-    )
-    for payment in payments:
-        _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_463100, 'debit': payment['amount'] },
-                            { 'account_id': COMPTE_463200, 'credit': payment['amount'] }])
-
     # Gains de billets d'eusko.
     payments = _search_account_history(
         cyclos=cyclos,
@@ -1029,12 +980,8 @@ def export_vers_odoo(request):
         amount = abs(float(payment['amount']))
         _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
                            payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_463200, 'debit': amount },
-                            { 'account_id': COMPTE_778800, 'credit': amount }])
-        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_BILLET,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_580000, 'debit': amount },
-                            { 'account_id': COMPTE_512200, 'credit': amount }])
+                           [{ 'account_id': COMPTE_EUSKO_BILLETS_EN_CIRCULATION, 'debit': amount },
+                            { 'account_id': COMPTE_FACTURATION_EUSKO_BILLETS, 'credit': amount }])
 
     # Pertes de billets d'eusko.
     payments = _search_account_history(
@@ -1050,12 +997,8 @@ def export_vers_odoo(request):
     for payment in payments:
         _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
                            payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_678800, 'debit': payment['amount'] },
-                            { 'account_id': COMPTE_463200, 'credit': payment['amount'] }])
-        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_BILLET,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_512200, 'debit': payment['amount'] },
-                            { 'account_id': COMPTE_580000, 'credit': payment['amount'] }])
+                           [{ 'account_id': COMPTE_FACTURATION_EUSKO_BILLETS, 'debit': payment['amount'] },
+                            { 'account_id': COMPTE_EUSKO_BILLETS_EN_CIRCULATION, 'credit': payment['amount'] }])
 
     # Opérations concernant les banques de dépôt.
     for banque in ('CAMPG', 'LBPO',) :
@@ -1064,14 +1007,7 @@ def export_vers_odoo(request):
         bank_account_query = [bank_user_data['id'], None]
         bank_account_data = cyclos.post(method='account/getAccountsSummary', data=bank_account_query)['result'][0]
         bank_account_id = bank_account_data['id']
-        # Identifiant du journal et numéro du compte (dans Odoo) correspondant à la banque.
-        if banque == 'CAMPG':
-            journal_banque = JOURNAL_CREDIT_AGRICOLE
-            compte_banque = COMPTE_512600
-        elif banque == 'LBPO':
-            journal_banque = JOURNAL_BANQUE_POSTALE
-            compte_banque = COMPTE_512700
-        # 1) On récupère tous les dépôts en banque et on en extraie les
+        # On récupère tous les dépôts en banque et on en extraie les
         # montants des cotisations, changes billet et changes numérique.
         payments = _search_account_history(
             cyclos=cyclos,
@@ -1094,57 +1030,22 @@ def export_vers_odoo(request):
                     montant_changes_billet = float(value['decimalValue'])
                 elif value['field']['internalName'] == 'montant_changes_numerique':
                     montant_changes_numerique = float(value['decimalValue'])
-            # On génère _une_ pièce comptable pour chaque dépôt, avec le
-            # dépôt (une ligne) au débit et les cotisations et les
-            # changes (une ou plusieurs lignes) au crédit.
-            account_lines = [
-                { 'account_id': compte_banque, 'debit': payment['amount'] },
-            ]
+            # On génère une pièce comptable par "facture".
             if montant_cotisations > float():
-                account_lines.append({ 'account_id': COMPTE_756100, 'credit': montant_cotisations })
+                _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
+                                   payment['date'], payment['description'],
+                                   [{ 'account_id': COMPTE_FACTURATION_COTISATIONS, 'debit': montant_cotisations },
+                                    { 'account_id': COMPTE_COTISATIONS_PARTICULIERS, 'credit': montant_cotisations }])
             if montant_changes_billet > float():
-                account_lines.append({ 'account_id': COMPTE_463200, 'credit': montant_changes_billet })
+                _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
+                                   payment['date'], payment['description'],
+                                   [{ 'account_id': COMPTE_FACTURATION_EUSKO_BILLETS, 'debit': montant_changes_billet },
+                                    { 'account_id': COMPTE_EUSKO_BILLETS_EN_CIRCULATION, 'credit': montant_changes_billet }])
             if montant_changes_numerique > float():
-                account_lines.append({ 'account_id': COMPTE_463300, 'credit': montant_changes_numerique })
-            _add_account_entry(csv_content, journal_banque,
-                               payment['date'], payment['description'],
-                               account_lines)
-        # 2) On récupère tous les virements faits depuis la banque de
-        # dépôt. Il s'agit toujours de virements internes à Euskal
-        # Moneta (soit vers le compte de gestion, soit vers un compte
-        # dédié).
-        payments = _search_account_history(
-            cyclos=cyclos,
-            account=bank_account_id,
-            direction='DEBIT',
-            begin_date=search_begin_date,
-            end_date=search_end_date,
-            payment_types=[
-                str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_debit_euro']),
-            ]
-        )
-        for payment in payments:
-            amount = abs(float(payment['amount']))
-            _add_account_entry(csv_content, journal_banque,
-                               payment['date'], payment['description'],
-                               [{ 'account_id': COMPTE_580000, 'debit': amount },
-                                { 'account_id': compte_banque, 'credit': amount }])
-        payments = _search_account_history(
-            cyclos=cyclos,
-            account=bank_account_id,
-            direction='DEBIT',
-            begin_date=search_begin_date,
-            end_date=search_end_date,
-            payment_types=[
-                str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_dedie']),
-            ]
-        )
-        for payment in payments:
-            amount = abs(float(payment['amount']))
-            _add_account_entry(csv_content, journal_banque,
-                               payment['date'], payment['description'],
-                               [{ 'account_id': COMPTE_580000, 'debit': amount },
-                                { 'account_id': compte_banque, 'credit': amount }])
+                _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
+                                   payment['date'], payment['description'],
+                                   [{ 'account_id': COMPTE_FACTURATION_EUSKO_NUMERIQUES, 'debit': montant_changes_numerique },
+                                    { 'account_id': COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION, 'credit': montant_changes_numerique }])
 
     # Reconversions d’eusko en €.
     # On se base sur les virements de remboursement faits depuis les
@@ -1162,17 +1063,15 @@ def export_vers_odoo(request):
     for payment in payments:
         amount = abs(float(payment['amount']))
         if payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']):
-            journal_compte_dedie = JOURNAL_CCOOP_DEDIE_BILLET
-            compte_compte_dedie = COMPTE_512200
-            compte_stock_eusko = COMPTE_463200
+            compte_eusko_en_circulation = COMPTE_EUSKO_BILLETS_EN_CIRCULATION
+            compte_facturation = COMPTE_FACTURATION_EUSKO_BILLETS
         elif payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']):
-            journal_compte_dedie = JOURNAL_CCOOP_DEDIE_NUMERIQUE
-            compte_compte_dedie = COMPTE_512400
-            compte_stock_eusko = COMPTE_463300
-        _add_account_entry(csv_content, journal_compte_dedie,
+            compte_eusko_en_circulation = COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION
+            compte_facturation = COMPTE_FACTURATION_EUSKO_NUMERIQUES
+        _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
                            payment['date'], payment['description'],
-                           [{ 'account_id': compte_stock_eusko, 'debit': amount },
-                            { 'account_id': compte_compte_dedie, 'credit': amount }])
+                           [{ 'account_id': compte_eusko_en_circulation, 'debit': amount },
+                            { 'account_id': compte_facturation, 'credit': amount }])
 
     # Change d’eusko numérique par virement ou prélèvement.
     # Pour ne pas avoir tous les changes de manière individuelle, afin
@@ -1203,12 +1102,13 @@ def export_vers_odoo(request):
     for key, amount in grouped_payments.items():
         date = key[:len('YYYY-MM-DD')]
         description = key[len('YYYY-MM-DD#'):]
-        _add_account_entry(csv_content, JOURNAL_CCOOP_CHANGE_NUMERIQUE,
+        _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
                            date, description,
-                           [{ 'account_id': COMPTE_512300, 'debit': amount },
-                            { 'account_id': COMPTE_463300, 'credit': amount }])
+                           [{ 'account_id': COMPTE_FACTURATION_EUSKO_NUMERIQUES, 'debit': amount },
+                            { 'account_id': COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION, 'credit': amount }])
 
-    # Dépôts et retraits et régularisation entre comptes dédiés.
+    # Dépôts et retraits.
+    # On se base sur les virements de régularisation entre comptes dédiés.
     # 1) Si retraits > dépôts, virement du Compte dédié numérique vers le Compte dédié billet.
     account_query = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]
     account_data = cyclos.post(method='account/getAccountsSummary', data=account_query)['result'][0]
@@ -1227,12 +1127,8 @@ def export_vers_odoo(request):
         amount = abs(float(payment['amount']))
         _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
                            payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_463300, 'debit': amount },
-                            { 'account_id': COMPTE_463200, 'credit': amount }])
-        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_NUMERIQUE,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_580000, 'debit': amount },
-                            { 'account_id': COMPTE_512400, 'credit': amount }])
+                           [{ 'account_id': COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION, 'debit': amount },
+                            { 'account_id': COMPTE_EUSKO_BILLETS_EN_CIRCULATION, 'credit': amount }])
     # 2) Si dépôts > retraits, virement du Compte dédié billet vers le Compte dédié numérique.
     account_query = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
     account_data = cyclos.post(method='account/getAccountsSummary', data=account_query)['result'][0]
@@ -1251,12 +1147,8 @@ def export_vers_odoo(request):
         amount = abs(float(payment['amount']))
         _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
                            payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_463200, 'debit': amount },
-                            { 'account_id': COMPTE_463300, 'credit': amount }])
-        _add_account_entry(csv_content, JOURNAL_CCOOP_DEDIE_BILLET,
-                           payment['date'], payment['description'],
-                           [{ 'account_id': COMPTE_580000, 'debit': amount },
-                            { 'account_id': COMPTE_512200, 'credit': amount }])
+                           [{ 'account_id': COMPTE_EUSKO_BILLETS_EN_CIRCULATION, 'debit': amount },
+                            { 'account_id': COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION, 'credit': amount }])
 
     return Response(csv_content)
 
