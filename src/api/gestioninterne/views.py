@@ -1128,6 +1128,8 @@ def export_vers_odoo(request):
         _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
                            payment['date'], payment['description'],
                            [{ 'account_id': COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION, 'debit': amount },
+                            { 'account_id': COMPTE_FACTURATION_EUSKO_NUMERIQUES, 'credit': amount },
+                            { 'account_id': COMPTE_FACTURATION_EUSKO_BILLETS, 'debit': amount },
                             { 'account_id': COMPTE_EUSKO_BILLETS_EN_CIRCULATION, 'credit': amount }])
     # 2) Si dépôts > retraits, virement du Compte dédié billet vers le Compte dédié numérique.
     account_query = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
@@ -1148,6 +1150,8 @@ def export_vers_odoo(request):
         _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
                            payment['date'], payment['description'],
                            [{ 'account_id': COMPTE_EUSKO_BILLETS_EN_CIRCULATION, 'debit': amount },
+                            { 'account_id': COMPTE_FACTURATION_EUSKO_BILLETS, 'credit': amount },
+                            { 'account_id': COMPTE_FACTURATION_EUSKO_NUMERIQUES, 'debit': amount },
                             { 'account_id': COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION, 'credit': amount }])
 
     return Response(csv_content)
