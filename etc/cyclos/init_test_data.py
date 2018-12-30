@@ -223,6 +223,7 @@ adherents = {
     'E00097': 'Obadiah Juge',
     'E00098': 'Albermale Lord',
     'E00099': 'Longsferry Lord',
+    'Z00001': 'Euskal Moneta',
     'Z00003': 'Guilde des Mendiants',
     'Z00007': 'Suzanne Sto Hélit (résilié)',
     'Z00008': 'Dieux du tonnerre (résilié)',
