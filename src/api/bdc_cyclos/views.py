@@ -30,10 +30,10 @@ def accounts_summaries(request, login_bdc=None):
 
     # Stock de billets: stock_de_billets_bdc
     # Caisse euros: caisse_euro_bdc
-    # Caisse eusko: caisse_eusko_bdc
-    # Retour eusko: retours_d_eusko_bdc
+    # Caisse mlc: caisse_mlc_bdc
+    # Retour mlc: retours_d_mlc_bdc
     res = {}
-    filter_keys = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
+    filter_keys = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_mlc_bdc', 'retours_d_mlc_bdc']
 
     for filter_key in filter_keys:
         data = [item
@@ -92,16 +92,16 @@ def dedicated_accounts_summaries(request):
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     query_data = []
-    # Compte dédié Eusko billet: compte_dedie_eusko_billet
-    # Compte dédié Eusko numérique: compte_dedie_eusko_numerique
-    query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
+    # Compte dédié Eusko billet: compte_dedie_mlc_billet
+    # Compte dédié Eusko numérique: compte_dedie_mlc_numerique
+    query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_billet']), None]
     query_data.extend(cyclos.post(method='account/getAccountsSummary', data=query_data_billet)['result'])
 
-    query_data_numerique = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]
+    query_data_numerique = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_numerique']), None]
     query_data.extend(cyclos.post(method='account/getAccountsSummary', data=query_data_numerique)['result'])
 
     res = {}
-    filter_keys = ['compte_dedie_eusko_billet', 'compte_dedie_eusko_numerique']
+    filter_keys = ['compte_dedie_mlc_billet', 'compte_dedie_mlc_numerique']
     for filter_key in filter_keys:
         data = [item
                 for item in query_data
@@ -209,7 +209,7 @@ def entree_stock(request):
         payment_query_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_stock_bdc']),
             'amount': payment['amount'],
-            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
             'from': 'SYSTEM',
             'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
             'customValues': [
@@ -256,7 +256,7 @@ def sortie_stock(request):
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_stock_bdc']),
         'amount': request.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'to': 'SYSTEM',
         'customValues': [
@@ -272,9 +272,9 @@ def sortie_stock(request):
 
 
 @api_view(['POST'])
-def change_euro_eusko(request):
+def change_euro_mlc(request):
     """
-    Change d'€ en eusko pour un adhérent via un BDC.
+    Change d'€ en mlc pour un adhérent via un BDC.
     """
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
@@ -328,7 +328,7 @@ def change_euro_eusko(request):
 @api_view(['POST'])
 def reconversion(request):
     """
-    Reconversion eusko en euros pour un adhérent (prestataire) via un BDC.
+    Reconversion mlc en euros pour un adhérent (prestataire) via un BDC.
     """
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
@@ -355,9 +355,9 @@ def reconversion(request):
 
     # payment/perform
     query_data = {
-        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko']),
+        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_mlc']),
         'amount': request.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': 'SYSTEM',
         'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'customValues': [
@@ -381,7 +381,7 @@ def accounts_history(request):
     """
     Accounts history for BDC and system accounts.
     For a Bureau De Change the available accounts types are:
-    ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc'].
+    ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_mlc_bdc', 'retours_d_mlc_bdc'].
 
     If your user is 'Gestion Interne' you can request some other accounts:
     'stock_de_billets' (aka Coffre), and 'compte_de_transit'.
@@ -412,13 +412,13 @@ def accounts_history(request):
     # If you are a BDC user
     if cyclos_mode in ['bdc', 'gi_bdc']:
         query_data = [cyclos.user_bdc_id, None]  # ID de l'utilisateur Bureau de change
-        account_types = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_eusko_bdc', 'retours_d_eusko_bdc']
+        account_types = ['stock_de_billets_bdc', 'caisse_euro_bdc', 'caisse_mlc_bdc', 'retours_d_mlc_bdc']
 
     # If you are Gestion Interne
     elif cyclos_mode == 'gi':
         query_data = ['SYSTEM', None]
         account_types = ['stock_de_billets', 'compte_de_transit',
-                         'compte_dedie_eusko_billet', 'compte_dedie_eusko_numerique']
+                         'compte_dedie_mlc_billet', 'compte_dedie_mlc_numerique']
 
     # Available account types verification
     if request.query_params['account_type'] not in account_types:
@@ -648,7 +648,7 @@ def bank_deposit(request):
     for payment in request.data['selected_payments']:
         transfer_change_status_data = {
             'transfer': payment['id'],  # ID du paiement (récupéré dans l'historique)
-            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['remis_a_euskal_moneta'])
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['remis_a_l_assocation'])
         }
         cyclos.post(method='transferStatus/changeStatus', data=transfer_change_status_data)
 
@@ -688,15 +688,15 @@ def cash_deposit(request):
         payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['remise_d_euro_en_caisse'])
         currency = str(settings.CYCLOS_CONSTANTS['currencies']['euro'])
         description = "Remise d'espèces - {} - {}".format(bdc_code, bdc_name)
-    elif request.data['mode'] == 'sortie-caisse-eusko':
+    elif request.data['mode'] == 'sortie-caisse-mlc':
         try:
             porteur = request.data['porteur']
         except KeyError:
             return Response({'error': 'Porteur parameter is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
 
-        payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
-        currency = str(settings.CYCLOS_CONSTANTS['currencies']['eusko'])
-        description = 'Sortie caisse eusko - {} - {}'.format(bdc_code, bdc_name)
+        payment_type = str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_mlc_bdc'])
+        currency = str(settings.CYCLOS_CONSTANTS['currencies']['mlc'])
+        description = 'Sortie caisse mlc - {} - {}'.format(bdc_code, bdc_name)
 
     else:
         return Response({'error': 'Mode parameter is incorrect!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -711,7 +711,7 @@ def cash_deposit(request):
         'description': description
     }
 
-    if request.data['mode'] == 'sortie-caisse-eusko':
+    if request.data['mode'] == 'sortie-caisse-mlc':
         cash_deposit_data.update({'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
@@ -725,7 +725,7 @@ def cash_deposit(request):
         # Passer tous les paiements à l'origine du dépôt à l'état "Remis à Euskal Moneta"
         transfer_change_status_data = {
             'transfer': payment['id'],  # ID du paiement (récupéré dans l'historique)
-            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['remis_a_euskal_moneta'])
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['remis_a_l_assocation'])
         }
         cyclos.post(method='transferStatus/changeStatus', data=transfer_change_status_data)
 
@@ -733,9 +733,9 @@ def cash_deposit(request):
 
 
 @api_view(['POST'])
-def sortie_retour_eusko(request):
+def sortie_retour_mlc(request):
     """
-    sortie_retour_eusko
+    sortie_retour_mlc
     """
     serializer = serializers.SortieRetourEuskoSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
@@ -773,11 +773,11 @@ def sortie_retour_eusko(request):
             return Response({'error': 'Unable to get adherent_id from one of your selected_payments!'},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        # Enregistrer les retours d'eusko
-        sortie_retour_eusko_data = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc']),
+        # Enregistrer les retours de mlcs
+        sortie_retour_mlc_data = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_mlc_bdc']),
             'amount': payment['amount'],  # montant de l'opération correspondante
-            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
             'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
             'to': 'SYSTEM',  # System account
             'customValues': [
@@ -790,17 +790,17 @@ def sortie_retour_eusko(request):
                     'linkedEntityValue': request.data['porteur']  # ID du porteur
                 },
             ],
-            # "Sortie retour d'eusko - Bxxx - Nom du BDC
+            # "Sortie retour d'mlc - Bxxx - Nom du BDC
             # Opération de Z12345 - Nom du prestataire" -> description du payment initial
-            'description': 'Sortie retours eusko - {} - {}\n{}'.format(
+            'description': 'Sortie retours mlc - {} - {}\n{}'.format(
                 bdc_code, bdc_name, payment['description'])
         }
-        cyclos.post(method='payment/perform', data=sortie_retour_eusko_data)
+        cyclos.post(method='payment/perform', data=sortie_retour_mlc_data)
 
         # Passer tous les paiements à l'origine du dépôt à l'état "Remis à Euskal Moneta"
         transfer_change_status_data = {
             'transfer': payment['id'],  # ID du paiement (récupéré dans l'historique)
-            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['remis_a_euskal_moneta'])
+            'newStatus': str(settings.CYCLOS_CONSTANTS['transfer_statuses']['remis_a_l_assocation'])
         }
         cyclos.post(method='transferStatus/changeStatus', data=transfer_change_status_data)
 
@@ -808,9 +808,9 @@ def sortie_retour_eusko(request):
 
 
 @api_view(['POST'])
-def depot_eusko_numerique(request):
+def depot_mlc_numerique(request):
     """
-    depot-eusko-numerique
+    depot-mlc-numerique
     """
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
@@ -837,10 +837,10 @@ def depot_eusko_numerique(request):
         member_name = dolibarr_member['company']
 
     # Retour des Eusko billets
-    retour_eusko_billets_data = {
+    retour_mlc_billets_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['depot_de_billets']),
         'amount': request.data['amount'],  # montant saisi
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': 'SYSTEM',
         'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'customValues': [
@@ -851,13 +851,13 @@ def depot_eusko_numerique(request):
         ],
         'description': 'Dépôt - {} - {}'.format(request.data['member_login'], member_name),
     }
-    cyclos.post(method='payment/perform', data=retour_eusko_billets_data)
+    cyclos.post(method='payment/perform', data=retour_mlc_billets_data)
 
     # Crédit du compte Eusko numérique du prestataire
-    depot_eusko_numerique_data = {
+    depot_mlc_numerique_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['credit_du_compte']),
         'amount': request.data['amount'],  # montant saisi
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': 'SYSTEM',
         'to': member_cyclos_id,  # ID de l'adhérent
         'customValues': [
@@ -868,15 +868,15 @@ def depot_eusko_numerique(request):
         ],
         'description': 'Dépôt',
     }
-    cyclos.post(method='payment/perform', data=depot_eusko_numerique_data)
+    cyclos.post(method='payment/perform', data=depot_mlc_numerique_data)
 
-    return Response(depot_eusko_numerique_data)
+    return Response(depot_mlc_numerique_data)
 
 
 @api_view(['POST'])
-def retrait_eusko_numerique(request):
+def retrait_mlc_numerique(request):
     """
-    Retrait eusko: numerique vers billets
+    Retrait mlc: numerique vers billets
     """
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
@@ -938,7 +938,7 @@ def retrait_eusko_numerique(request):
     debit_compte_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_du_compte']),
         'amount': request.data['amount'],  # montant saisi
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': member_cyclos_id,  # ID de l'adhérent
         'to': 'SYSTEM',
         'customValues': [
@@ -955,7 +955,7 @@ def retrait_eusko_numerique(request):
     retrait_billets_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_de_billets']),
         'amount': request.data['amount'],  # montant saisi
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'to': 'SYSTEM',
         'customValues': [
@@ -1049,9 +1049,9 @@ def change_password(request):
 
 
 @api_view(['POST'])
-def change_euro_eusko_numeriques(request):
+def change_euro_mlc_numeriques(request):
     """
-    Change d'€ en eusko numériques pour un adhérent via un BDC.
+    Change d'€ en MLC numériques pour un adhérent via un BDC.
     """
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='bdc')
@@ -1104,7 +1104,7 @@ def change_euro_eusko_numeriques(request):
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['credit_du_compte']),
         'amount': request.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': 'SYSTEM',
         'to': member_cyclos_id,  # ID de l'adhérent
         'customValues': [

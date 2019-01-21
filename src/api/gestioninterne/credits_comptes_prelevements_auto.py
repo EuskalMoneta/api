@@ -128,7 +128,7 @@ def perform(request):
                 'amount': float(payment['montant']),
                 'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
                 'from': 'SYSTEM',
-                'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+                'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_numerique']),
                 'customValues': [{
                     'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
                     'stringValue': payment['ref']  # référence de l'échéance
@@ -139,9 +139,9 @@ def perform(request):
 
             # Payment in Eusko
             change_prelevement_auto = {
-                'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),  # noqa
+                'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_mlc']),  # noqa
                 'amount': float(payment['montant']),
-                'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+                'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
                 'from': 'SYSTEM',
                 'to': adherent_cyclos_id,
                 'customValues': [{

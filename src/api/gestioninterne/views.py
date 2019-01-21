@@ -31,7 +31,7 @@ def sortie_coffre(request):
     sortie_coffre_query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_coffre']),
         'amount': request.data['amount'],  # montant saisi par l'utilisateur
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': 'SYSTEM',
         'to': 'SYSTEM',
         'customValues': [
@@ -113,7 +113,7 @@ def entree_coffre(request):
 
         # Comment construire le champ Description de l'entrée coffre ?
         # Il faut reprendre la description de l'opération d'origine,
-        # et remplacer "Sortie stock" ou "Sortie retours eusko" par "Entrée coffre".
+        # et remplacer "Sortie stock" ou "Sortie retours mlc" par "Entrée coffre".
         # Exemple:
         # "Entrée coffre - Bxxx - Nom du BDC'"
         try:
@@ -135,8 +135,8 @@ def entree_coffre(request):
             },
         ]
 
-        # Dans le cas d'une sortie retours eusko
-        if payment['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc']):
+        # Dans le cas d'une sortie retours mlc 
+        if payment['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_mlc_bdc']):
             try:
                 adherent_id = [
                     value['linkedEntityValue']['id']
@@ -148,19 +148,19 @@ def entree_coffre(request):
                 return Response({'error': 'Unable to get adherent_id from one of your selected_payments!'},
                                 status=status.HTTP_400_BAD_REQUEST)
 
-            # Le champ Adhérent n'est présent que pour les entrées coffre correspondant des retours d'eusko
+            # Le champ Adhérent n'est présent que pour les entrées coffre correspondant des retours de mlcs
             custom_values.append({
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent_facultatif']),
                 'linkedEntityValue': adherent_id  # adhérent associé à l'opération d'origine
             })
 
-            # Si l'opération d'origine est une sortie retour d'eusko, la description doit être, sur 2 lignes :
+            # Si l'opération d'origine est une sortie retour d'mlc, la description doit être, sur 2 lignes :
             # "Entrée coffre - Bxxx - Nom du BDC\n
             # Opération de Z12345 - Nom du prestataire" où
             # "Opération" est "Reconversion" ou "Dépôt sur le compte", selon le type de l'opération d'origine.
             try:
-                if 'Sortie retours eusko' in payment['description']:
-                    description = payment['description'].replace('Sortie retours eusko', 'Entrée coffre')
+                if 'Sortie retours mlc' in payment['description']:
+                    description = payment['description'].replace('Sortie retours mlc', 'Entrée coffre')
                 else:
                     description = "Entrée coffre - {} - {}\n{}".format(
                         bdc['login'], bdc['name'], payment['description'])
@@ -170,7 +170,7 @@ def entree_coffre(request):
         payment_query_data = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['entree_coffre']),
             'amount': payment['amount'],  # montant de l'opération d'origine
-            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
             'from': 'SYSTEM',
             'to': 'SYSTEM',
             'customValues': custom_values,
@@ -225,9 +225,9 @@ def payments_available_for_entrees_euro(request):
 
 
 @api_view(['GET'])
-def payments_available_for_entrees_eusko(request):
+def payments_available_for_entrees_mlc(request):
     """
-    payments_available_for_entrees_eusko
+    payments_available_for_entrees_mlc
     """
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
@@ -250,11 +250,11 @@ def payments_available_for_entrees_eusko(request):
     if query_data['result']['totalCount'] == 0:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    # Il faut filtrer et ne garder que les paiements de type sortie_caisse_eusko_bdc
+    # Il faut filtrer et ne garder que les paiements de type sortie_caisse_mlc_bdc
     filtered_data = [
         item
         for item in query_data['result']['pageItems']
-        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])
+        if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_mlc_bdc'])
     ]
     return Response(filtered_data)
 
@@ -396,29 +396,29 @@ def validate_banques_virement(request):
         }
         cyclos.post(method='payment/perform', data=ventes_query)
 
-    # Change eusko billet
+    # Change mlc billet
     if request.data['montant_total_billet']:
-        change_eusko_billet_query = {
+        change_mlc_billet_query = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_dedie']),
-            'amount': request.data['montant_total_billet'],  # montant du virement "Changes eusko billets"
+            'amount': request.data['montant_total_billet'],  # montant du virement "Changes mlc billets"
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': bank_user_data['id'],  # ID de l'utilisateur Banque de dépôt
-            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
+            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_billet']),
             'description': '{} - Changes Eusko billet'.format(bank_user_data['display'])  # nom de la banque de dépôt
         }
-        cyclos.post(method='payment/perform', data=change_eusko_billet_query)
+        cyclos.post(method='payment/perform', data=change_mlc_billet_query)
 
-    # Change eusko numérique
+    # Change mlc numérique
     if request.data['montant_total_numerique']:
-        change_eusko_numerique_query = {
+        change_mlc_numerique_query = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_banque_de_depot_vers_compte_dedie']),
-            'amount': request.data['montant_total_numerique'],  # montant du virement "Changes eusko numérique"
+            'amount': request.data['montant_total_numerique'],  # montant du virement "Changes mlc numérique"
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': bank_user_data['id'],  # ID de l'utilisateur Banque de dépôt
-            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_numerique']),
             'description': '{} - Changes Eusko numérique'.format(bank_user_data['display'])  # noqa: nom de la banque de dépôt
         }
-        cyclos.post(method='payment/perform', data=change_eusko_numerique_query)
+        cyclos.post(method='payment/perform', data=change_mlc_numerique_query)
 
     for payment in request.data['selected_payments']:
         # Passer l'opération à l'état "Virements faits"
@@ -507,9 +507,9 @@ def validate_depots_retraits(request):
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_entre_comptes_dedies']),
             'amount': request.data['montant_total_depots'] - request.data['montant_total_retraits'],
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
-            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
-            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
-            'description': "Régularisation entre comptes dédiés suite à des dépôts et retraits d'eusko.",
+            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_billet']),
+            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_numerique']),
+            'description': "Régularisation entre comptes dédiés suite à des dépôts et retraits d'mlc.",
         }
         cyclos.post(method='payment/perform', data=virement_query)
     elif request.data['montant_total_depots'] < request.data['montant_total_retraits']:
@@ -517,9 +517,9 @@ def validate_depots_retraits(request):
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_entre_comptes_dedies']),
             'amount': request.data['montant_total_retraits'] - request.data['montant_total_depots'],
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
-            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
-            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
-            'description': "Régularisation entre comptes dédiés suite à des dépôts et retraits d'eusko.",
+            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_numerique']),
+            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_billet']),
+            'description': "Régularisation entre comptes dédiés suite à des dépôts et retraits d'mlc.",
         }
         cyclos.post(method='payment/perform', data=virement_query)
 
@@ -547,7 +547,7 @@ def payments_available_for_reconversions(request):
 
     res = []
 
-    # Reconversions d'eusko billets
+    # Reconversions d'mlc billets
     query_billets = {
         'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation']),
         'orderBy': 'DATE_DESC',
@@ -560,18 +560,18 @@ def payments_available_for_reconversions(request):
     }
     query_billets_data = cyclos.post(method='account/searchAccountHistory', data=query_billets)
 
-    # Il faut filtrer et ne garder que les paiements de type reconversion_billets_versement_des_eusko
+    # Il faut filtrer et ne garder que les paiements de type reconversion_billets_versement_des_mlc
     filtered_billets_data = [
         item
         for item in query_billets_data['result']['pageItems']
         if item['type']['id'] ==
-        str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko'])
+        str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_mlc'])
     ]
     res.extend(filtered_billets_data)
 
-    # Reconversions d'eusko numériques
+    # Reconversions d'mlc numériques
     query_numeriques = {
-        'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_eusko_numerique']),
+        'account': str(settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_mlc_numerique']),
         'orderBy': 'DATE_DESC',
         'direction': 'CREDIT',
         'statuses': [
@@ -607,17 +607,17 @@ def validate_reconversions(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     # Verify whether or not dedicated accounts have enough money
-    query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
+    query_data_billet = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_billet']), None]
     accounts_summaries_billet = cyclos.post(method='account/getAccountsSummary', data=query_data_billet)
     try:
         if (float(accounts_summaries_billet['result'][0]['status']['balance']) <
            float(request.data['montant_total_billets'])):
             return Response({'error': "error-system-not-enough-money-billet"})
     except (KeyError, IndexError):
-        return Response({'error': "Unable to fetch compte_dedie_eusko_billet account data!"},
+        return Response({'error': "Unable to fetch compte_dedie_mlc_billet account data!"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    query_data_numerique = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]
+    query_data_numerique = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_numerique']), None]
     accounts_summaries_numerique = cyclos.post(method='account/getAccountsSummary', data=query_data_numerique)
 
     try:
@@ -625,26 +625,26 @@ def validate_reconversions(request):
            float(request.data['montant_total_numerique'])):
             return Response({'error': "error-system-not-enough-money-numerique"})
     except (KeyError, IndexError):
-        return Response({'error': "Unable to fetch compte_dedie_eusko_numerique account data!"},
+        return Response({'error': "Unable to fetch compte_dedie_mlc_numerique account data!"},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     if float(request.data['montant_total_billets']) > float(0):
-        # 1) Enregistrer le virement pour les eusko billet
+        # 1) Enregistrer le virement pour les mlc billet
         billets_query = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
             # montant total des reconversions billet sélectionnées
             'amount': float(request.data['montant_total_billets']),
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
-            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']),
+            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_billet']),
             'to': 'SYSTEM',
             'description': 'Reconversions - Remboursement des prestataires + commission pour Euskal Moneta.',
         }
         cyclos.post(method='payment/perform', data=billets_query)
 
-        # 2) Passer chaque opération (reconversion d'eusko billet) sélectionnée à l'état "Virements faits" :
+        # 2) Passer chaque opération (reconversion d'mlc billet) sélectionnée à l'état "Virements faits" :
         for payment in request.data['selected_payments']:
             if (payment['type']['id'] ==
-               str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko'])):
+               str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_mlc'])):
 
                 # Passer l'opération à l'état "Virements faits"
                 status_query_data = {
@@ -654,19 +654,19 @@ def validate_reconversions(request):
                 cyclos.post(method='transferStatus/changeStatus', data=status_query_data)
 
     if float(request.data['montant_total_numerique']) > float(0):
-        # 3) Enregistrer le virement pour les eusko numériques
+        # 3) Enregistrer le virement pour les mlc numériques
         numeriques_query = {
             'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_de_compte_dedie_vers_compte_debit_euro']),
             # montant total des reconversions numériques sélectionnées
             'amount': float(request.data['montant_total_numerique']),
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
-            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+            'from': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_numerique']),
             'to': 'SYSTEM',
             'description': 'Reconversions - Remboursement des prestataires + commission pour Euskal Moneta.',
         }
         cyclos.post(method='payment/perform', data=numeriques_query)
 
-        # 4) Passer chaque opération (reconversion d'eusko numérique) sélectionnée à l'état "Virements faits" :
+        # 4) Passer chaque opération (reconversion d'mlc numérique) sélectionnée à l'état "Virements faits" :
         for payment in request.data['selected_payments']:
             if payment['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_numerique']):
 
@@ -720,7 +720,7 @@ def calculate_3_percent(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # On récupère la liste de tous les changes d'€ en eusko pour la
+    # On récupère la liste de tous les changes d'€ en mlc pour la
     # période demandée et on détermine à chaque fois qui est l'adhérent
     # qui a fait le change.
     # Il y a 3 types d'opérations à prendre en compte :
@@ -730,8 +730,8 @@ def calculate_3_percent(request):
     # Pour 1) et 2) on considère le paiement correspondant au versement
     # des € : le compte d'origine est le Compte de débit €, le numéro
     # d'adhérent est dans un champ personnalisé du paiement.
-    # Pour 3) on considère le versement des eusko : le compte d'origine
-    # est le Compte de débit eusko numérique, le compte destinataire est
+    # Pour 3) on considère le versement des mlc : le compte d'origine
+    # est le Compte de débit mlc numérique, le compte destinataire est
     # le compte de l'adhérent.
     changes = []
     # 1) et 2) On récupère tous les débits du Compte de débit € pour la
@@ -755,17 +755,17 @@ def calculate_3_percent(request):
         for value in payment['customValues']
         if value['field']['internalName'] == 'adherent'
     ])
-    # 3) On récupère tous les débits du Compte de débit eusko numérique
+    # 3) On récupère tous les débits du Compte de débit mlc numérique
     # pour la période puis on filtre le résultat pour ne garder que les
     # paiements de type "change numérique en ligne".
     payments = _search_account_history(
         cyclos=cyclos,
-        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_eusko_numerique'],
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_mlc_numerique'],
         direction='DEBIT',
         begin_date=search_begin_date,
         end_date=search_end_date,
         payment_types=[
-            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_mlc']),
         ]
     )
     changes.extend([
@@ -914,7 +914,7 @@ def export_vers_odoo(request):
     Cyclos pour la période demandée et qui doit être enregistrée en
     comptabilité. La transposition des opérations Cyclos en écritures
     dans la comptabilité est détaillée dans le document "Comptabilité
-    des eusko".
+    des mlc".
     """
 
     # Pseudo-constantes pour les noms des journaux et les comptes dans Odoo.
@@ -960,12 +960,12 @@ def export_vers_odoo(request):
     # absolue du montant, on fait la recherche des paiements à partir du
     # compte qui est crédité, sauf si la recherche est plus simple à
     # partir du compte débité (ce qui est le cas par exemple pour les
-    # cotisations en eusko car c'est toujours le même compte qui est
+    # cotisations en mlc car c'est toujours le même compte qui est
     # débité alors qu'en faisant la recherche des crédits, il faudrait
     # passer en revue tous les bureaux de change).
     csv_content = []
 
-    # Gains de billets d'eusko.
+    # Gains de billets d'mlc.
     payments = _search_account_history(
         cyclos=cyclos,
         account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation'],
@@ -983,7 +983,7 @@ def export_vers_odoo(request):
                            [{ 'account_id': COMPTE_EUSKO_BILLETS_EN_CIRCULATION, 'debit': amount },
                             { 'account_id': COMPTE_FACTURATION_EUSKO_BILLETS, 'credit': amount }])
 
-    # Pertes de billets d'eusko.
+    # Pertes de billets d'mlc.
     payments = _search_account_history(
         cyclos=cyclos,
         account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_des_billets_en_circulation'],
@@ -1047,7 +1047,7 @@ def export_vers_odoo(request):
                                    [{ 'account_id': COMPTE_FACTURATION_EUSKO_NUMERIQUES, 'debit': montant_changes_numerique },
                                     { 'account_id': COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION, 'credit': montant_changes_numerique }])
 
-    # Reconversions d’eusko en €.
+    # Reconversions d’mlc en €.
     # On se base sur les virements de remboursement faits depuis les
     # comptes dédiés.
     payments = _search_account_history(
@@ -1062,18 +1062,18 @@ def export_vers_odoo(request):
     )
     for payment in payments:
         amount = abs(float(payment['amount']))
-        if payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']):
-            compte_eusko_en_circulation = COMPTE_EUSKO_BILLETS_EN_CIRCULATION
+        if payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_billet']):
+            compte_mlc_en_circulation = COMPTE_EUSKO_BILLETS_EN_CIRCULATION
             compte_facturation = COMPTE_FACTURATION_EUSKO_BILLETS
-        elif payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']):
-            compte_eusko_en_circulation = COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION
+        elif payment['relatedAccount']['owner']['id'] == str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_numerique']):
+            compte_mlc_en_circulation = COMPTE_EUSKO_NUMERIQUES_EN_CIRCULATION
             compte_facturation = COMPTE_FACTURATION_EUSKO_NUMERIQUES
         _add_account_entry(csv_content, JOURNAL_OPERATIONS_DIVERSES,
                            payment['date'], payment['description'],
-                           [{ 'account_id': compte_eusko_en_circulation, 'debit': amount },
+                           [{ 'account_id': compte_mlc_en_circulation, 'debit': amount },
                             { 'account_id': compte_facturation, 'credit': amount }])
 
-    # Change d’eusko numérique par virement ou prélèvement.
+    # Change d’mlc numérique par virement ou prélèvement.
     # Pour ne pas avoir tous les changes de manière individuelle, afin
     # de réduire le nombre d'écritures comptables, on regroupe les
     # paiements par date et selon leur description (de manière à
@@ -1081,12 +1081,12 @@ def export_vers_odoo(request):
     # prélèvement de l'autre).
     payments = _search_account_history(
         cyclos=cyclos,
-        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_eusko_numerique'],
+        account=settings.CYCLOS_CONSTANTS['system_accounts']['compte_de_debit_mlc_numerique'],
         direction='DEBIT',
         begin_date=search_begin_date,
         end_date=search_end_date,
         payment_types=[
-            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_mlc']),
         ]
     )
     grouped_payments = {}
@@ -1110,12 +1110,12 @@ def export_vers_odoo(request):
     # Dépôts et retraits.
     # On se base sur les virements de régularisation entre comptes dédiés.
     # 1) Si retraits > dépôts, virement du Compte dédié numérique vers le Compte dédié billet.
-    account_query = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']), None]
+    account_query = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_numerique']), None]
     account_data = cyclos.post(method='account/getAccountsSummary', data=account_query)['result'][0]
-    compte_dedie_eusko_numerique_id = account_data['id']
+    compte_dedie_mlc_numerique_id = account_data['id']
     payments = _search_account_history(
         cyclos=cyclos,
-        account=compte_dedie_eusko_numerique_id,
+        account=compte_dedie_mlc_numerique_id,
         direction='DEBIT',
         begin_date=search_begin_date,
         end_date=search_end_date,
@@ -1132,12 +1132,12 @@ def export_vers_odoo(request):
                             { 'account_id': COMPTE_FACTURATION_EUSKO_BILLETS, 'debit': amount },
                             { 'account_id': COMPTE_EUSKO_BILLETS_EN_CIRCULATION, 'credit': amount }])
     # 2) Si dépôts > retraits, virement du Compte dédié billet vers le Compte dédié numérique.
-    account_query = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_billet']), None]
+    account_query = [str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_billet']), None]
     account_data = cyclos.post(method='account/getAccountsSummary', data=account_query)['result'][0]
-    compte_dedie_eusko_billet_id = account_data['id']
+    compte_dedie_mlc_billet_id = account_data['id']
     payments = _search_account_history(
         cyclos=cyclos,
-        account=compte_dedie_eusko_billet_id,
+        account=compte_dedie_mlc_billet_id,
         direction='DEBIT',
         begin_date=search_begin_date,
         end_date=search_end_date,
@@ -1234,7 +1234,7 @@ def _add_account_entry(csv_content, journal_id, date, description, lines):
 @api_view(['POST'])
 def change_par_virement(request):
     """
-    Enregistrement d'un change d'eusko numériques par virement.
+    Enregistrement d'un change d'mlc numériques par virement.
     """
     serializer = serializers.ChangeParVirementSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
@@ -1279,7 +1279,7 @@ def change_par_virement(request):
             'amount': float(serializer.data['amount']),
             'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
             'from': 'SYSTEM',
-            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_mlc_numerique']),
             'customValues': [{
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
                 'stringValue': serializer.data['bank_transfer_reference']
@@ -1289,10 +1289,10 @@ def change_par_virement(request):
         res_change_numerique_euro = cyclos.post(method='payment/perform', data=change_numerique_euro)
 
         # Payment in Eusko
-        change_numerique_eusko = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),  # noqa
+        change_numerique_mlc = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_mlc']),  # noqa
             'amount': float(serializer.data['amount']),
-            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
             'from': 'SYSTEM',
             'to': adherent_cyclos_id,
             'customValues': [{
@@ -1301,17 +1301,17 @@ def change_par_virement(request):
             }],
             'description': 'Change par virement'
         }
-        res_change_numerique_eusko = cyclos.post(method='payment/perform', data=change_numerique_eusko)
+        res_change_numerique_mlc = cyclos.post(method='payment/perform', data=change_numerique_mlc)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     res = {'res_change_numerique_euro': res_change_numerique_euro,
-           'res_change_numerique_eusko': res_change_numerique_eusko}
+           'res_change_numerique_mlc': res_change_numerique_mlc}
     return Response(res)
 
 
 @api_view(['POST'])
-def paiement_cotisation_eusko_numerique(request):
+def paiement_cotisation_mlc_numerique(request):
     """
     Paiement de la cotisation d'un membre en Eusko numérique.
 
@@ -1361,7 +1361,7 @@ def paiement_cotisation_eusko_numerique(request):
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
         'amount': serializer.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': member_cyclos_id,
         'to': euskal_moneta_cyclos_id,
         'description': 'Cotisation - {} - {}'.format(member['login'], member_name),

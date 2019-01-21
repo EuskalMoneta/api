@@ -288,15 +288,15 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
         if 'Eusko' in data['payment_mode']:
             query_data.update(
-                {'type': str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_eusko']),
-                 'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+                {'type': str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_mlc']),
+                 'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
                  'customValues': [
                     {'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
                      'linkedEntityValue': member_cyclos_id}],
                  'description': 'Cotisation - {} - {}'.format(
                     current_member['login'], member_name),
                  })
-            currency = 'eusko'
+            currency = 'mlc'
         elif 'Euro' in data['payment_mode']:
             query_data.update(
                 {'type': str(settings.CYCLOS_CONSTANTS['payment_types']['cotisation_en_euro']),

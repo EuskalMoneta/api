@@ -556,7 +556,7 @@ def one_time_transfer(request):
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
         'amount': serializer.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': serializer.data['debit'],
         'to': serializer.data['beneficiaire'],
         'description': serializer.data['description'],
@@ -582,7 +582,7 @@ def reconvert_eusko(request):
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_numerique']),
         'amount': serializer.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': serializer.data['debit'],
         'to': 'SYSTEM',
         'description': serializer.data['description'],
@@ -787,7 +787,7 @@ def members_cel_subscription(request):
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
         'amount': serializer.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['mlc']),
         'from': cyclos.user_id,
         'to': euskal_moneta_cyclos_id,
         'description': 'Cotisation - {} - {}'.format(current_member['login'], member_name),

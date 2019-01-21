@@ -30,6 +30,7 @@ def get_internal_name(name):
     return slug.replace('-', '_')
     
 # Ensemble des constantes nécessaires au fonctionnement du script
+# A RECOPIER DANS LE SCRIPT init_test_data.py
 NETWORK_INTERNAL_NAME = 'eusko'
 NETWORK_NAME = 'Eusko'
 LOCAL_CURRENCY_NAME = 'Eusko'
@@ -39,11 +40,17 @@ LOCAL_CURRENCY_SYMBOL = 'EUS'
 # Ensemble des constantes nécessaires à l'API.
 constants_by_category = {}
 
-
+# Nécessaire de placer cette fonction après les variables spécifiques à chaque monnaie
 def add_constant(category, name, value):
     if category not in constants_by_category.keys():
         constants_by_category[category] = {}
     internal_name = get_internal_name(name)
+    
+    # Replace custom currency names by a standard "mlc" for simplification purposes in cyclos_constants.yml file attributes
+    internal_name = internal_name.replace(NETWORK_INTERNAL_NAME,'mlc')
+    internal_name = internal_name.replace(LOCAL_CURRENCY_INTERNAL_NAME,'mlc')
+    internal_name = internal_name.replace(LOCAL_CURRENCY_SYMBOL,'MLC')
+
     constants_by_category[category][internal_name] = value
 
 # Arguments à fournir dans la ligne de commande
@@ -242,7 +249,7 @@ ID_RESEAU = create_network(
 
 
 ########################################################################
-# Création des devises "Eusko" et "Euro".
+# Création des devises "MLC" et "Euro".
 #
 def create_currency(name, symbol):
     logger.info('Création de la devise "%s"...', name)
@@ -377,12 +384,12 @@ logger.info('Récupération de l\'id de la configuration par défaut...')
 r = requests.get(network_web_services + 'configuration/getDefault',
                  headers=headers)
 check_request_status(r)
-eusko_default_config_id = r.json()['result']['id']
+mlc_default_config_id = r.json()['result']['id']
 # Puis on crée une nouvelle configuration pour le canal "Pay at POS".
 logger.info('Création d\'une nouvelle configuration pour le canal "Pay at POS"...')
 new_pos_config = get_data_for_new_channel_configuration(
     channel=ID_CANAL_PAY_AT_POS,
-    configuration=eusko_default_config_id)
+    configuration=mlc_default_config_id)
 new_pos_config['defined'] = True
 new_pos_config['enabled'] = True
 new_pos_config['userAccess'] = 'DEFAULT_ENABLED'
@@ -399,7 +406,7 @@ check_request_status(r)
 logger.info('Création d\'une nouvelle configuration pour le canal "Mobile app"...')
 new_mobile_app_config = get_data_for_new_channel_configuration(
     channel=ID_CANAL_MOBILE_APP,
-    configuration=eusko_default_config_id)
+    configuration=mlc_default_config_id)
 new_mobile_app_config['defined'] = True
 new_mobile_app_config['enabled'] = True
 new_mobile_app_config['userAccess'] = 'DEFAULT_ENABLED'
@@ -441,7 +448,7 @@ def get_data_for_new_configuration(parent_configuration):
 # D'abord on crée une nouvelle configuration qui hérite de la config par
 # défaut.
 logger.info("Création d'une nouvelle configuration pour les opérateurs BDC...")
-operateur_bdc_config = get_data_for_new_configuration(eusko_default_config_id)
+operateur_bdc_config = get_data_for_new_configuration(mlc_default_config_id)
 operateur_bdc_config['name'] = 'Opérateurs BDC'
 logger.info('Sauvegarde de la nouvelle configuration...')
 r = requests.post(
@@ -469,7 +476,7 @@ check_request_status(r)
 
 # On fait la même chose pour Gestion interne.
 logger.info("Création d'une nouvelle configuration pour Gestion interne...")
-gestion_interne = get_data_for_new_configuration(eusko_default_config_id)
+gestion_interne = get_data_for_new_configuration(mlc_default_config_id)
 gestion_interne['name'] = 'Gestion interne'
 logger.info('Sauvegarde de la nouvelle configuration...')
 r = requests.post(
@@ -726,7 +733,7 @@ def create_user_account_type(name, currency_id):
     add_constant('account_types', name, account_type_id)
     return account_type_id
 
-# Comptes système pour l'eusko billet
+# Comptes système pour l'mlc billet
 ID_COMPTE_DE_DEBIT_CURRENCY_BILLET = create_system_account_type(
     name='Compte de débit ' + LOCAL_CURRENCY_NAME +  ' billet',
     currency_id=ID_DEVISE_LOCAL_CURRENCY,
@@ -754,11 +761,11 @@ ID_COMPTE_DE_DEBIT_EURO = create_system_account_type(
 )
 
 # Comptes des bureaux de change :
-# - Stock de billets : stock d'eusko disponible pour le change (eusko
-#   billet) et les retraits (eusko numérique)
+# - Stock de billets : stock d'mlc disponible pour le change (mlc
+#   billet) et les retraits (mlc numérique)
 # - Caisse € : € encaissés pour les changes, cotisations et ventes
-# - Caisse eusko : eusko encaissés pour les cotisations et ventes
-# - Retours d'eusko : eusko retournés par les prestataires pour les
+# - Caisse mlc : mlc encaissés pour les cotisations et ventes
+# - Retours d'mlc : mlc retournés par les prestataires pour les
 #   reconvertir en € ou les déposer sur leur compte
 ID_STOCK_DE_BILLETS_BDC = create_user_account_type(
     name='Stock de billets BDC',
@@ -779,7 +786,7 @@ ID_RETOURS_CURRENCY_BDC = create_user_account_type(
 
 # Comptes utilisateur pour la gestion interne des €
 # - pour le Crédit Agricole et La Banque Postale
-# - pour les 2 comptes dédiés (eusko billet et eusko numérique)
+# - pour les 2 comptes dédiés (mlc billet et mlc numérique)
 ID_BANQUE_DE_DEPOT = create_user_account_type(
     name='Banque de dépôt',
     currency_id=ID_DEVISE_EURO,
@@ -871,7 +878,7 @@ ID_STATUS_A_RAPPROCHER = create_transfer_status(
 )
 
 # Remise à Euskal Moneta : pour tous les paiements qui créditent les
-# caisses €, eusko et retours d'eusko des bureaux de change.
+# caisses €, mlc et retours d'mlc des bureaux de change.
 ID_STATUS_FLOW_REMISE_A_ASSO = create_transfer_status_flow(
     name="Remise à l'Assocation",
 )
@@ -885,7 +892,7 @@ ID_STATUS_A_REMETTRE = create_transfer_status(
     possible_next=ID_STATUS_REMIS,
 )
 
-# Virements : pour les reconversions d'eusko en € (virement à faire au
+# Virements : pour les reconversions d'mlc en € (virement à faire au
 # prestataire qui a reconverti) et pour les dépôts en banque (virements
 # à faire vers les comptes dédiés).
 ID_STATUS_FLOW_VIREMENTS = create_transfer_status_flow(
@@ -1010,7 +1017,7 @@ def create_transfer_fee(name, original_transfer_type, generated_transfer_type,
     transfer_fee_id = r.json()['result']
     logger.debug('transfer_fee_id = %s', transfer_fee_id)
 
-# Types de paiement pour l'eusko billet
+# Types de paiement pour l'mlc billet
 #
 ID_TYPE_PAIEMENT_IMPRESSION_BILLETS = create_payment_transfer_type(
     name="Impression de billets " + LOCAL_CURRENCY_INTERNAL_NAME,
@@ -1075,12 +1082,12 @@ ID_TYPE_PAIEMENT_SORTIE_STOCK_BDC = create_payment_transfer_type(
         ID_STATUS_A_RAPPROCHER,
     ],
 )
-# Les eusko sortis de la Caisse eusko du BDC vont dans le compte des
-# billets en circulation (dans la pratique, ces eusko rentrent dans la
-# caisse eusko d'Euskal Moneta mais ce sont bien des eusko en
+# Les mlc sortis de la Caisse mlc du BDC vont dans le compte des
+# billets en circulation (dans la pratique, ces mlc rentrent dans la
+# caisse mlc d'Euskal Moneta mais ce sont bien des mlc en
 # circulation). Les sorties caisse sont initialement dans l'état
 # "A rapprocher" et seront passées dans l'état "Rapproché" lorsque leur
-# entrée dans la Caisse eusko d'E.M. sera validée.
+# entrée dans la Caisse mlc d'E.M. sera validée.
 ID_TYPE_PAIEMENT_SORTIE_CAISSE_CURRENCY_BDC = create_payment_transfer_type(
     name='Sortie caisse ' + LOCAL_CURRENCY_NAME + ' BDC',
     direction='USER_TO_SYSTEM',
@@ -1128,13 +1135,13 @@ ID_TYPE_PAIEMENT_GAIN_DE_BILLETS = create_payment_transfer_type(
 # Change billets :
 # Cette opération se fait en 2 temps :
 # 1) l'adhérent(e) donne des € au BDC
-# 2) le BDC donne des € à l'adhérent(e) : les eusko sortent du stock de
+# 2) le BDC donne des € à l'adhérent(e) : les mlc sortent du stock de
 # billets du BDC et vont dans le compte système "Compte des billets en
-# circulation". En effet, une fois donnés à l'adhérent(e), les eusko
+# circulation". En effet, une fois donnés à l'adhérent(e), les mlc
 # sont "dans la nature", on ne sait pas exactement ce qu'ils deviennent.
 #
 # Le paiement enregistré est le versement des € et cela génère
-# automatiquement le paiement correspondant au fait de donner les eusko
+# automatiquement le paiement correspondant au fait de donner les mlc
 # à l'adhérent(e). On utilise pour cela le mécanisme des frais de
 # transaction. Les frais sont payés par le destinataire, çad le BDC, au
 # système (le compte des billets en circulation). Ils correspondent à
@@ -1162,7 +1169,7 @@ ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_MLC = create_generated_transfer_ty
     to_account_type_id=ID_COMPTE_DES_BILLETS_EN_CIRCULATION,
 )
 create_transfer_fee(
-    name='Change billets - Versement des eusko',
+    name='Change billets - Versement des ' + LOCAL_CURRENCY_NAME,
     original_transfer_type=ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_EUROS,
     generated_transfer_type=ID_TYPE_PAIEMENT_CHANGE_BILLETS_VERSEMENT_DES_MLC,
     other_currency=True,
@@ -1344,7 +1351,7 @@ ID_TYPE_PAIEMENT_REGUL_DEPOT_EXCESSIF = create_payment_transfer_type(
 # Les € remis à E.M. vont dans le compte de débit et les opérations sont
 # initialemnt dans l'état "A rapprocher", ce qui permettra de les
 # valider (c'est le même fonctionnement que pour les sorties de la
-# Caisse eusko des BDC).
+# Caisse mlc des BDC).
 ID_TYPE_PAIEMENT_REMISE_EUROS_EN_CAISSE = create_payment_transfer_type(
     name="Remise d'€ en caisse",
     direction='USER_TO_SYSTEM',
@@ -1420,7 +1427,7 @@ ID_TYPE_PAIEMENT_VIREMENT_ENTRE_COMPTES_DEDIES = create_payment_transfer_type(
 # L'API Eusko doit générer ces 2 paiements de façon cohérente. Cela ne
 # peut pas être géré dans le paramétrage avec des frais car il s'agit de
 # 2 paiements de compte système à compte utilisateur, mais pour des
-# utilisateurs différents (le compte dédié eusko numérique, et
+# utilisateurs différents (le compte dédié mlc numérique, et
 # l'adhérent dont il faut créditer le compte).
 # Le champ "Numéro de transaction banque" contient la référence du
 # paiement bancaire réel en €.
@@ -1484,7 +1491,7 @@ ID_TYPE_PAIEMENT_RECONVERSION_NUMERIQUE = create_payment_transfer_type(
 )
 
 # Les 2 types de paiement ci-dessous seront utilisés lorsqu'un adhérent
-# déposera des eusko billet dans un bureau de change pour créditer son
+# déposera des mlc billet dans un bureau de change pour créditer son
 # compte numérique.
 # Pour cette opération, l'API Eusko doit générer 2 paiements :
 #  - un paiement "Dépôt de billets"
@@ -1520,7 +1527,7 @@ ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE = create_payment_transfer_type(
 )
 
 # Les 2 types de paiement ci-dessous seront utilisés lorsqu'un adhérent
-# fera un retrait d'eusko billet (à partir de son compte numérique) dans
+# fera un retrait d'mlc billet (à partir de son compte numérique) dans
 # un bureau de change.
 # Pour cette opération, l'API Eusko doit générer 2 paiements :
 #  - un paiement "Retrait de billets"
@@ -1528,10 +1535,10 @@ ID_TYPE_PAIEMENT_CREDIT_DU_COMPTE = create_payment_transfer_type(
 # Note : c'est le même fonctionnement que pour le dépôt de billets.
 #
 # Attention, pour le retrait de billets, le compte d'origine est bien
-# le stock de billets du bureau de change, et pas sa caisse eusko, car
-# on n'a aucun contrôle sur l'approvisionnement de cette caisse eusko.
-# Pour être certain que le BDC a des eusko lorsqu'un adhérent veut faire
-# un retrait, il faut prendre ces eusko dans le stock de billets du BDC.
+# le stock de billets du bureau de change, et pas sa caisse mlc, car
+# on n'a aucun contrôle sur l'approvisionnement de cette caisse mlc.
+# Pour être certain que le BDC a des mlc lorsqu'un adhérent veut faire
+# un retrait, il faut prendre ces mlc dans le stock de billets du BDC.
 # Au départ, nous voulions que ce stock ne soit utilisé que pour le
 # change, mais je ne vois pas comment faire autrement.
 ID_TYPE_PAIEMENT_RETRAIT_DE_BILLETS = create_payment_transfer_type(
@@ -1559,7 +1566,7 @@ ID_TYPE_PAIEMENT_RETRAIT_DU_COMPTE = create_payment_transfer_type(
     ],
 )
 
-# Et enfin, les types de paiement les plus importants pour l'eusko
+# Et enfin, les types de paiement les plus importants pour l'mlc
 # numérique !
 # On crée un type de paiement dédié pour le paiement par carte via le
 # terminal de paiement, ce qui permettra de distinguer très facilement

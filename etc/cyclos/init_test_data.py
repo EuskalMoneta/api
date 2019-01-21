@@ -39,9 +39,15 @@ else:
 for k, v in vars(args).items():
     logger.debug('args.%s = %s', k, v)
 
+NETWORK_INTERNAL_NAME = 'eusko'
+NETWORK_NAME = 'Eusko'
+LOCAL_CURRENCY_NAME = 'Eusko'
+LOCAL_CURRENCY_INTERNAL_NAME = 'eusko'
+LOCAL_CURRENCY_SYMBOL = 'EUS'
+
 # URLs des web services
 global_web_services = args.url + 'global/web-rpc/'
-eusko_web_services = args.url + 'eusko/web-rpc/'
+network_web_services = args.url + '/' + NETWORK_INTERNAL_NAME + '/web-rpc/'
 
 # En-têtes pour toutes les requêtes (il n'y a qu'un en-tête, pour
 # l'authentification).
@@ -62,7 +68,7 @@ check_request_status(r)
 def create_user(group, name, login, password=None, custom_values=None):
     logger.info('Création de l\'utilisateur "%s" (groupe "%s")...', name, group)
     # FIXME code à déplacer pour ne pas l'exécuter à chaque fois
-    r = requests.post(eusko_web_services + 'group/search',
+    r = requests.post(network_web_services + 'group/search',
                       headers=headers, json={})
     check_request_status(r)
     groups = r.json()['result']['pageItems']
@@ -77,7 +83,7 @@ def create_user(group, name, login, password=None, custom_values=None):
     }
     if password:
         # FIXME code à déplacer pour ne pas l'exécuter à chaque fois
-        r = requests.get(eusko_web_services + 'passwordType/list',
+        r = requests.get(network_web_services + 'passwordType/list',
                          headers=headers)
         check_request_status(r)
         password_types = r.json()['result']
@@ -96,7 +102,7 @@ def create_user(group, name, login, password=None, custom_values=None):
     if custom_values:
         user_registration['customValues'] = []
         for field_id, value in custom_values.items():
-            r = requests.get(eusko_web_services + 'userCustomField/load/' + field_id, headers=headers)
+            r = requests.get(network_web_services + 'userCustomField/load/' + field_id, headers=headers)
             check_request_status(r)
             custom_field_type = r.json()['result']['type']
             if custom_field_type == 'LINKED_ENTITY':
@@ -106,7 +112,7 @@ def create_user(group, name, login, password=None, custom_values=None):
                 value_key: value,
             })
     logger.debug('create_user : json = %s', user_registration)
-    r = requests.post(eusko_web_services + 'user/register',
+    r = requests.post(network_web_services + 'user/register',
                       headers=headers,
                       json=user_registration)
     check_request_status(r)
@@ -132,7 +138,7 @@ create_user(
 # FIXME Séparer ce code du code qui crée les données statiques.
 
 # On récupère l'id du champ perso 'BDC'.
-r = requests.get(eusko_web_services + 'userCustomField/list', headers=headers)
+r = requests.get(network_web_services + 'userCustomField/list', headers=headers)
 check_request_status(r)
 user_custom_fields = r.json()['result']
 for field in user_custom_fields:
@@ -270,23 +276,23 @@ with open("/cyclos/cyclos_constants.yml", 'r') as cyclos_stream:
     except yaml.YAMLError as exc:
         assert False, exc
 
-# Impression billets eusko
-logger.info('Impression billets eusko...')
-logger.debug(str(CYCLOS_CONSTANTS['payment_types']['impression_de_billets_d_eusko']) + "\r\n" +
-             str(CYCLOS_CONSTANTS['currencies']['eusko']) + "\r\n" +
-             str(CYCLOS_CONSTANTS['account_types']['compte_de_debit_eusko_billet']) + "\r\n" +
+# Impression billets mlc 
+logger.info('Impression billets mlc...')
+logger.debug(str(CYCLOS_CONSTANTS['payment_types']['impression_de_billets_mlc']) + "\r\n" +
+             str(CYCLOS_CONSTANTS['currencies']['mlc']) + "\r\n" +
+             str(CYCLOS_CONSTANTS['account_types']['compte_de_debit_mlc_billet']) + "\r\n" +
              str(CYCLOS_CONSTANTS['account_types']['stock_de_billets']))
 
-r = requests.post(eusko_web_services + 'payment/perform',
+r = requests.post(network_web_services + 'payment/perform',
                   headers={'Authorization': 'Basic {}'.format(base64.standard_b64encode(b'demo:demo').decode('utf-8'))},  # noqa
                   json={
-                      'type': CYCLOS_CONSTANTS['payment_types']['impression_de_billets_d_eusko'],
+                      'type': CYCLOS_CONSTANTS['payment_types']['impression_de_billets_mlc'],
                       'amount': 126500,
-                      'currency': CYCLOS_CONSTANTS['currencies']['eusko'],
+                      'currency': CYCLOS_CONSTANTS['currencies']['mlc'],
                       'from': 'SYSTEM',
                       'to': 'SYSTEM',
                   })
 
-logger.info('Impression billets eusko... Terminé !')
+logger.info('Impression billets mlc... Terminé !')
 logger.debug(r.json())
 logger.info('Fin du script !')
