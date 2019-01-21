@@ -947,7 +947,8 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
                                  to_account_type_id, custom_fields=[],
                                  status_flows=[], initial_statuses=[],
                                  channels=[ID_CANAL_MAIN_WEB, ID_CANAL_WEB_SERVICES],
-                                 principal_types=[]):
+                                 principal_types=[],
+                                 description_availability="OPTIONAL"):
     logger.info('Création du type de paiement "%s"...', name)
     r = requests.post(network_web_services + 'transferType/save',
                       headers=headers,
@@ -964,6 +965,7 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
                           'maxChargebackTime': {'amount': '2', 'field': 'MONTHS'},
                           'channels': channels,
                           'principalTypes': principal_types,
+                          'descriptionAvailability': description_availability
                       })
     check_request_status(r)
     payment_transfer_type_id = r.json()['result']
@@ -978,7 +980,8 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
 
 
 def create_generated_transfer_type(name, direction, from_account_type_id,
-                                   to_account_type_id):
+                                   to_account_type_id,
+                                   description_availability="OPTIONAL"):
     logger.info('Création du type de paiement "%s"...', name)
     r = requests.post(network_web_services + 'transferType/save',
                       headers=headers,
@@ -989,6 +992,7 @@ def create_generated_transfer_type(name, direction, from_account_type_id,
                           'direction': direction,
                           'from': from_account_type_id,
                           'to': to_account_type_id,
+                          'descriptionAvailability': description_availability
                       })
     check_request_status(r)
     generated_transfer_type_id = r.json()['result']
@@ -1084,7 +1088,7 @@ ID_TYPE_PAIEMENT_SORTIE_STOCK_BDC = create_payment_transfer_type(
 )
 # Les mlc sortis de la Caisse mlc du BDC vont dans le compte des
 # billets en circulation (dans la pratique, ces mlc rentrent dans la
-# caisse mlc d'Euskal Moneta mais ce sont bien des mlc en
+# caisse mlc de l'Association mais ce sont bien des mlc en
 # circulation). Les sorties caisse sont initialement dans l'état
 # "A rapprocher" et seront passées dans l'état "Rapproché" lorsque leur
 # entrée dans la Caisse mlc d'E.M. sera validée.
