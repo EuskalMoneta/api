@@ -173,15 +173,6 @@ def countries(request):
 
 
 @api_view(['GET'])
-def country_by_id(request, id):
-    """
-    Get country by ID.
-    """
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-    return Response(dolibarr.get(model='countries', id=id, lang='fr_FR'))
-
-
-@api_view(['GET'])
 def get_bdc_name(request):
     """
     Get the bdc name (lastname) for the current user.

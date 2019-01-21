@@ -34,7 +34,6 @@ urlpatterns = [
     url(r'^verify-usergroup/$', dolibarr_data_views.verify_usergroup),
     url(r'^associations/$', dolibarr_data_views.associations),
     url(r'^countries/$', dolibarr_data_views.countries),
-    url(r'^countries/(?P<id>[^/.]+)/$', dolibarr_data_views.country_by_id),
     url(r'^bdc-name/$', dolibarr_data_views.get_bdc_name),
     url(r'^member-name/$', dolibarr_data_views.get_member_name),
     url(r'^user-data/$', dolibarr_data_views.get_user_data),
