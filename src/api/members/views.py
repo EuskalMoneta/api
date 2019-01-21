@@ -225,7 +225,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
         data_res_payment = {'date': arrow.now('Europe/Paris').timestamp, 'type': payment_type,
                             'label': data['label'], 'amount': data['amount']}
-        model_res_payment = 'accounts/{}/lines'.format(payment_account)
+        model_res_payment = 'bankaccounts/{}/lines'.format(payment_account)
         try:
             res_id_payment = self.dolibarr.post(
                 model=model_res_payment, data=data_res_payment, api_key=dolibarr_token)
@@ -256,7 +256,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                                     'type': 'member', 'url_id': member_id,
                                     'url': '{}/adherents/card.php?rowid={}'.format(
                                         settings.DOLIBARR_PUBLIC_URL, member_id)}
-        model_link_payment_member = 'accounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
+        model_link_payment_member = 'bankaccounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
         try:
             res_id_link_payment_member = self.dolibarr.post(
                 model=model_link_payment_member, data=data_link_payment_member,

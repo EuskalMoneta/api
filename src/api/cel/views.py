@@ -813,7 +813,7 @@ def members_cel_subscription(request):
     payment_type = 'VIR'
     data_res_payment = {'date': arrow.now('Europe/Paris').timestamp, 'type': payment_type,
                         'label': serializer.data['label'], 'amount': serializer.data['amount']}
-    model_res_payment = 'accounts/{}/lines'.format(payment_account)
+    model_res_payment = 'bankaccounts/{}/lines'.format(payment_account)
     try:
         res_id_payment = dolibarr.post(
             model=model_res_payment, data=data_res_payment)
@@ -844,7 +844,7 @@ def members_cel_subscription(request):
                                 'type': 'member', 'url_id': member[0]['id'],
                                 'url': '{}/adherents/card.php?rowid={}'.format(
                                     settings.DOLIBARR_PUBLIC_URL, member[0]['id'])}
-    model_link_payment_member = 'accounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
+    model_link_payment_member = 'bankaccounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
     try:
         res_id_link_payment_member = dolibarr.post(
             model=model_link_payment_member, data=data_link_payment_member)

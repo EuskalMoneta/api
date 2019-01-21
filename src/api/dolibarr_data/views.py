@@ -160,7 +160,7 @@ def towns_by_zipcode(request):
         return Response({'error': 'Zipcode must not be empty'}, status=status.HTTP_400_BAD_REQUEST)
 
     dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-    return Response(dolibarr.get(model='towns', zipcode=search))
+    return Response(dolibarr.get(model='setup/dictionary/towns', zipcode=search))
 
 
 @api_view(['GET'])
@@ -169,7 +169,7 @@ def countries(request):
     Get the list of countries.
     """
     dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-    return Response(dolibarr.get(model='countries', lang='fr_FR'))
+    return Response(dolibarr.get(model='setup/dictionary/countries', lang='fr_FR'))
 
 
 @api_view(['GET'])
