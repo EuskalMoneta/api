@@ -723,7 +723,7 @@ def accept_cgu(request):
         data = {'array_options': member_data['array_options']}
         data['array_options'].update({'options_accepte_cgu_eusko_numerique': True})
 
-        dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
+        dolibarr.put(model='members/{}'.format(member_data['id']), data=data)
         return Response({'status': 'OK'})
     except (DolibarrAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -738,7 +738,7 @@ def refuse_cgu(request):
         data = {'array_options': member_data['array_options']}
         data['array_options'].update({'options_accepte_cgu_eusko_numerique': False})
 
-        dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
+        dolibarr.put(model='members/{}'.format(member_data['id']), data=data)
 
         # Activate user pre-selected language
         activate(member_data['array_options']['options_langue'])
@@ -829,7 +829,7 @@ def members_cel_subscription(request):
     data_link_sub_payment = {'fk_bank': res_id_payment}
     model_link_sub_payment = 'subscriptions/{}'.format(res_id_subscription)
     try:
-        res_id_link_sub_payment = dolibarr.patch(
+        res_id_link_sub_payment = dolibarr.put(
             model=model_link_sub_payment, data=data_link_sub_payment)
 
         log.info("res_id_link_sub_payment: {}".format(res_id_link_sub_payment))

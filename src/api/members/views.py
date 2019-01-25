@@ -157,7 +157,7 @@ class MembersAPIView(BaseAPIView):
             return Response({'error': 'Oops! Something is wrong in your request data: {}'.format(serializer.errors)},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(self.dolibarr.patch(model='members/{}'.format(pk), data=data,
+        return Response(self.dolibarr.put(model='members/{}'.format(pk), data=data,
                                             api_key=request.user.profile.dolibarr_token))
 
 
@@ -242,7 +242,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
         data_link_sub_payment = {'fk_bank': res_id_payment}
         model_link_sub_payment = 'subscriptions/{}'.format(res_id_subscription)
         try:
-            res_id_link_sub_payment = self.dolibarr.patch(
+            res_id_link_sub_payment = self.dolibarr.put(
                 model=model_link_sub_payment, data=data_link_sub_payment, api_key=dolibarr_token)
 
             log.info("res_id_link_sub_payment: {}".format(res_id_link_sub_payment))

@@ -1405,7 +1405,7 @@ def paiement_cotisation_eusko_numerique(request):
     data_link_sub_payment = {'fk_bank': res_id_payment}
     model_link_sub_payment = 'subscriptions/{}'.format(res_id_subscription)
     try:
-        res_id_link_sub_payment = dolibarr.patch(
+        res_id_link_sub_payment = dolibarr.put(
             model=model_link_sub_payment, data=data_link_sub_payment)
 
         log.info("res_id_link_sub_payment: {}".format(res_id_link_sub_payment))
