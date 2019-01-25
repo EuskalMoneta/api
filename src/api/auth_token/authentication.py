@@ -35,7 +35,7 @@ def authenticate(username, password):
         raise AuthenticationFailed()
 
     try:
-        user_results = dolibarr.get(model='users', login=username, api_key=dolibarr_token)
+        user_results = dolibarr.get(model='users', sqlfilters="login='{}'".format(username), api_key=dolibarr_token)
         dolibarr_user = [item
                          for item in user_results
                          if item['login'] == username][0]
@@ -84,7 +84,7 @@ def get_username_from_username_or_email(username_or_email):
                                                       password=settings.APPS_ANONYMOUS_PASSWORD,
                                                       reset=True)
             user_results = dolibarr.get(model='users',
-                                        email=username_or_email,
+                                        sqlfilters="email='{}'".format(username_or_email),
                                         api_key=dolibarr_anonymous_token)
             matching_users = [item
                               for item in user_results

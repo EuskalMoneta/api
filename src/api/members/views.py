@@ -80,7 +80,7 @@ class MembersAPIView(BaseAPIView):
         if login and valid_login:
             # We want to search in members by login (N° Adhérent)
             try:
-                response = self.dolibarr.get(model='members', login=login, api_key=dolibarr_token)
+                response = self.dolibarr.get(model='members', sqlfilters="login='{}'".format(login), api_key=dolibarr_token)
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(response)
@@ -90,9 +90,10 @@ class MembersAPIView(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         elif name and len(name) >= 3:
-            # We want to search in members by name (Firstname and Lastname)
+            # We want to search in members by name (firstname, lastname or societe)
             try:
-                response = self.dolibarr.get(model='members', name=name, api_key=dolibarr_token)
+                sqlfilters = "firstname like '%{1}%' or lastname like '%{1}%' or societe like '%{1}%'".format(name)
+                response = self.dolibarr.get(model='members', sqlfilters=sqlfilters, api_key=dolibarr_token)
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(response)
@@ -104,7 +105,7 @@ class MembersAPIView(BaseAPIView):
         elif email:
             try:
                 validate_email(email)
-                user_results = self.dolibarr.get(model='members', email=email, api_key=dolibarr_token)
+                user_results = self.dolibarr.get(model='members', sqlfilters="email='{}'".format(email), api_key=dolibarr_token)
                 user_data = [item
                              for item in user_results
                              if item['email'] == email][0]
@@ -113,7 +114,7 @@ class MembersAPIView(BaseAPIView):
                 return Response({'error': 'You need to provide a *VALID* ?email parameter! (Format: E12345)'},
                                 status=status.HTTP_400_BAD_REQUEST)
         else:
-            objects = self.dolibarr.get(model=self.model, api_key=dolibarr_token)
+            objects = self.dolibarr.get(model='members', api_key=dolibarr_token)
             paginator = CustomPagination()
             result_page = paginator.paginate_queryset(objects, request)
 

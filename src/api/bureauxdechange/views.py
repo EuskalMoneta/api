@@ -134,7 +134,7 @@ class BDCAPIView(BaseAPIView):
         # Récupérer le user Opérateur BDC
         try:
             operator_bdc_id = self.dolibarr.get(
-                api_key=request.user.profile.dolibarr_token, model='users', login=pk)[0]['id']
+                api_key=request.user.profile.dolibarr_token, model='users', sqlfilters="login='{}'".format(pk))[0]['id']
         except (KeyError, IndexError):
             return Response({'error': 'Unable to get operator_bdc_id from this username!'},
                             status=status.HTTP_400_BAD_REQUEST)

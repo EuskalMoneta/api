@@ -820,7 +820,7 @@ def calculate_3_percent(request):
             # association il parraine en 1er choix.
             # Si c'est une asso 3%, c'est elle qui reçoit les dons.
             try:
-                member_data = dolibarr.get(model='members', login=member_id)[0]
+                member_data = dolibarr.get(model='members', sqlfilters="login='{}'".format(member_id))[0]
             except DolibarrAPIException:
                 # Si on ne parvient pas à récupérer l'adhérent-e dans Dolibarr,
                 # on ignore l'erreur et on considère simplement qu'on n'a
@@ -1251,7 +1251,7 @@ def change_par_virement(request):
 
     # On récupère les données de l'adhérent.
     try:
-        member = dolibarr.get(model='members', login=serializer.data['member_login'])[0]
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(serializer.data['member_login']))[0]
     except:
         return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1330,7 +1330,7 @@ def paiement_cotisation_eusko_numerique(request):
     # On se connecte à Dolibarr et on récupère les données de l'adhérent.
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member = dolibarr.get(model='members', login=serializer.data['member_login'])[0]
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(serializer.data['member_login']))[0]
     except DolibarrAPIException as e:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except:
