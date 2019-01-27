@@ -135,13 +135,17 @@ def validate_first_connection(request):
             Response({'error': 'Unable to save security answer!'}, status=status.HTTP_400_BAD_REQUEST)
 
         # 2) Dans Dolibarr, créer un utilisateur lié à l'adhérent
-        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(token_data['login']), api_key=dolibarr_token)
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(token_data['login']), api_key=dolibarr_token)[0]
 
-        create_user = 'members/{}/createUser'.format(member[0]['id'])
-        create_user_data = {'login': token_data['login']}
-
-        # user_id will be the ID for this new user
-        user_id = dolibarr.post(model=create_user, data=create_user_data, api_key=dolibarr_token)
+        create_user_data = {
+            'login': member['login'],
+            'admin': 0,
+            'employee': 0,
+            'lastname': member['lastname'],
+            'firstname': member['firstname'],
+            'fk_member': member['id'],
+        }
+        user_id = dolibarr.post(model='users', data=create_user_data, api_key=dolibarr_token)
 
         # 3) Dans Dolibarr, ajouter ce nouvel utilisateur dans le groupe "Adhérents"
         user_group_model = 'users/{}/setGroup/{}'.format(user_id, settings.DOLIBARR_CONSTANTS['groups']['adherents'])
