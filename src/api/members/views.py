@@ -92,7 +92,7 @@ class MembersAPIView(BaseAPIView):
         elif name and len(name) >= 3:
             # We want to search in members by name (firstname, lastname or societe)
             try:
-                sqlfilters = "firstname like '%{1}%' or lastname like '%{1}%' or societe like '%{1}%'".format(name)
+                sqlfilters = "firstname like '%{name}%' or lastname like '%{name}%' or societe like '%{name}%'".format(name=name)
                 response = self.dolibarr.get(model='members', sqlfilters=sqlfilters, api_key=dolibarr_token)
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
