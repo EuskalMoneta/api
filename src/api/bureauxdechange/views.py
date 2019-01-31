@@ -69,7 +69,7 @@ class BDCAPIView(BaseAPIView):
         try:
             user_id = self.dolibarr.post(
                 model='users', api_key=request.user.profile.dolibarr_token,
-                data={"login": request.data['login'], "lastname": request.data['name']})['id']
+                data={"login": request.data['login'], "lastname": request.data['name']})
         except (DolibarrAPIException, KeyError):
             return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
 
