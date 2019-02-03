@@ -80,7 +80,7 @@ class MembersAPIView(BaseAPIView):
         if login and valid_login:
             # We want to search in members by login (N° Adhérent)
             try:
-                response = self.dolibarr.get(model='members', login=login, api_key=dolibarr_token)
+                response = self.dolibarr.get(model='members', sqlfilters="login='{}'".format(login), api_key=dolibarr_token)
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(response)
@@ -90,9 +90,10 @@ class MembersAPIView(BaseAPIView):
                             status=status.HTTP_400_BAD_REQUEST)
 
         elif name and len(name) >= 3:
-            # We want to search in members by name (Firstname and Lastname)
+            # We want to search in members by name (firstname, lastname or societe)
             try:
-                response = self.dolibarr.get(model='members', name=name, api_key=dolibarr_token)
+                sqlfilters = "firstname like '%{name}%' or lastname like '%{name}%' or societe like '%{name}%'".format(name=name)
+                response = self.dolibarr.get(model='members', sqlfilters=sqlfilters, api_key=dolibarr_token)
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(response)
@@ -104,7 +105,7 @@ class MembersAPIView(BaseAPIView):
         elif email:
             try:
                 validate_email(email)
-                user_results = self.dolibarr.get(model='members', email=email, api_key=dolibarr_token)
+                user_results = self.dolibarr.get(model='members', sqlfilters="email='{}'".format(email), api_key=dolibarr_token)
                 user_data = [item
                              for item in user_results
                              if item['email'] == email][0]
@@ -113,7 +114,7 @@ class MembersAPIView(BaseAPIView):
                 return Response({'error': 'You need to provide a *VALID* ?email parameter! (Format: E12345)'},
                                 status=status.HTTP_400_BAD_REQUEST)
         else:
-            objects = self.dolibarr.get(model=self.model, api_key=dolibarr_token)
+            objects = self.dolibarr.get(model='members', api_key=dolibarr_token)
             paginator = CustomPagination()
             result_page = paginator.paginate_queryset(objects, request)
 
@@ -156,7 +157,7 @@ class MembersAPIView(BaseAPIView):
             return Response({'error': 'Oops! Something is wrong in your request data: {}'.format(serializer.errors)},
                             status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(self.dolibarr.patch(model='members/{}'.format(pk), data=data,
+        return Response(self.dolibarr.put(model='members/{}'.format(pk), data=data,
                                             api_key=request.user.profile.dolibarr_token))
 
 
@@ -225,7 +226,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
         data_res_payment = {'date': arrow.now('Europe/Paris').timestamp, 'type': payment_type,
                             'label': data['label'], 'amount': data['amount']}
-        model_res_payment = 'accounts/{}/lines'.format(payment_account)
+        model_res_payment = 'bankaccounts/{}/lines'.format(payment_account)
         try:
             res_id_payment = self.dolibarr.post(
                 model=model_res_payment, data=data_res_payment, api_key=dolibarr_token)
@@ -241,7 +242,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
         data_link_sub_payment = {'fk_bank': res_id_payment}
         model_link_sub_payment = 'subscriptions/{}'.format(res_id_subscription)
         try:
-            res_id_link_sub_payment = self.dolibarr.patch(
+            res_id_link_sub_payment = self.dolibarr.put(
                 model=model_link_sub_payment, data=data_link_sub_payment, api_key=dolibarr_token)
 
             log.info("res_id_link_sub_payment: {}".format(res_id_link_sub_payment))
@@ -256,7 +257,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                                     'type': 'member', 'url_id': member_id,
                                     'url': '{}/adherents/card.php?rowid={}'.format(
                                         settings.DOLIBARR_PUBLIC_URL, member_id)}
-        model_link_payment_member = 'accounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
+        model_link_payment_member = 'bankaccounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
         try:
             res_id_link_payment_member = self.dolibarr.post(
                 model=model_link_payment_member, data=data_link_payment_member,

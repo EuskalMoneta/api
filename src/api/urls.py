@@ -7,7 +7,6 @@ from bureauxdechange.views import BDCAPIView
 from members.views import MembersAPIView, MembersSubscriptionsAPIView
 from cel.beneficiaire import BeneficiaireViewSet
 from cel.security_qa import SecurityQAViewSet
-from prestataires.views import AnnuairePrestatairesAPIView, CategoriesPrestatairesAPIView, VillesPrestatairesAPIView
 
 from auth_token import views as auth_token_views
 import bdc_cyclos.views as bdc_cyclos_views
@@ -24,9 +23,6 @@ router.register(r'members', MembersAPIView, base_name='members')
 router.register(r'members-subscriptions', MembersSubscriptionsAPIView, base_name='members-subscriptions')
 router.register(r'beneficiaires', BeneficiaireViewSet, base_name='beneficiaires')
 router.register(r'securityqa', SecurityQAViewSet, base_name='securityqa')
-router.register(r'annuaire-prestataires', AnnuairePrestatairesAPIView, base_name='annuaire-prestataires')
-router.register(r'categories-prestataires', CategoriesPrestatairesAPIView, base_name='categories-prestataires')
-router.register(r'villes-prestataires', VillesPrestatairesAPIView, base_name='villes-prestataires')
 
 urlpatterns = [
     # Auth token
@@ -38,7 +34,6 @@ urlpatterns = [
     url(r'^verify-usergroup/$', dolibarr_data_views.verify_usergroup),
     url(r'^associations/$', dolibarr_data_views.associations),
     url(r'^countries/$', dolibarr_data_views.countries),
-    url(r'^countries/(?P<id>[^/.]+)/$', dolibarr_data_views.country_by_id),
     url(r'^bdc-name/$', dolibarr_data_views.get_bdc_name),
     url(r'^member-name/$', dolibarr_data_views.get_member_name),
     url(r'^user-data/$', dolibarr_data_views.get_user_data),

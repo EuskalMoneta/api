@@ -43,14 +43,14 @@ def first_connection(request):
         valid_login = Member.validate_num_adherent(request.data['login'])
 
         try:
-            dolibarr.get(model='users', login=request.data['login'], api_key=dolibarr_token)
+            dolibarr.get(model='users', sqlfilters="login='{}'".format(request.data['login']), api_key=dolibarr_token)
             return Response({'error': 'User already exist!'}, status=status.HTTP_201_CREATED)
         except DolibarrAPIException:
             pass
 
         if valid_login:
             # We want to search in members by login (N° Adhérent)
-            response = dolibarr.get(model='members', login=request.data['login'], api_key=dolibarr_token)
+            response = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.data['login']), api_key=dolibarr_token)
             user_data = [item
                          for item in response
                          if item['login'] == request.data['login']][0]
@@ -109,7 +109,7 @@ def validate_first_connection(request):
                                         password=settings.APPS_ANONYMOUS_PASSWORD)
         # We check if the user already exist, if he already exist we return a 400
         try:
-            dolibarr.get(model='users', login=token_data['login'], api_key=dolibarr_token)
+            dolibarr.get(model='users', sqlfilters="login='{}'".format(token_data['login']), api_key=dolibarr_token)
             return Response({'error': 'User already exist!'}, status=status.HTTP_201_CREATED)
         except DolibarrAPIException:
             pass
@@ -135,13 +135,17 @@ def validate_first_connection(request):
             Response({'error': 'Unable to save security answer!'}, status=status.HTTP_400_BAD_REQUEST)
 
         # 2) Dans Dolibarr, créer un utilisateur lié à l'adhérent
-        member = dolibarr.get(model='members', login=token_data['login'], api_key=dolibarr_token)
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(token_data['login']), api_key=dolibarr_token)[0]
 
-        create_user = 'members/{}/createUser'.format(member[0]['id'])
-        create_user_data = {'login': token_data['login']}
-
-        # user_id will be the ID for this new user
-        user_id = dolibarr.post(model=create_user, data=create_user_data, api_key=dolibarr_token)
+        create_user_data = {
+            'login': member['login'],
+            'admin': 0,
+            'employee': 0,
+            'lastname': member['lastname'],
+            'firstname': member['firstname'],
+            'fk_member': member['id'],
+        }
+        user_id = dolibarr.post(model='users', data=create_user_data, api_key=dolibarr_token)
 
         # 3) Dans Dolibarr, ajouter ce nouvel utilisateur dans le groupe "Adhérents"
         user_group_model = 'users/{}/setGroup/{}'.format(user_id, settings.DOLIBARR_CONSTANTS['groups']['adherents'])
@@ -196,7 +200,7 @@ def lost_password(request):
 
         if valid_login:
             # We want to search in members by login (N° Adhérent)
-            response = dolibarr.get(model='members', login=request.data['login'], api_key=dolibarr_token)
+            response = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.data['login']), api_key=dolibarr_token)
             user_data = [item
                          for item in response
                          if item['login'] == request.data['login']][0]
@@ -624,7 +628,7 @@ def user_rights(request):
     # Get useful data from Dolibarr for this user
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member_data = dolibarr.get(model='members', login=str(request.user))[0]
+        member_data = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))[0]
 
         # return Response(member_data)
         now = arrow.now('Europe/Paris')
@@ -689,7 +693,7 @@ def euskokart_update_pin(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        response = dolibarr.get(model='members', login=str(request.user))
+        response = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))
 
         # Activate user pre-selected language
         activate(response[0]['array_options']['options_langue'])
@@ -718,12 +722,12 @@ def euskokart_update_pin(request):
 def accept_cgu(request):
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member_data = dolibarr.get(model='members', login=str(request.user))[0]
+        member_data = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))[0]
 
         data = {'array_options': member_data['array_options']}
         data['array_options'].update({'options_accepte_cgu_eusko_numerique': True})
 
-        dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
+        dolibarr.put(model='members/{}'.format(member_data['id']), data=data)
         return Response({'status': 'OK'})
     except (DolibarrAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -733,12 +737,12 @@ def accept_cgu(request):
 def refuse_cgu(request):
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member_data = dolibarr.get(model='members', login=str(request.user))[0]
+        member_data = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))[0]
 
         data = {'array_options': member_data['array_options']}
         data['array_options'].update({'options_accepte_cgu_eusko_numerique': False})
 
-        dolibarr.patch(model='members/{}'.format(member_data['id']), data=data)
+        dolibarr.put(model='members/{}'.format(member_data['id']), data=data)
 
         # Activate user pre-selected language
         activate(member_data['array_options']['options_langue'])
@@ -761,7 +765,7 @@ def members_cel_subscription(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member = dolibarr.get(model='members', login=str(request.user))
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))
     except DolibarrAPIException as e:
         return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -813,7 +817,7 @@ def members_cel_subscription(request):
     payment_type = 'VIR'
     data_res_payment = {'date': arrow.now('Europe/Paris').timestamp, 'type': payment_type,
                         'label': serializer.data['label'], 'amount': serializer.data['amount']}
-    model_res_payment = 'accounts/{}/lines'.format(payment_account)
+    model_res_payment = 'bankaccounts/{}/lines'.format(payment_account)
     try:
         res_id_payment = dolibarr.post(
             model=model_res_payment, data=data_res_payment)
@@ -829,7 +833,7 @@ def members_cel_subscription(request):
     data_link_sub_payment = {'fk_bank': res_id_payment}
     model_link_sub_payment = 'subscriptions/{}'.format(res_id_subscription)
     try:
-        res_id_link_sub_payment = dolibarr.patch(
+        res_id_link_sub_payment = dolibarr.put(
             model=model_link_sub_payment, data=data_link_sub_payment)
 
         log.info("res_id_link_sub_payment: {}".format(res_id_link_sub_payment))
@@ -844,7 +848,7 @@ def members_cel_subscription(request):
                                 'type': 'member', 'url_id': member[0]['id'],
                                 'url': '{}/adherents/card.php?rowid={}'.format(
                                     settings.DOLIBARR_PUBLIC_URL, member[0]['id'])}
-    model_link_payment_member = 'accounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
+    model_link_payment_member = 'bankaccounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
     try:
         res_id_link_payment_member = dolibarr.post(
             model=model_link_payment_member, data=data_link_payment_member)

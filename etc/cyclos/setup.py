@@ -2111,6 +2111,7 @@ ID_PRODUIT_ADHERENTS_PRESTATAIRES = create_member_product(
     ],
     other_users_profile_fields={
         'FULL_NAME': False,
+        'LOGIN_NAME': True,
         'ACCOUNT_NUMBER': True,
     },
     user_account_type_id=ID_COMPTE_ADHERENT,
@@ -2157,6 +2158,7 @@ ID_PRODUIT_ADHERENTS_UTILISATEURS = create_member_product(
     ],
     other_users_profile_fields={
         'FULL_NAME': False,
+        'LOGIN_NAME': True,
         'ACCOUNT_NUMBER': True,
     },
     user_account_type_id=ID_COMPTE_ADHERENT,

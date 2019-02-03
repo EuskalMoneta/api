@@ -820,7 +820,7 @@ def calculate_3_percent(request):
             # association il parraine en 1er choix.
             # Si c'est une asso 3%, c'est elle qui reçoit les dons.
             try:
-                member_data = dolibarr.get(model='members', login=member_id)[0]
+                member_data = dolibarr.get(model='members', sqlfilters="login='{}'".format(member_id))[0]
             except DolibarrAPIException:
                 # Si on ne parvient pas à récupérer l'adhérent-e dans Dolibarr,
                 # on ignore l'erreur et on considère simplement qu'on n'a
@@ -1251,7 +1251,7 @@ def change_par_virement(request):
 
     # On récupère les données de l'adhérent.
     try:
-        member = dolibarr.get(model='members', login=serializer.data['member_login'])[0]
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(serializer.data['member_login']))[0]
     except:
         return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1330,7 +1330,7 @@ def paiement_cotisation_eusko_numerique(request):
     # On se connecte à Dolibarr et on récupère les données de l'adhérent.
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member = dolibarr.get(model='members', login=serializer.data['member_login'])[0]
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(serializer.data['member_login']))[0]
     except DolibarrAPIException as e:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except:
@@ -1389,7 +1389,7 @@ def paiement_cotisation_eusko_numerique(request):
     payment_type = 'VIR'
     data_res_payment = {'date': arrow.now('Europe/Paris').timestamp, 'type': payment_type,
                         'label': serializer.data['label'], 'amount': serializer.data['amount']}
-    model_res_payment = 'accounts/{}/lines'.format(payment_account)
+    model_res_payment = 'bankaccounts/{}/lines'.format(payment_account)
     try:
         res_id_payment = dolibarr.post(
             model=model_res_payment, data=data_res_payment)
@@ -1405,7 +1405,7 @@ def paiement_cotisation_eusko_numerique(request):
     data_link_sub_payment = {'fk_bank': res_id_payment}
     model_link_sub_payment = 'subscriptions/{}'.format(res_id_subscription)
     try:
-        res_id_link_sub_payment = dolibarr.patch(
+        res_id_link_sub_payment = dolibarr.put(
             model=model_link_sub_payment, data=data_link_sub_payment)
 
         log.info("res_id_link_sub_payment: {}".format(res_id_link_sub_payment))
@@ -1420,7 +1420,7 @@ def paiement_cotisation_eusko_numerique(request):
                                 'type': 'member', 'url_id': member['id'],
                                 'url': '{}/adherents/card.php?rowid={}'.format(
                                     settings.DOLIBARR_PUBLIC_URL, member['id'])}
-    model_link_payment_member = 'accounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
+    model_link_payment_member = 'bankaccounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
     try:
         res_id_link_payment_member = dolibarr.post(
             model=model_link_payment_member, data=data_link_payment_member)
