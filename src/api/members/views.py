@@ -277,14 +277,28 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                'id_link_payment_member': res_id_link_payment_member,
                'member': current_member}
 
-        # Cyclos: Register member subscription payment
-        member_cyclos_id = self.cyclos.get_member_id_from_login(current_member['login'])
-
         if current_member['type'].lower() == 'particulier':
             member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
         else:
             member_name = current_member['company']
 
+        # Get Cyclos member and create it if it does not exist.
+        try:
+            member_cyclos_id = self.cyclos.get_member_id_from_login(current_member['login'])
+        except CyclosAPIException:
+            log.debug("Member not found in Cyclos, will create it.")
+            create_user_data = {
+                'group': str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte']),
+                'name': '{} {}'.format(current_member['firstname'], current_member['lastname']),
+                'username': current_member['login'],
+                'skipActivationEmail': True,
+            }
+            log.debug("create_user_data = {}".format(create_user_data))
+            response_data = self.cyclos.post(method='user/register', data=create_user_data)
+            member_cyclos_id = response_data['result']['user']['id']
+        log.debug("member_cyclos_id = {}".format(member_cyclos_id))
+
+        # Cyclos: Register member subscription payment
         query_data = {}
 
         if 'Eusko' in data['payment_mode']:
