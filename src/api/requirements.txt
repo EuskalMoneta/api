@@ -1,7 +1,7 @@
 arrow
 django==1.11.*
 django-cors-middleware
-djangorestframework
+djangorestframework==3.9.*
 djangorestframework-csv
 django-filter  # Filtering support
 django-wkhtmltopdf
