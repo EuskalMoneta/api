@@ -131,10 +131,32 @@ class Member:
             pass
 
         try:
-            # If we are in "saisie libre"-mode: we use the options_asso_saisie_libre field,
-            # if not we use the fk_asso field
             data['array_options'].update({'options_langue': data['options_langue']})
             del data['options_langue']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({'options_notifications_validation_mandat_prelevement': data['options_notifications_validation_mandat_prelevement']})
+            del data['options_notifications_validation_mandat_prelevement']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({'options_notifications_refus_ou_annulation_mandat_prelevement': data['options_notifications_refus_ou_annulation_mandat_prelevement']})
+            del data['options_notifications_refus_ou_annulation_mandat_prelevement']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({'options_notifications_prelevements': data['options_notifications_prelevements']})
+            del data['options_notifications_prelevements']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({'options_notifications_virements': data['options_notifications_virements']})
+            del data['options_notifications_virements']
         except KeyError:
             pass
 
