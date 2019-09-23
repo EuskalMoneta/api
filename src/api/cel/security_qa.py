@@ -11,19 +11,22 @@ import jwt
 from cel import models, serializers
 
 
+class PredefinedSecurityQuestionViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    This viewset allows to retrieve all the predefined security questions.
+
+    There is no need to be authenticated to the API to use it because the list of security questions must be
+    accessible when a user is initializing its password.
+    """
+    queryset = models.PredefinedSecurityQuestion.objects.all()
+    serializer_class = serializers.PredefinedSecurityQuestionSerializer
+    pagination_class = None
+    permission_classes = (AllowAny, )
+
+
 class SecurityQAViewSet(viewsets.ViewSet):
 
     permission_classes = (AllowAny, )
-
-    def list(self, request):
-        """
-        This endpoint allow to retrieve all predefined SecurityQuestions.
-
-        To use it, you *DON'T NEED* to be authenticated with an API Token,
-        as its used to create a SecurityAnswer (this is used in ValidFirstConnection page).
-        """
-        queryset = models.SecurityQuestion.objects.filter(predefined=True)
-        return Response([model_to_dict(item) for item in queryset])
 
     def retrieve(self, request, pk):
         """

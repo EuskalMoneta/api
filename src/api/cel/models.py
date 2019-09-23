@@ -14,6 +14,19 @@ class Beneficiaire(models.Model):
         unique_together = ('owner', 'cyclos_account_number')
 
 
+class PredefinedSecurityQuestion(models.Model):
+
+    question = models.CharField(max_length=150)
+    LANGUAGES = [
+        ('eu', 'eu'),
+        ('fr', 'fr'),
+    ]
+    language = models.CharField(max_length=2, choices=LANGUAGES)
+
+    class Meta:
+        db_table = 'predefined_security_question'
+
+
 class SecurityAnswer(models.Model):
     """
     Inspired by https://github.com/praetorianlabs-amarquez/django-security-questions.

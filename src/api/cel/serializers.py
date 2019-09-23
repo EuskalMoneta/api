@@ -73,6 +73,13 @@ class BeneficiaireSerializer(serializers.ModelSerializer):
         fields = ('id', 'owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number')
 
 
+class PredefinedSecurityQuestionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.PredefinedSecurityQuestion
+        fields = ('id', 'question', 'language')
+
+
 class OneTimeTransferSerializer(serializers.Serializer):
 
     debit = serializers.IntegerField()
