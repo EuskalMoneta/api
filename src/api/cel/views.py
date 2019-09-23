@@ -114,20 +114,8 @@ def validate_first_connection(request):
         except DolibarrAPIException:
             pass
 
-        # 1) Créer une réponse à une SecurityQuestion (créer aussi une SecurityAnswer).
-        if serializer.data.get('question_id', False):
-            # We got a question_id
-            q = models.SecurityQuestion.objects.get(id=serializer.data['question_id'])
-
-        elif serializer.data.get('question_text', False):
-            # We didn't got a question_id, but a question_text: we need to create a new SecurityQuestion object
-            q = models.SecurityQuestion.objects.create(question=serializer.data['question_text'])
-
-        else:
-            return Response({'status': ('Error: You need to provide at least one thse two fields: '
-                                        'question_id or question_text')}, status=status.HTTP_400_BAD_REQUEST)
-
-        res = models.SecurityAnswer.objects.create(owner=token_data['login'], question=q)
+        # 1) Créer une SecurityAnswer.
+        res = models.SecurityAnswer.objects.create(owner=token_data['login'], question=serializer.data['question'])
         res.set_answer(raw_answer=serializer.data['answer'])
         res.save()
 

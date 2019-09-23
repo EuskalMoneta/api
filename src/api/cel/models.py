@@ -33,8 +33,8 @@ class SecurityAnswer(models.Model):
     """
 
     owner = models.CharField(max_length=6, unique=True)
-    question = models.ForeignKey('SecurityQuestion')
-    answer = models.CharField(max_length=150, null=False, blank=False)
+    question = models.CharField(max_length=150)
+    answer = models.CharField(max_length=150)
 
     class Meta:
         db_table = 'security_answer'
@@ -59,12 +59,3 @@ class SecurityAnswer(models.Model):
 
     def has_usable_answer(self):
         return hashers.is_password_usable(self.answer)
-
-
-class SecurityQuestion(models.Model):
-
-    question = models.CharField(max_length=150, null=False, blank=False)
-    predefined = models.BooleanField(default=False)
-
-    class Meta:
-        db_table = 'security_question'

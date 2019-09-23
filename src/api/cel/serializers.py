@@ -41,8 +41,7 @@ class ValidFirstConnectionSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField()
     confirm_password = serializers.CharField()
-    question_text = serializers.CharField(required=False)
-    question_id = serializers.IntegerField(required=False)
+    question = serializers.CharField()
     answer = serializers.CharField()
 
 
@@ -61,8 +60,7 @@ class ValidLostPasswordSerializer(serializers.Serializer):
 
 class SecurityAnswerSerializer(serializers.Serializer):
 
-    question_text = serializers.CharField(required=False)
-    question_id = serializers.IntegerField(required=False)
+    question = serializers.CharField()
     answer = serializers.CharField()
 
 
