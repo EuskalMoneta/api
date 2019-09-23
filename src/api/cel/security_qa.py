@@ -4,7 +4,7 @@ from django.forms.models import model_to_dict
 from rest_framework import status, viewsets
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.exceptions import AuthenticationFailed
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 import jwt
 
@@ -26,14 +26,45 @@ class PredefinedSecurityQuestionViewSet(viewsets.ReadOnlyModelViewSet):
 
 class SecurityQAViewSet(viewsets.ViewSet):
 
-    permission_classes = (AllowAny, )
-
-    def retrieve(self, request, pk):
+    def get_permissions(self):
         """
-        This endpoint allow to retrieve the SecurityQuestion our connected user has chosen.
+        Instantiates and returns the list of permissions that this view requires.
+        """
+        if self.action in ['list', 'partial_update']:
+            permission_classes = [IsAuthenticated]
+        else:
+            permission_classes = [AllowAny]
+        return [permission() for permission in permission_classes]
+
+    def list(self, request):
+        """
+        Get the SecurityAnswer of the user making the request.
+        """
+        queryset = models.SecurityAnswer.objects.filter(owner=self.request.user)
+        serializer = serializers.SecurityAnswerSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def partial_update(self, request, pk=None):
+        """
+        Update the SecurityAnswer of the user making the request.
+        """
+        if pk != 'me':
+            return Response({'status': "Only PATCH securityqa/me/ is allowed."},
+                            status=status.HTTP_400_BAD_REQUEST)
+        serializer = serializers.SecurityAnswerSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        security_answer = models.SecurityAnswer.objects.filter(owner=self.request.user)[0]
+        security_answer.question = serializer.data['question']
+        security_answer.set_answer(raw_answer=serializer.data['answer'])
+        security_answer.save()
+        return Response({'status': 'OK'})
+
+    def retrieve(self, request, pk=None):
+        """
+        This endpoint allow to retrieve the SecurityAnswer our connected user has chosen.
 
         To use it, you *DON'T NEED* to be authenticated with an API Token,
-        as its used to recover a lost password.
+        as it is used to recover a lost password.
         """
         if pk != 'me':
             return Response({'status': "You can't get Security QA for this user."},
@@ -64,37 +95,3 @@ class SecurityQAViewSet(viewsets.ViewSet):
             return Response({'question': model_to_dict(question)})
         else:
             return Response({'error': 'Unable to read security question!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    def create(self, request):
-        """
-        This endpoint allow to answer a SecurityQuestion (aka create a SecurityAnswer).
-
-        To use it, you *NEED* to be authenticated with an API Token.
-        """
-        # TokenAuthentication inspired by http://stackoverflow.com/a/36065715
-        user = TokenAuthentication().authenticate(request)
-        if not user:
-            raise AuthenticationFailed()
-
-        serializer = serializers.SecurityAnswerSerializer(data=request.data)
-
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        if serializer.data.get('question_id', False):
-            # We got a question_id
-            q = models.SecurityQuestion.objects.get(id=serializer.data['question_id'])
-
-        elif serializer.data.get('question_text', False):
-            # We didn't got a question_id, but a question_text: we need to create a new SecurityQuestion object
-            q = models.SecurityQuestion.objects.create(question=serializer.data['question_text'])
-
-        else:
-            return Response({'status': ('Error: You need to provide at least one thse two fields: '
-                                        'question_id or question_text')}, status=status.HTTP_400_BAD_REQUEST)
-
-        res = models.SecurityAnswer.objects.create(owner=str(request.user), question=q)
-        res.set_answer(raw_answer=serializer.data['answer'])
-        res.save()
-
-        return Response({'status': 'OK'}) if res else Response(status=status.HTTP_400_BAD_REQUEST)
