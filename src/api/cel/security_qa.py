@@ -18,10 +18,20 @@ class PredefinedSecurityQuestionViewSet(viewsets.ReadOnlyModelViewSet):
     There is no need to be authenticated to the API to use it because the list of security questions must be
     accessible when a user is initializing its password.
     """
-    queryset = models.PredefinedSecurityQuestion.objects.all()
     serializer_class = serializers.PredefinedSecurityQuestionSerializer
     pagination_class = None
     permission_classes = (AllowAny, )
+
+    def get_queryset(self):
+        """
+        Optionally restricts the returned questions to a given language,
+        by filtering against a `language` query parameter in the URL.
+        """
+        queryset = models.PredefinedSecurityQuestion.objects.all()
+        language = self.request.query_params.get('language', None)
+        if language is not None:
+            queryset = queryset.filter(language=language)
+        return queryset
 
 
 class SecurityQAViewSet(viewsets.ViewSet):
