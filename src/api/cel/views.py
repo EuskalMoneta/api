@@ -51,12 +51,17 @@ def first_connection(request):
         if valid_login:
             # We want to search in members by login (N° Adhérent)
             response = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.data['login']), api_key=dolibarr_token)
-            user_data = [item
+            member = [item
                          for item in response
                          if item['login'] == request.data['login']][0]
 
-            if user_data['email'] == request.data['email']:
+            if member['email'] == request.data['email']:
                 # We got a match!
+
+                # On enregistre la langue choisie par l'adhérent.
+                data = Member.validate_data({'options_langue': request.data['langue']}, mode='update',
+                                            base_options=member['array_options'])
+                dolibarr.put(model='members/{}'.format(member['id']), data=data, api_key=dolibarr_token)
 
                 # We need to mail a token etc...
                 payload = {'login': request.data['login'],
@@ -69,11 +74,11 @@ def first_connection(request):
                                                                              jwt_token.decode("utf-8"))
 
                 # Activate user pre-selected language
-                activate(user_data['array_options']['options_langue'])
+                activate(member['array_options']['options_langue'])
 
                 # Translate subject & body for this email
                 subject = _('Première connexion à votre compte en ligne Eusko')
-                body = render_to_string('mails/first_connection.txt', {'token': confirm_url, 'user': user_data})
+                body = render_to_string('mails/first_connection.txt', {'token': confirm_url, 'user': member})
 
                 sendmail_euskalmoneta(subject=subject, body=body, to_email=request.data['email'])
                 return Response({'member': 'OK'})
