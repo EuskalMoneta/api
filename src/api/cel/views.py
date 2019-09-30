@@ -411,6 +411,7 @@ def export_history_adherent(request):
             'end': arrow.get(serializer.data['end']).format('DD MMMM YYYY', locale='fr'),
         },
     }
+
     if request.accepted_media_type == 'application/pdf':
         response = wkhtmltopdf_views.PDFTemplateResponse(
             request=request, context=context, template="summary/summary.html")

@@ -14,6 +14,36 @@ class Beneficiaire(models.Model):
         unique_together = ('owner', 'cyclos_account_number')
 
 
+class Mandat(models.Model):
+    """
+    Représente un mandat de prélèvement entre deux adhérents.
+
+    Le débiteur autorise le créditeur à effectuer des prélèvements sur son compte, dont il lui a donné le numéro. Les
+    deux parties prenantes sont identifiées par leur numéro de compte. Les noms du débiteur et du créditeur sont
+    également enregistrés avec le mandat, pour diminuer le nombre de requêtes à faire par la suite auprès de Cyclos
+    pour afficher les mandats.
+    """
+    numero_compte_debiteur = models.CharField(max_length=9)
+    nom_debiteur = models.CharField(max_length=150)
+    numero_compte_crediteur = models.CharField(max_length=9)
+    nom_crediteur = models.CharField(max_length=150)
+    EN_ATTENTE = 'ATT'
+    VALIDE = 'VAL'
+    REFUSE = 'REF'
+    REVOQUE = 'REV'
+    STATUTS = (
+        (EN_ATTENTE, 'En attente de validation'),
+        (VALIDE, 'Validé'),
+        (REFUSE, 'Refusé'),
+        (REVOQUE, 'Révoqué'),
+    )
+    statut = models.CharField(max_length=3, choices=STATUTS, default=EN_ATTENTE)
+
+    class Meta:
+        db_table = 'mandat'
+        unique_together = ('numero_compte_crediteur', 'numero_compte_debiteur')
+
+
 class PredefinedSecurityQuestion(models.Model):
 
     question = models.CharField(max_length=150)

@@ -74,6 +74,18 @@ class BeneficiaireSerializer(serializers.ModelSerializer):
         fields = ('id', 'owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number')
 
 
+class MandatSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        """
+        Pour créer un mandat, le seul champ nécessaire est 'numero_compte_debiteur'. Tous les autres champs sont en
+        lecture seule et servent uniquement lors de la récupération d'un ou plusieurs mandats.
+        """
+        model = models.Mandat
+        fields = ['numero_compte_debiteur', 'nom_debiteur', 'numero_compte_crediteur', 'nom_crediteur', 'statut']
+        read_only_fields = ['nom_debiteur', 'numero_compte_crediteur', 'nom_crediteur', 'statut']
+
+
 class PredefinedSecurityQuestionSerializer(serializers.ModelSerializer):
 
     class Meta:
