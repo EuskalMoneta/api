@@ -7,11 +7,11 @@ class FirstConnectionSerializer(serializers.Serializer):
 
     login = serializers.CharField()
     email = serializers.EmailField()
-    langue = serializers.CharField(max_length=2)
+    language = serializers.CharField(max_length=2)
 
-    def validate_langue(self, value):
+    def validate_language(self, value):
         if value not in ('eu', 'fr'):
-            raise serializers.ValidationError("langue must be 'eu' or 'fr'")
+            raise serializers.ValidationError("language must be 'eu' or 'fr'")
         return value
 
 

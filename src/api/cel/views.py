@@ -59,7 +59,7 @@ def first_connection(request):
                 # We got a match!
 
                 # On enregistre la langue choisie par l'adhérent.
-                data = Member.validate_data({'options_langue': request.data['langue']}, mode='update',
+                data = Member.validate_data({'options_langue': request.data['language']}, mode='update',
                                             base_options=member['array_options'])
                 dolibarr.put(model='members/{}'.format(member['id']), data=data, api_key=dolibarr_token)
 
