@@ -351,8 +351,10 @@ def export_history_adherent(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    begin_date = serializer.data['begin'].replace(hour=0, minute=0, second=0).isoformat()
-    end_date = serializer.data['end'].replace(hour=23, minute=59, second=59).isoformat()
+    # Quand on envoie une requête à Cyclos, une date signifie le jour indiqué à zéro heure donc pour avoir un
+    # historique de date à date, il faut que end_date soit le lendemain de la date de fin souhaitée.
+    begin_date = serializer.data['begin'].isoformat()
+    end_date = (serializer.data['end'] + timedelta(days=1)).isoformat()
 
     # On récupère un résumé des comptes de l'utilisateur à la date
     # begin_date, ce qui nous permet d'avoir l'id du compte et son solde
@@ -409,7 +411,7 @@ def export_history_adherent(request):
             'end': arrow.get(serializer.data['end']).format('DD MMMM YYYY', locale='fr'),
         },
     }
-    if request.query_params['mode'] == 'pdf':
+    if request.accepted_media_type == 'application/pdf':
         response = wkhtmltopdf_views.PDFTemplateResponse(
             request=request, context=context, template="summary/summary.html")
         pdf_content = response.rendered_content
@@ -420,7 +422,7 @@ def export_history_adherent(request):
         }
 
         return Response(pdf_content, headers=headers)
-    else:
+    elif request.accepted_media_type == 'text/csv':
         csv_content = [{'Date': line['date'],
                         'Libellé': line['description'],
                         'Crédit': "{0:.2f}".format(float(line['amount'])).replace('.', ',')
@@ -430,6 +432,8 @@ def export_history_adherent(request):
                         'Solde': "{0:.2f}".format(float(line['balance'])).replace('.', ',')}
                        for line in context['account_history']]
         return Response(csv_content)
+    else:
+        return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
 
 
 @api_view(['GET'])

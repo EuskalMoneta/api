@@ -30,11 +30,8 @@ class HistorySerializer(serializers.Serializer):
 
 
 class ExportHistorySerializer(serializers.Serializer):
-
-    begin = serializers.DateTimeField(format=None)
-    end = serializers.DateTimeField(format=None)
-    description = serializers.CharField(required=False)
-    mode = serializers.CharField()
+    begin = serializers.DateField(format=None)
+    end = serializers.DateField(format=None)
 
 
 class ExportRIESerializer(serializers.Serializer):
