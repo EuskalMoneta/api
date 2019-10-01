@@ -69,3 +69,60 @@ class MandatViewSet(viewsets.ModelViewSet):
         # Le mandat créé est envoyé dans la réponse.
         serializer = MandatSerializer(mandat)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    @action(detail=True, methods=['post'])
+    def valider(self, request, pk=None):
+        """
+        Valider un mandat.
+
+        Un mandat ne peut être validé que s'il est en attente de validation, et uniquement par son débiteur.
+        """
+        mandat = self.get_object()
+        if mandat.statut == Mandat.EN_ATTENTE and get_current_user_account_number(
+                self.request) == mandat.numero_compte_debiteur:
+            mandat.statut = Mandat.VALIDE
+            mandat.save()
+            # TODO: notification par email au créditeur
+            serializer = MandatSerializer(mandat)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+    @action(detail=True, methods=['post'])
+    def refuser(self, request, pk=None):
+        """
+        Refuser un mandat.
+
+        Un mandat ne peut être refusé que s'il est en attente de validation, et uniquement par son débiteur.
+        """
+        mandat = self.get_object()
+        """
+        Valider un mandat.
+        """
+        if mandat.statut == Mandat.EN_ATTENTE and get_current_user_account_number(
+                self.request) == mandat.numero_compte_debiteur:
+            mandat.statut = Mandat.REFUSE
+            mandat.save()
+            # TODO: notification par email au créditeur
+            serializer = MandatSerializer(mandat)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+
+    @action(detail=True, methods=['post'])
+    def revoquer(self, request, pk=None):
+        """
+        Révoquer un mandat.
+
+        Un mandat ne peut être révoqué que s'il est valide, et uniquement par son débiteur.
+        """
+        mandat = self.get_object()
+        if mandat.statut == Mandat.VALIDE and get_current_user_account_number(
+                self.request) == mandat.numero_compte_debiteur:
+            mandat.statut = Mandat.REVOQUE
+            mandat.save()
+            # TODO: notification par email au créditeur
+            serializer = MandatSerializer(mandat)
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
