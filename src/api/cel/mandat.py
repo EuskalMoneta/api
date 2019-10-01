@@ -1,4 +1,6 @@
+from django.shortcuts import get_object_or_404
 from rest_framework import status, viewsets
+from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from cel.models import Mandat
@@ -18,21 +20,24 @@ def get_current_user_account_number(request):
     return accounts_summaries_data['result'][0]['number']
 
 
-class MandatViewSet(viewsets.ViewSet):
+class MandatViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour les mandats.
 
-    def list(self, request):
-        """
-        Récupérer la liste des mandats de l'utilisateur courant, soit comme débiteur soit comme créditeur.
-        """
+    list() et retrieve() sont fournis par ModelViewSet et utilisent serializer_class et get_queryset().
+    On utilise http_method_names pour limiter les méthodes disponibles (interdire PATCH, PUT, DELETE).
+    """
+    serializer_class = MandatSerializer
+    http_method_names = ['get', 'post']
+
+    def get_queryset(self):
+        queryset = Mandat.objects.all()
         type = self.request.query_params.get('type', None)
-        if type is None:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
         if type == 'debiteur':
-            queryset = Mandat.objects.filter(numero_compte_debiteur=get_current_user_account_number(request))
+            queryset = queryset.filter(numero_compte_debiteur=get_current_user_account_number(self.request))
         elif type == 'crediteur':
-            queryset = Mandat.objects.filter(numero_compte_crediteur=get_current_user_account_number(request))
-        serializer = MandatSerializer(queryset, many=True)
-        return Response(serializer.data)
+            queryset = queryset.filter(numero_compte_crediteur=get_current_user_account_number(self.request))
+        return queryset
 
     def create(self, request):
         """

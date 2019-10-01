@@ -82,7 +82,7 @@ class MandatSerializer(serializers.ModelSerializer):
         lecture seule et servent uniquement lors de la récupération d'un ou plusieurs mandats.
         """
         model = models.Mandat
-        fields = ['numero_compte_debiteur', 'nom_debiteur', 'numero_compte_crediteur', 'nom_crediteur', 'statut']
+        fields = ['id', 'numero_compte_debiteur', 'nom_debiteur', 'numero_compte_crediteur', 'nom_crediteur', 'statut']
         read_only_fields = ['nom_debiteur', 'numero_compte_crediteur', 'nom_crediteur', 'statut']
 
 
