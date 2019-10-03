@@ -1,5 +1,6 @@
 from django.contrib.auth import hashers
 from django.db import models
+from simple_history.models import HistoricalRecords
 
 
 class Beneficiaire(models.Model):
@@ -38,10 +39,15 @@ class Mandat(models.Model):
         (REVOQUE, 'Révoqué'),
     )
     statut = models.CharField(max_length=3, choices=STATUTS, default=EN_ATTENTE)
+    history = HistoricalRecords()
 
     class Meta:
         db_table = 'mandat'
         unique_together = ('numero_compte_crediteur', 'numero_compte_debiteur')
+
+    @property
+    def date_derniere_modif(self):
+        return self.history.latest().history_date.date()
 
 
 class PredefinedSecurityQuestion(models.Model):
