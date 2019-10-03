@@ -28,7 +28,7 @@ class MandatViewSet(viewsets.ModelViewSet):
     On utilise http_method_names pour limiter les méthodes disponibles (interdire PATCH, PUT, DELETE).
     """
     serializer_class = MandatSerializer
-    http_method_names = ['get', 'post']
+    http_method_names = ['get', 'post', 'delete']
 
     def get_queryset(self):
         queryset = Mandat.objects.all()
@@ -69,6 +69,17 @@ class MandatViewSet(viewsets.ModelViewSet):
         # Le mandat créé est envoyé dans la réponse.
         serializer = MandatSerializer(mandat)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, pk=None):
+        """
+        Un mandat ne peut être supprimé que par son créditeur (qui est celui qui l'a créé).
+        """
+        mandat = self.get_object()
+        if get_current_user_account_number(self.request) == mandat.numero_compte_crediteur:
+            mandat.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        else:
+            return Response(status=status.HTTP_403_FORBIDDEN)
 
     @action(detail=True, methods=['post'])
     def valider(self, request, pk=None):
