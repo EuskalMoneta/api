@@ -113,14 +113,13 @@ urlpatterns = [
     url(r'^accept-cgu/$', cel_views.accept_cgu),
     url(r'^refuse-cgu/$', cel_views.refuse_cgu),
 
-    # euskokart
     url(r'^euskokart/$', cel_views.euskokart_list),
     url(r'^euskokart-block/$', cel_views.euskokart_block),
     url(r'^euskokart-unblock/$', cel_views.euskokart_unblock),
     url(r'^euskokart-pin/$', cel_views.euskokart_pin),
     url(r'^euskokart-upd-pin/$', cel_views.euskokart_update_pin),
     url(r'^member-cel-subscription/$', cel_views.members_cel_subscription),
-
+    url(r'^montant-don/$', cel_views.montant_don),
 ]
 
 urlpatterns += router.urls

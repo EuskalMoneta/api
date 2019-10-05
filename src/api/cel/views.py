@@ -1,5 +1,5 @@
 from base64 import b64encode
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import logging
 from uuid import uuid4
 
@@ -20,6 +20,7 @@ from wkhtmltopdf import views as wkhtmltopdf_views
 from cel import models, serializers
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
+from gestioninterne.views import _search_account_history
 from members.misc import Member
 from misc import EuskalMonetaAPIException, sendmail_euskalmoneta
 
@@ -865,3 +866,45 @@ def members_cel_subscription(request):
            'member': current_member}
 
     return Response(res, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+def montant_don(request):
+    """
+    Retourne le montant du don 3% généré par l'utilisateur depuis le 1er juillet dernier.
+    """
+    log.debug("montant_don()")
+    # Connexion à Cyclos.
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On récupère tous les crédits du compte de l'utilisateur qui ont été faits depuis le 1er juillet dernier et qui
+    # sont du type "Change numérique en ligne - Versement des eusko" (changes par prélèvement automatique ou virement)
+    # et "Crédit du compte" (chargements de compte en BDC).
+    accounts_summary_data = cyclos.post(method='account/getAccountsSummary', data=[cyclos.user_id, None])
+    current_user_account = accounts_summary_data['result'][0]
+    log.debug("current_user_account={}".format(current_user_account))
+    today = date.today()
+    begin_date = datetime(today.year if today.month >= 7 else today.year-1, 7, 1).isoformat()
+    end_date = datetime.now().replace(microsecond=0).isoformat()
+    log.debug("begin_date={}".format(begin_date))
+    log.debug("end_date={}".format(end_date))
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=current_user_account['id'],
+        direction='CREDIT',
+        begin_date=begin_date,
+        end_date=end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),
+            str(settings.CYCLOS_CONSTANTS['payment_types']['credit_du_compte']),
+        ]
+    )
+
+    montant_don = sum([float(payment['amount']) for payment in payments]) * 0.03
+
+    response_data = {'montant_don': montant_don}
+    log.debug("response_data = %s", response_data)
+    return Response(response_data)
