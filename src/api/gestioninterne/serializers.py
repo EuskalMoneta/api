@@ -62,6 +62,7 @@ class ChangeParVirementSerializer(serializers.Serializer):
     member_login = serializers.CharField()
     bank_transfer_reference = serializers.CharField()
     amount = serializers.FloatField()
+    description = serializers.CharField()
 
 
 class PaiementCotisationEuskoNumeriqueSerializer(serializers.Serializer):

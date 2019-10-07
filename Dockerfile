@@ -14,7 +14,7 @@ COPY etc/dolibarr /dolibarr
 RUN apt-get update && apt-get install -y \
         gcc \
         gettext \
-        mysql-client default-libmysqlclient-dev \
+        default-mysql-client default-libmysqlclient-dev \
         postgresql-client libpq-dev \
         sqlite3 \
     --no-install-recommends 

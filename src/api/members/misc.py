@@ -84,7 +84,7 @@ class Member:
         sendmail_euskalmoneta(subject=subject, body=body)
 
     @staticmethod
-    def send_mail_change_auto(login, profile, mode, new_amount, comment, lang):
+    def send_mail_change_auto(login, profile, mode, new_amount, comment, email, lang):
         """
         Envoi mail à Euskal Moneta lorsque le montant du change automatique à été modifié.
         """
@@ -101,7 +101,7 @@ class Member:
                                  'profile_firstname': str(profile.firstname),
                                  'profile_lastname': str(profile.lastname),
                                  'profile_companyname': str(profile.companyname),
-                                 'new_amount': new_amount, 'comment': comment})
+                                 'new_amount': new_amount, 'comment': comment, 'email': email})
 
         sendmail_euskalmoneta(subject=subject, body=body)
 
