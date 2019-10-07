@@ -1284,7 +1284,7 @@ def change_par_virement(request):
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
                 'stringValue': serializer.data['bank_transfer_reference']
             }],
-            'description': 'Change par virement'
+            'description': serializer.data['description'],
         }
         res_change_numerique_euro = cyclos.post(method='payment/perform', data=change_numerique_euro)
 
@@ -1299,7 +1299,7 @@ def change_par_virement(request):
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
                 'stringValue': serializer.data['bank_transfer_reference']
             }],
-            'description': 'Change par virement'
+            'description': serializer.data['description'],
         }
         res_change_numerique_eusko = cyclos.post(method='payment/perform', data=change_numerique_eusko)
     except Exception as e:
