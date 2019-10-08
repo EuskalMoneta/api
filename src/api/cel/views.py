@@ -383,23 +383,27 @@ def export_history_adherent(request):
     account_history_res = cyclos.post(method='account/searchAccountHistory', data=account_history_query_data)
     account_history = account_history_res['result']['pageItems']
 
-    # On calcule le solde pour chaque ligne de l'historique.
+    # Pour chaque ligne de l'historique :
+    # - on calcule le solde (en faisant le cumul avec les lignes précédentes)
+    # - on met la date au format JJ/MM/AAAA (on n'affiche pas l'heure dans l'historique)
+    # - on ajoute "Vers : xxx" ou "De : xxx" dans la description sauf lorsque l'autre compte est un compte système
     balance = initial_balance
     for line in account_history:
         balance = float(balance) + float(line['amount'])
         line['balance'] = balance
+        line['date'] = arrow.get(line['date']).format('DD/MM/YYYY')
+        if line['relatedAccount']['type']['nature'] != 'SYSTEM':
+            line['description'] = "{}\r\n{} : {}".format(line['description'],
+                                                         'Vers' if float(line['amount']) < 0 else 'De',
+                                                         line['relatedAccount']['owner']['display'])
 
     # On ajoute une première ligne avec le solde initial du compte.
     account_history.insert(0, {
-        'date': begin_date,
+        'date': arrow.get(begin_date).format('DD/MM/YYYY'),
         'description': 'Solde initial',
         'amount': 0,
         'balance': initial_balance,
     })
-
-    # On formate les dates pour les rendre plus lisibles.
-    for line in account_history:
-        line['date'] = arrow.get(line['date']).format('DD-MM-YYYY à HH:mm')
 
     # On fabrique l'objet qui va servir à l'export PDF ou CSV.
     context = {
