@@ -96,7 +96,6 @@ class PredefinedSecurityQuestionSerializer(serializers.ModelSerializer):
 
 class OneTimeTransferSerializer(serializers.Serializer):
 
-    debit = serializers.IntegerField()
     beneficiaire = serializers.IntegerField()
     amount = serializers.FloatField()
     description = serializers.CharField()
@@ -104,7 +103,6 @@ class OneTimeTransferSerializer(serializers.Serializer):
 
 class ReconvertEuskoSerializer(serializers.Serializer):
 
-    debit = serializers.IntegerField()
     amount = serializers.FloatField()
     description = serializers.CharField()
 

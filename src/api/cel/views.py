@@ -564,7 +564,7 @@ def one_time_transfer(request):
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
         'amount': serializer.data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-        'from': serializer.data['debit'],
+        'from': cyclos.user_id,
         'to': serializer.data['beneficiaire'],
         'description': serializer.data['description'],
     }
@@ -590,7 +590,7 @@ def reconvert_eusko(request):
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_numerique']),
         'amount': serializer.data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-        'from': serializer.data['debit'],
+        'from': cyclos.user_id,
         'to': 'SYSTEM',
         'description': serializer.data['description'],
     }
