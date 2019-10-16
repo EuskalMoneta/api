@@ -94,14 +94,13 @@ class SecurityQAViewSet(viewsets.ViewSet):
             else:
                 return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
 
-        question = None
+        answer = None
         try:
             answer = models.SecurityAnswer.objects.get(owner=login)
-            question = answer.question
         except ObjectDoesNotExist:
             pass
 
-        if question:
-            return Response({'question': model_to_dict(question)})
+        if answer:
+            return Response({'question': model_to_dict(answer)})
         else:
             return Response({'error': 'Unable to read security question!'}, status=status.HTTP_400_BAD_REQUEST)
