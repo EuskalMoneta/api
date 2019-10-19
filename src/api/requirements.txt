@@ -4,6 +4,7 @@ django-cors-middleware
 djangorestframework==3.9.*
 djangorestframework-csv
 django-filter  # Filtering support
+django-simple-history
 django-wkhtmltopdf
 drf-pdf
 markdown       # Markdown support for the browsable API.

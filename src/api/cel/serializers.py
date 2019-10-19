@@ -7,6 +7,12 @@ class FirstConnectionSerializer(serializers.Serializer):
 
     login = serializers.CharField()
     email = serializers.EmailField()
+    language = serializers.CharField(max_length=2)
+
+    def validate_language(self, value):
+        if value not in ('eu', 'fr'):
+            raise serializers.ValidationError("language must be 'eu' or 'fr'")
+        return value
 
 
 class LostPasswordSerializer(serializers.Serializer):
@@ -24,11 +30,8 @@ class HistorySerializer(serializers.Serializer):
 
 
 class ExportHistorySerializer(serializers.Serializer):
-
-    begin = serializers.DateTimeField(format=None)
-    end = serializers.DateTimeField(format=None)
-    description = serializers.CharField(required=False)
-    mode = serializers.CharField()
+    begin = serializers.DateField(format=None)
+    end = serializers.DateField(format=None)
 
 
 class ExportRIESerializer(serializers.Serializer):
@@ -41,8 +44,7 @@ class ValidFirstConnectionSerializer(serializers.Serializer):
     token = serializers.CharField()
     new_password = serializers.CharField()
     confirm_password = serializers.CharField()
-    question_text = serializers.CharField(required=False)
-    question_id = serializers.IntegerField(required=False)
+    question = serializers.CharField()
     answer = serializers.CharField()
 
 
@@ -61,8 +63,7 @@ class ValidLostPasswordSerializer(serializers.Serializer):
 
 class SecurityAnswerSerializer(serializers.Serializer):
 
-    question_text = serializers.CharField(required=False)
-    question_id = serializers.IntegerField(required=False)
+    question = serializers.CharField()
     answer = serializers.CharField()
 
 
@@ -73,9 +74,28 @@ class BeneficiaireSerializer(serializers.ModelSerializer):
         fields = ('id', 'owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number')
 
 
+class MandatSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        """
+        Pour créer un mandat, le seul champ nécessaire est 'numero_compte_debiteur'. Tous les autres champs sont en
+        lecture seule et servent uniquement lors de la récupération d'un ou plusieurs mandats.
+        """
+        model = models.Mandat
+        fields = ['id', 'numero_compte_debiteur', 'nom_debiteur', 'numero_compte_crediteur', 'nom_crediteur', 'statut',
+                  'date_derniere_modif']
+        read_only_fields = ['nom_debiteur', 'numero_compte_crediteur', 'nom_crediteur', 'statut', 'date_derniere_modif']
+
+
+class PredefinedSecurityQuestionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = models.PredefinedSecurityQuestion
+        fields = ('id', 'question', 'language')
+
+
 class OneTimeTransferSerializer(serializers.Serializer):
 
-    debit = serializers.IntegerField()
     beneficiaire = serializers.IntegerField()
     amount = serializers.FloatField()
     description = serializers.CharField()
@@ -83,7 +103,6 @@ class OneTimeTransferSerializer(serializers.Serializer):
 
 class ReconvertEuskoSerializer(serializers.Serializer):
 
-    debit = serializers.IntegerField()
     amount = serializers.FloatField()
     description = serializers.CharField()
 
@@ -101,3 +120,9 @@ class MembersSubscriptionSerializer(serializers.Serializer):
     end_date = serializers.DateTimeField(format=None)
     amount = serializers.IntegerField()
     label = serializers.CharField()
+
+
+class ExecutePrelevementSerializer(serializers.Serializer):
+    account = serializers.CharField()
+    amount = serializers.CharField()
+    description = serializers.CharField()
