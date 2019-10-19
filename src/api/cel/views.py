@@ -912,3 +912,24 @@ def montant_don(request):
     response_data = {'montant_don': montant_don}
     log.debug("response_data = %s", response_data)
     return Response(response_data)
+
+
+@api_view(['POST'])
+def execute_prelevements(request):
+    """
+    Exécute la liste des prélèvements donnée en paramètre.
+    """
+    log.debug("prelevements()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.ExecutePrelevementSerializer(data=request.data, many=True)
+    serializer.is_valid(raise_exception=True)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+
+    # Connexion à Cyclos.
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    return Response(status.status.HTTP_500_INTERNAL_SERVER_ERROR)

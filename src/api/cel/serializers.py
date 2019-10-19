@@ -120,3 +120,9 @@ class MembersSubscriptionSerializer(serializers.Serializer):
     end_date = serializers.DateTimeField(format=None)
     amount = serializers.IntegerField()
     label = serializers.CharField()
+
+
+class ExecutePrelevementSerializer(serializers.Serializer):
+    account = serializers.CharField()
+    amount = serializers.CharField()
+    description = serializers.CharField()
