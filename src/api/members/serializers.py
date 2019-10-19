@@ -68,6 +68,11 @@ class MemberPartialSerializer(serializers.Serializer):
     options_asso_saisie_libre = serializers.CharField(write_only=True, required=False, allow_blank=True)
     # Langue
     options_langue = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    # Notifications
+    options_notifications_validation_mandat_prelevement = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    options_notifications_refus_ou_annulation_mandat_prelevement = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    options_notifications_prelevements = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    options_notifications_virements = serializers.CharField(write_only=True, required=False, allow_blank=True)
     fk_asso = serializers.CharField(required=False, allow_blank=True)
     fk_asso2 = serializers.CharField(required=False, allow_blank=True)
 

@@ -16,5 +16,7 @@ def sendmail_euskalmoneta(subject, body, to_email=None, from_email=None):
     if from_email is None:
         from_email = settings.EMAIL_HOST_USER
 
+    log.debug("sendmail:\nFrom: {}\nTo: {}\nSubject: {}\n{}".format(
+        from_email, to_email, subject, body))
     with mail.get_connection() as connection:
         mail.EmailMessage(subject, body, from_email, [to_email], connection=connection).send()
