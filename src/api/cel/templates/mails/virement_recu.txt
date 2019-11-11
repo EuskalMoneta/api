@@ -1,0 +1,21 @@
+{% load staticfiles i18n %}
+{% load template_tags %}
+
+{% if user|get_item:'company' %}
+{% blocktrans with name=user|get_item:'company' %}
+Bonjour {{ name }},
+{% endblocktrans %}
+{% else %}
+{% blocktrans with name=user|get_item:'firstname' %}
+Bonjour {{ name }},
+{% endblocktrans %}
+{% endif %}
+
+{% blocktrans %}
+Vous venez de recevoir un virement de {{ montant }} eusko de la part de {{ emetteur }}.
+{% endblocktrans %}
+
+{% trans "Si vous ne souhaitez pas recevoir d'email lorsque vous recevez un virement, vous pouvez désactiver ces notifications depuis votre compte Eusko dans Profil > Notifications" %}.
+
+{% trans "Bien cordialement" %},
+{% trans "L'équipe d'Euskal Moneta" %}
