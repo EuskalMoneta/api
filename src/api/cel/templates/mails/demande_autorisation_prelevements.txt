@@ -1,0 +1,20 @@
+{% load staticfiles i18n %}
+{% load template_tags %}
+
+{% if user|get_item:'company' %}
+{% blocktrans with name=user|get_item:'company' %}
+Bonjour {{ name }},
+{% endblocktrans %}
+{% else %}
+{% blocktrans with name=user|get_item:'firstname' %}
+Bonjour {{ name }},
+{% endblocktrans %}
+{% endif %}
+
+{% blocktrans %}
+{{ crediteur }} vient de faire une demande d'autorisation de prélèvements sur votre compte Eusko.
+Veuillez vous connecter à votre compte pour accepter ou refuser cette demande.
+{% endblocktrans %}
+
+{% trans "Bien cordialement" %},
+{% trans "L'équipe d'Euskal Moneta" %}
