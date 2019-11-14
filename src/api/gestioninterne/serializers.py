@@ -71,3 +71,16 @@ class PaiementCotisationEuskoNumeriqueSerializer(serializers.Serializer):
     end_date = serializers.DateTimeField(format=None)
     amount = serializers.FloatField()
     label = serializers.CharField()
+
+
+class NotificationPaiementHelloAssoSerializer(serializers.Serializer):
+    id = serializers.CharField()
+    date = serializers.CharField()
+    amount = serializers.FloatField()
+    type = serializers.CharField(allow_blank=True)
+    url = serializers.CharField(allow_blank=True)
+    payer_first_name = serializers.CharField()
+    payer_last_name = serializers.CharField()
+    url_receipt = serializers.CharField(allow_blank=True)
+    url_tax_receipt = serializers.CharField(allow_blank=True)
+    action_id = serializers.CharField()

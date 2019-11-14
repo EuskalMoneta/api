@@ -238,8 +238,8 @@ class Subscription:
             # We need to know which is the greater between those two years:
             # current year which is the var `now`
             # OR
-            # (current subcrition ending year + 1 year)
-            current_sub_ending_plus_one_year = arrow.get(end_date).to('Europe/Paris').replace(years=+1)
+            # (current subscription ending year + 1 year)
+            current_sub_ending_plus_one_year = arrow.get(end_date).to('Europe/Paris').shift(years=1)
 
             if now.year > current_sub_ending_plus_one_year.year:
                 res = now.replace(month=1, day=1, hour=0, minute=0, second=0).timestamp
@@ -255,7 +255,7 @@ class Subscription:
     @staticmethod
     def calculate_end_date(start_date, now=None):
         """
-        Compute end_date for this subcription.
+        Compute end_date for this subscription.
         To do this, we need the start date for this *sub*,
         which was calculated by _calculate_start_date() just before this method was called.
         """
@@ -272,8 +272,7 @@ class Subscription:
             if now < date_anticipated_sub:
                 res = now.replace(month=12, day=31, hour=23, minute=59, second=59).timestamp
             else:
-                # note the years=+1, this does a relative addition like this: "now.year + 1"
-                res = now.replace(years=+1, month=12, day=31, hour=23, minute=59, second=59).timestamp
+                res = now.replace(month=12, day=31, hour=23, minute=59, second=59).shift(years=1).timestamp
 
         return res
 

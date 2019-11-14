@@ -1,4 +1,5 @@
-from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.utils.translation import activate, gettext as _
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -6,6 +7,8 @@ from rest_framework.response import Response
 from cel.models import Mandat
 from cel.serializers import MandatSerializer
 from cyclos_api import CyclosAPI, CyclosAPIException
+from dolibarr_api import DolibarrAPI, DolibarrAPIException
+from misc import sendmail_euskalmoneta
 
 
 def get_current_user_account_number(request):
@@ -48,11 +51,16 @@ class MandatViewSet(viewsets.ModelViewSet):
         serializer = MandatSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
 
-        # Pour avoir le nom du débiteur, on fait une recherche dans Cyclos par son numéro de compte.
+        try:
+            dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+        except DolibarrAPIException:
+            return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
         try:
             cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
         except CyclosAPIException:
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+        # Pour avoir le nom du débiteur, on fait une recherche dans Cyclos par son numéro de compte.
         data = cyclos.post(method='user/search', data={'keywords': serializer.validated_data['numero_compte_debiteur']})
         debiteur = data['result']['pageItems'][0]
 
@@ -64,7 +72,16 @@ class MandatViewSet(viewsets.ModelViewSet):
             nom_crediteur=cyclos.user_profile['result']['display']
         )
 
-        # TODO: notification par email au débiteur
+        # Notification par email au débiteur.
+        debiteur_dolibarr = dolibarr.get(model='members',
+                                         sqlfilters="login='{}'".format(debiteur['shortDisplay']))[0]
+        # Activation de la langue choisie par l'adhérent et traduction du sujet et du corps de l'email.
+        activate(debiteur_dolibarr['array_options']['options_langue'])
+        subject = _("Compte Eusko : demande d'autorisation de prélèvements")
+        body = render_to_string('mails/demande_autorisation_prelevements.txt',
+                                {'user': debiteur_dolibarr,
+                                 'crediteur': cyclos.user_profile['result']['display']})
+        sendmail_euskalmoneta(subject=subject, body=body, to_email=debiteur_dolibarr['email'])
 
         # Le mandat créé est envoyé dans la réponse.
         serializer = MandatSerializer(mandat)
@@ -93,8 +110,10 @@ class MandatViewSet(viewsets.ModelViewSet):
                 self.request) == mandat.numero_compte_debiteur:
             mandat.statut = Mandat.VALIDE
             mandat.save()
-            # TODO: notification par email au créditeur
-            serializer = MandatSerializer(mandat)
+
+            # Notification par email au créditeur.
+            notifier_crediteur(request=request, mandat=mandat, template='autorisation_de_prelevement_validee')
+
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(status=status.HTTP_403_FORBIDDEN)
@@ -114,8 +133,10 @@ class MandatViewSet(viewsets.ModelViewSet):
                 self.request) == mandat.numero_compte_debiteur:
             mandat.statut = Mandat.REFUSE
             mandat.save()
-            # TODO: notification par email au créditeur
-            serializer = MandatSerializer(mandat)
+
+            # Notification par email au créditeur.
+            notifier_crediteur(request=request, mandat=mandat, template='autorisation_de_prelevement_refusee')
+
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(status=status.HTTP_403_FORBIDDEN)
@@ -132,8 +153,39 @@ class MandatViewSet(viewsets.ModelViewSet):
                 self.request) == mandat.numero_compte_debiteur:
             mandat.statut = Mandat.REVOQUE
             mandat.save()
-            # TODO: notification par email au créditeur
-            serializer = MandatSerializer(mandat)
+
+            # Notification par email au créditeur.
+            notifier_crediteur(request=request, mandat=mandat, template='autorisation_de_prelevement_revoquee')
+
             return Response(status=status.HTTP_204_NO_CONTENT)
         else:
             return Response(status=status.HTTP_403_FORBIDDEN)
+
+
+def notifier_crediteur(request, mandat, template):
+    """
+    Envoi d'une notification par email au créditeur.
+    """
+    # On cherche le créditeur dans Cyclos par son numéro de compte, pour avoir son numéro d'adhérent, puis on
+    # charge les informations de cet adhérent dans Dolibarr et enfin, on lui envoie un email.
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+    data = cyclos.post(method='user/search',
+                       data={'keywords': mandat.numero_compte_crediteur})
+    crediteur = data['result']['pageItems'][0]
+    crediteur_dolibarr = dolibarr.get(model='members',
+                                      sqlfilters="login='{}'".format(crediteur['shortDisplay']))[0]
+    # Activation de la langue choisie par l'adhérent et traduction du sujet et du corps de l'email.
+    activate(crediteur_dolibarr['array_options']['options_langue'])
+    subject = _("Compte Eusko : demande d'autorisation de prélèvements")
+    body = render_to_string('mails/{}.txt'.format(template),
+                            {'user': crediteur_dolibarr,
+                             'debiteur': mandat.nom_debiteur})
+    # Envoi de l'email
+    sendmail_euskalmoneta(subject=subject, body=body, to_email=crediteur_dolibarr['email'])
