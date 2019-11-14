@@ -2362,6 +2362,7 @@ set_admin_group_permissions(
         ID_GROUPE_ADHERENTS_PRESTATAIRES,
         ID_GROUPE_ADHERENTS_UTILISATEURS,
         ID_GROUPE_ADHERENTS_SANS_COMPTE,
+        ID_GROUPE_COMPTES_DEDIES,
     ],
     user_profile_fields=[
         'FULL_NAME',
