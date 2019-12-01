@@ -37,31 +37,24 @@ def import_csv(request, filename):
     """
 
     # DictReader needs a file-like object, I need to use StringIO to create one from the uploaded file
-    f = io.StringIO(request.data['file'].read().decode('utf-8'))
-
-    csv.register_dialect('collect.online', delimiter=';')
-    reader = csv.DictReader(f, dialect='collect.online')
+    # The input file is encoded in Windows-1252
+    f = io.StringIO(request.data['file'].read().decode('cp1252'))
+    reader = csv.DictReader(f, delimiter=';')
 
     # I don't like 'Sentences with Spaces And Random Caps' as key in my dicts, I slugify every key here
     reader.fieldnames = [slugify(name) for name in reader.fieldnames]
 
-    # I need to filter out csv lines by 'statut-echeance' field, and I prefer to strip every value in my data
-    csv_data = [{k: row[k].strip()
-                 for k in row}
-                for row in reader
-                if row['statut-echeance'] == 'Exécutée']
-
     res = {'errors': [], 'ignore': 0, 'ok': []}
 
-    for row in csv_data:
+    for row in reader:
         try:
             echeance = models.Echeance(
-                ref=row['reference-de-bout-en-bout'],
-                adherent_name='{} {}'.format(row['prenom-ou-siren'], row['nom-ou-raisons-sociale']).strip(),
-                adherent_id=row['reference-debiteur'],
-                montant=float(row['montant-en']),
-                date=datetime.strptime(row['date-decheance'], '%d/%m/%y'),
-                operation_date=datetime.strptime(row['date-doperation'], '%d/%m/%y'))
+                ref=row['reference'],
+                adherent_name=row['debiteur'],
+                adherent_id=row['code'],
+                montant=float(row['montant'].replace(',', '.').strip(' €')),
+                date=datetime.strptime(row['date-execution'], '%d/%m/%Y %H:%M:%S'),
+                operation_date=None)
 
             echeance.save()
 
@@ -71,21 +64,16 @@ def import_csv(request, filename):
         except IntegrityError:
             res['ignore'] += 1
         except Exception as e:
-            try:
-                echeance_dict = model_to_dict(echeance)
-                echeance_dict.update({'error': e})
-                res['errors'].append(echeance_dict)
-            except Exception as err_two:
-                echeance_dict = {
-                    'ref': row['reference-de-bout-en-bout'],
-                    'adherent_name': '{} {}'.format(row['prenom-ou-siren'], row['nom-ou-raisons-sociale']).strip(),
-                    'adherent_id': row['reference-debiteur'],
-                    'montant': row['montant-en'],
-                    'date': row['date-decheance'],
-                    'operation_date': row['date-doperation'],
-                    'error': '{} {}'.format(e, err_two),
-                }
-                res['errors'].append(echeance_dict)
+            echeance_dict = {
+                'ref': row['reference'],
+                'adherent_name': row['debiteur'],
+                'adherent_id': row['code'],
+                'montant': row['montant'],
+                'date': row['date-execution'],
+                'operation_date': '',
+                'error': e,
+            }
+            res['errors'].append(echeance_dict)
 
     return Response(res)
 

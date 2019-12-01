@@ -18,6 +18,8 @@ from rest_framework_csv.renderers import CSVRenderer
 from wkhtmltopdf import views as wkhtmltopdf_views
 
 from cel import models, serializers
+from cel.models import Mandat
+from cel.mandat import get_current_user_account_number
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from gestioninterne.views import _search_account_history
@@ -950,11 +952,66 @@ def execute_prelevements(request):
     serializer = serializers.ExecutePrelevementSerializer(data=request.data, many=True)
     serializer.is_valid(raise_exception=True)
     log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+    prelevements = serializer.validated_data
 
-    # Connexion à Cyclos.
-    try:
-        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+    # Connexion à Cyclos avec l'utilisateur courant, pour faire les recherches d'utilisateur par numéro de compte.
+    cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
 
-    return Response(status.status.HTTP_500_INTERNAL_SERVER_ERROR)
+    # On récupère l'utilisateur créditeur à partir de son numéro de compte.
+    numero_compte_crediteur = get_current_user_account_number(request)
+    data = cyclos.post(method='user/search', data={'keywords': numero_compte_crediteur})
+    crediteur = data['result']['pageItems'][0]
+
+    # Connexion à Cyclos avec l'utilisateur Anonyme, pour exécuter les prélèvements.
+    cyclos_anonyme = CyclosAPI(mode='login')
+    cyclos_token_anonyme = cyclos_anonyme.login(
+        auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                   settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
+
+    # Pour chaque prélèvement à faire, on recherche le mandat correspondant et on vérifie s'il est valide.
+    # Si c'est le cas, on fait le prélèvement (le paiement est fait par l'utilisateur Anonyme).
+    for prelevement in prelevements:
+        try:
+            # On récupère le débiteur à partir de son numéro de compte.
+            try:
+                data = cyclos.post(method='user/search', data={'keywords': prelevement['account']})
+                debiteur = data['result']['pageItems'][0]
+                prelevement['name'] = debiteur['display']
+            except IndexError:
+                prelevement['name'] = None
+                raise Exception(_("Ce numéro de compte n'existe pas"))
+            try:
+                mandat = Mandat.objects.get(numero_compte_crediteur=numero_compte_crediteur,
+                                            numero_compte_debiteur=prelevement['account'])
+            except Mandat.DoesNotExist:
+                raise Exception(_("Pas d'autorisation de prélèvement"))
+            if mandat.statut == Mandat.EN_ATTENTE:
+                raise Exception(_("Pas d'autorisation de prélèvement (autorisation en attente de validation)"))
+            elif mandat.statut == Mandat.REFUSE:
+                raise Exception(_("Pas d'autorisation de prélèvement (autorisation refusée)"))
+            elif mandat.statut == Mandat.REVOQUE:
+                raise Exception(_("Pas d'autorisation de prélèvement (autorisation révoquée)"))
+            # On fait le paiement (on accepte les montants écrits avec un point ou une virgule).
+            query_data = {
+                'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
+                'amount': float(prelevement['amount'].replace(',', '.')),
+                'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+                'from': debiteur['id'],
+                'to': crediteur['id'],
+                'description': prelevement['description'],
+            }
+            try:
+                cyclos_anonyme.post(method='payment/perform', data=query_data, token=cyclos_token_anonyme)
+            except CyclosAPIException as err:
+                if str(err).find('INSUFFICIENT_BALANCE') != -1:
+                    raise Exception(_("Solde insuffisant"))
+                else:
+                    raise err
+            prelevement['status'] = 1
+            prelevement['description'] = _("Prélèvement effectué")
+        except Exception as e:
+            prelevement['status'] = 0
+            prelevement['description'] = str(e)
+
+    return Response(prelevements)
