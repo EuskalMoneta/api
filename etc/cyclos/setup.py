@@ -2373,6 +2373,12 @@ set_admin_group_permissions(
     user_password_actions=[
         'login',
     ],
+    access_user_accounts=[
+        ID_COMPTE_ADHERENT,
+    ],
+    payments_as_user_to_user=[
+        ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
+    ],
 )
 
 
