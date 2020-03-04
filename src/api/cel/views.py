@@ -149,7 +149,7 @@ def validate_first_connection(request):
         if not user_group_res == 1:
             raise EuskalMonetaAPIException
 
-        # 4) Dans Cyclos, activer l'utilisateur
+        # 4) Dans Cyclos, initialiser le mot de passe de l'utilisateur
         cyclos = CyclosAPI(mode='login')
         cyclos_token = cyclos.login(
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
@@ -157,13 +157,6 @@ def validate_first_connection(request):
 
         cyclos_user_id = cyclos.get_member_id_from_login(member_login=token_data['login'], token=cyclos_token)
 
-        active_user_data = {
-            'user': cyclos_user_id,  # ID de l'utilisateur
-            'status': 'ACTIVE'
-        }
-        cyclos.post(method='userStatus/changeStatus', data=active_user_data, token=cyclos_token)
-
-        # 5) Dans Cyclos, initialiser le mot de passe d'un utilisateur
         password_data = {
             'user': cyclos_user_id,  # ID de l'utilisateur
             'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
@@ -255,7 +248,7 @@ def validate_lost_password(request):
         if not answer.check_answer(serializer.data['answer']):
             return Response({'status': 'NOK'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Dans Cyclos, activer l'utilisateur (au cas où il soit à l'état bloqué)
+        # Dans Cyclos, reset le mot de passe de l'utilisateur
         cyclos = CyclosAPI(mode='login')
         cyclos_token = cyclos.login(
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
@@ -263,13 +256,6 @@ def validate_lost_password(request):
 
         cyclos_user_id = cyclos.get_member_id_from_login(member_login=token_data['login'], token=cyclos_token)
 
-        active_user_data = {
-            'user': cyclos_user_id,  # ID de l'utilisateur
-            'status': 'ACTIVE'
-        }
-        cyclos.post(method='userStatus/changeStatus', data=active_user_data, token=cyclos_token)
-
-        # Dans Cyclos, reset le mot de passe d'un utilisateur
         password_data = {
             'user': cyclos_user_id,  # ID de l'utilisateur
             'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
