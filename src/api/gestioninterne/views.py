@@ -754,7 +754,7 @@ def calculate_3_percent(request):
     )
     changes.extend([
         {'amount' : abs(float(payment['amount'])),
-         'member_id' : value['linkedEntityValue']['internalName'],}
+         'member_id' : value['linkedEntityValue']['user']['shortDisplay']}
         for payment in payments
         for value in payment['customValues']
         if value['field']['internalName'] == 'adherent'
@@ -774,7 +774,7 @@ def calculate_3_percent(request):
     )
     changes.extend([
         {'amount' : abs(float(payment['amount'])),
-         'member_id' : payment['relatedAccount']['owner']['shortDisplay'],}
+         'member_id' : payment['relatedAccount']['owner']['shortDisplay']}
         for payment in payments
     ])
 
