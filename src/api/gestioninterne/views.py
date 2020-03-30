@@ -754,7 +754,7 @@ def calculate_3_percent(request):
     )
     changes.extend([
         {'amount' : abs(float(payment['amount'])),
-         'member_id' : value['linkedEntityValue']['internalName'],}
+         'member_id' : value['linkedEntityValue']['user']['shortDisplay']}
         for payment in payments
         for value in payment['customValues']
         if value['field']['internalName'] == 'adherent'
@@ -774,7 +774,7 @@ def calculate_3_percent(request):
     )
     changes.extend([
         {'amount' : abs(float(payment['amount'])),
-         'member_id' : payment['relatedAccount']['owner']['shortDisplay'],}
+         'member_id' : payment['relatedAccount']['owner']['shortDisplay']}
         for payment in payments
     ])
 
@@ -1449,31 +1449,32 @@ def paiement_cotisation_eusko_numerique(request):
 @api_view(['POST'])
 @permission_classes((AllowAny, ))
 def notification_paiement_helloasso(request):
-    log.debug('notification_paiement_helloasso()')
-    log.debug('request.data={}'.format(request.data))
-    serializer = serializers.NotificationPaiementHelloAssoSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
-    log.debug('serializer.validated_data={}'.format(serializer.validated_data))
-    log.debug('serializer.errors={}'.format(serializer.errors))
-
-    payment_id = serializer.validated_data['id']
-    amount = serializer.validated_data['amount']
-    action_id = serializer.validated_data['action_id']
-
-    # On récupère le numéro d'adhérent indiqué dans le formulaire HelloAsso.
-    r = requests.get('https://api.helloasso.com/v3/actions/{}.json'.format(action_id),
-                     auth=HTTPBasicAuth('euskal-moneta', 'yP5hp4kgNB7syct83ErgK'))
-    if r.status_code != requests.codes.ok:
-        r.raise_for_status()
-    for custom_info in r.json()['custom_infos']:
-        if custom_info['label'] == "Kide zenbakia / Numéro d'adhérent-e":
-            numero_adherent = custom_info['value']
-    log.debug('numero_adherent={}'.format(numero_adherent))
-
-    # Le code ci-dessous est en partie un copier-coller venant de la fonction change_par_virement(). Il faudrait
-    # factoriser tout ça mais je n'ai pas le temps de tout tester correctement maintenant donc je minimise les risques.
-
     try:
+        log.debug('notification_paiement_helloasso()')
+        log.debug('request.data={}'.format(request.data))
+        serializer = serializers.NotificationPaiementHelloAssoSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        log.debug('serializer.validated_data={}'.format(serializer.validated_data))
+        log.debug('serializer.errors={}'.format(serializer.errors))
+
+        payment_id = serializer.validated_data['id']
+        amount = serializer.validated_data['amount']
+        action_id = serializer.validated_data['action_id']
+
+        # On récupère le numéro d'adhérent indiqué dans le formulaire HelloAsso.
+        numero_adherent = ''
+        r = requests.get('https://api.helloasso.com/v3/actions/{}.json'.format(action_id),
+                         auth=HTTPBasicAuth('euskal-moneta', 'yP5hp4kgNB7syct83ErgK'))
+        if r.status_code != requests.codes.ok:
+            r.raise_for_status()
+        for custom_info in r.json()['custom_infos']:
+            if custom_info['label'] == "Kide zenbakia / Numéro d'adhérent-e":
+                numero_adherent = custom_info['value']
+        log.debug('numero_adherent={}'.format(numero_adherent))
+
+        # Le code ci-dessous est en partie un copier-coller venant de la fonction change_par_virement(). Il faudrait
+        # factoriser tout ça mais je n'ai pas le temps de tout tester correctement maintenant donc je minimise les risques.
+
         # Connexion à Cyclos avec l'utilisateur Anonyme.
         cyclos = CyclosAPI(mode='login')
         cyclos_token = cyclos.login(
@@ -1481,6 +1482,7 @@ def notification_paiement_helloasso(request):
                                                        settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
 
         adherent_cyclos_id = cyclos.get_member_id_from_login(member_login=numero_adherent, token=cyclos_token)
+        log.debug('adherent_cyclos_id={}'.format(adherent_cyclos_id))
 
         # Determine whether or not our user is part of the appropriate group
         group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
@@ -1488,6 +1490,7 @@ def notification_paiement_helloasso(request):
 
         # Fetching info for our current user (we look for his groups)
         user_data = cyclos.post(method='user/load', data=[adherent_cyclos_id], token=cyclos_token)
+        log.debug('user_data={}'.format(user_data))
 
         if not user_data['result']['group']['id'] in group_constants_with_account:
             error = "{} n'a pas de compte Eusko numérique...".format(numero_adherent)
@@ -1525,6 +1528,18 @@ def notification_paiement_helloasso(request):
         }
         cyclos.post(method='payment/perform', data=change_numerique_eusko, token=cyclos_token)
     except Exception as e:
+        subject = _()
+        body = render_to_string('mails/refuse_cgu.txt', {'user': member_data})
+        sendmail_euskalmoneta(
+            subject="Problème lors du traitement d'un paiement reçu via HelloAsso",
+            body=
+                "Données du paiement : {}\n"
+                "Numéro d'adhérent : {}\n"
+                "Identifiant Cyclos : {}\n"
+                "Utilisateur Cyclos : {}\n"
+                "Erreur : {}\n".format(request.data, numero_adherent,
+                                       adherent_cyclos_id, user_data,
+                                       str(e)))
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response(status=status.HTTP_200_OK)
