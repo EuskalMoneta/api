@@ -6,7 +6,8 @@ from rest_framework import routers
 from bureauxdechange.views import BDCAPIView
 from members.views import MembersAPIView, MembersSubscriptionsAPIView
 from cel.beneficiaire import BeneficiaireViewSet
-from cel.security_qa import SecurityQAViewSet
+from cel.mandat import MandatViewSet
+from cel.security_qa import PredefinedSecurityQuestionViewSet, SecurityQAViewSet
 
 from auth_token import views as auth_token_views
 import bdc_cyclos.views as bdc_cyclos_views
@@ -22,6 +23,9 @@ router.register(r'bdc', BDCAPIView, base_name='bdc')
 router.register(r'members', MembersAPIView, base_name='members')
 router.register(r'members-subscriptions', MembersSubscriptionsAPIView, base_name='members-subscriptions')
 router.register(r'beneficiaires', BeneficiaireViewSet, base_name='beneficiaires')
+router.register(r'mandats', MandatViewSet, base_name='mandats')
+router.register(r'predefined-security-questions', PredefinedSecurityQuestionViewSet,
+                base_name='predefined-security-questions')
 router.register(r'securityqa', SecurityQAViewSet, base_name='securityqa')
 
 urlpatterns = [
@@ -109,14 +113,18 @@ urlpatterns = [
     url(r'^accept-cgu/$', cel_views.accept_cgu),
     url(r'^refuse-cgu/$', cel_views.refuse_cgu),
 
-    # euskokart
     url(r'^euskokart/$', cel_views.euskokart_list),
     url(r'^euskokart-block/$', cel_views.euskokart_block),
     url(r'^euskokart-unblock/$', cel_views.euskokart_unblock),
     url(r'^euskokart-pin/$', cel_views.euskokart_pin),
     url(r'^euskokart-upd-pin/$', cel_views.euskokart_update_pin),
     url(r'^member-cel-subscription/$', cel_views.members_cel_subscription),
+    url(r'^montant-don/$', cel_views.montant_don),
+    url(r'^execute-prelevements/$', cel_views.execute_prelevements),
 
+    # URL de callback pour les notifications envoyées par HelloAsso
+    # cf https://dev.helloasso.com/v3/notifications
+    url(r'^notification-paiement-helloasso/$', gi_views.notification_paiement_helloasso),
 ]
 
 urlpatterns += router.urls

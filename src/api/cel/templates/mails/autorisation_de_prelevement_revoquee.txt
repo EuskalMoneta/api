@@ -1,0 +1,19 @@
+{% load staticfiles i18n %}
+{% load template_tags %}
+
+{% if user|get_item:'company' %}
+{% blocktrans with name=user|get_item:'company' %}
+Bonjour {{ name }},
+{% endblocktrans %}
+{% else %}
+{% blocktrans with name=user|get_item:'firstname' %}
+Bonjour {{ name }},
+{% endblocktrans %}
+{% endif %}
+
+{% blocktrans %}
+{{ debiteur }} a révoqué votre autorisation de prélèvements sur son compte Eusko.
+{% endblocktrans %}
+
+{% trans "Bien cordialement" %},
+{% trans "L'équipe d'Euskal Moneta" %}

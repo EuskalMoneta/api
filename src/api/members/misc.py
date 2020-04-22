@@ -84,7 +84,7 @@ class Member:
         sendmail_euskalmoneta(subject=subject, body=body)
 
     @staticmethod
-    def send_mail_change_auto(login, profile, mode, new_amount, comment, lang):
+    def send_mail_change_auto(login, profile, mode, new_amount, comment, email, lang):
         """
         Envoi mail à Euskal Moneta lorsque le montant du change automatique à été modifié.
         """
@@ -101,7 +101,7 @@ class Member:
                                  'profile_firstname': str(profile.firstname),
                                  'profile_lastname': str(profile.lastname),
                                  'profile_companyname': str(profile.companyname),
-                                 'new_amount': new_amount, 'comment': comment})
+                                 'new_amount': new_amount, 'comment': comment, 'email': email})
 
         sendmail_euskalmoneta(subject=subject, body=body)
 
@@ -131,10 +131,32 @@ class Member:
             pass
 
         try:
-            # If we are in "saisie libre"-mode: we use the options_asso_saisie_libre field,
-            # if not we use the fk_asso field
             data['array_options'].update({'options_langue': data['options_langue']})
             del data['options_langue']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({'options_notifications_validation_mandat_prelevement': data['options_notifications_validation_mandat_prelevement']})
+            del data['options_notifications_validation_mandat_prelevement']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({'options_notifications_refus_ou_annulation_mandat_prelevement': data['options_notifications_refus_ou_annulation_mandat_prelevement']})
+            del data['options_notifications_refus_ou_annulation_mandat_prelevement']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({'options_notifications_prelevements': data['options_notifications_prelevements']})
+            del data['options_notifications_prelevements']
+        except KeyError:
+            pass
+
+        try:
+            data['array_options'].update({'options_notifications_virements': data['options_notifications_virements']})
+            del data['options_notifications_virements']
         except KeyError:
             pass
 
@@ -216,8 +238,8 @@ class Subscription:
             # We need to know which is the greater between those two years:
             # current year which is the var `now`
             # OR
-            # (current subcrition ending year + 1 year)
-            current_sub_ending_plus_one_year = arrow.get(end_date).to('Europe/Paris').replace(years=+1)
+            # (current subscription ending year + 1 year)
+            current_sub_ending_plus_one_year = arrow.get(end_date).to('Europe/Paris').shift(years=1)
 
             if now.year > current_sub_ending_plus_one_year.year:
                 res = now.replace(month=1, day=1, hour=0, minute=0, second=0).timestamp
@@ -233,7 +255,7 @@ class Subscription:
     @staticmethod
     def calculate_end_date(start_date, now=None):
         """
-        Compute end_date for this subcription.
+        Compute end_date for this subscription.
         To do this, we need the start date for this *sub*,
         which was calculated by _calculate_start_date() just before this method was called.
         """
@@ -250,8 +272,7 @@ class Subscription:
             if now < date_anticipated_sub:
                 res = now.replace(month=12, day=31, hour=23, minute=59, second=59).timestamp
             else:
-                # note the years=+1, this does a relative addition like this: "now.year + 1"
-                res = now.replace(years=+1, month=12, day=31, hour=23, minute=59, second=59).timestamp
+                res = now.replace(month=12, day=31, hour=23, minute=59, second=59).shift(years=1).timestamp
 
         return res
 

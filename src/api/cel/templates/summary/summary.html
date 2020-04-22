@@ -41,6 +41,10 @@
                 margin-top: 75px;
             }
 
+            .align-left {
+                text-align: left;
+            }
+
             .align-right {
                 text-align: right;
             }
@@ -92,8 +96,8 @@
                     <td>
                         {{ item|get_item:'date' }}
                     </td>
-                    <td>
-                        {{ item|get_item:'description' }}
+                    <td class="align-left">
+                        {{ item|get_item:'description'|linebreaks }}
                     </td>
                     <td class="align-right">
                     {% if item|get_item:'amount' < "0" %}

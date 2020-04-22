@@ -2362,6 +2362,7 @@ set_admin_group_permissions(
         ID_GROUPE_ADHERENTS_PRESTATAIRES,
         ID_GROUPE_ADHERENTS_UTILISATEURS,
         ID_GROUPE_ADHERENTS_SANS_COMPTE,
+        ID_GROUPE_COMPTES_DEDIES,
     ],
     user_profile_fields=[
         'FULL_NAME',
@@ -2371,6 +2372,12 @@ set_admin_group_permissions(
     disabled_users='MANAGE',
     user_password_actions=[
         'login',
+    ],
+    access_user_accounts=[
+        ID_COMPTE_ADHERENT,
+    ],
+    payments_as_user_to_user=[
+        ID_TYPE_PAIEMENT_VIREMENT_INTER_ADHERENT,
     ],
 )
 

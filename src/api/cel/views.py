@@ -1,5 +1,5 @@
 from base64 import b64encode
-from datetime import datetime, timedelta
+from datetime import date, datetime, timedelta
 import logging
 from uuid import uuid4
 
@@ -18,8 +18,11 @@ from rest_framework_csv.renderers import CSVRenderer
 from wkhtmltopdf import views as wkhtmltopdf_views
 
 from cel import models, serializers
+from cel.models import Mandat
+from cel.mandat import get_current_user_account_number
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
+from gestioninterne.views import _search_account_history
 from members.misc import Member
 from misc import EuskalMonetaAPIException, sendmail_euskalmoneta
 
@@ -51,12 +54,17 @@ def first_connection(request):
         if valid_login:
             # We want to search in members by login (N° Adhérent)
             response = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.data['login']), api_key=dolibarr_token)
-            user_data = [item
+            member = [item
                          for item in response
                          if item['login'] == request.data['login']][0]
 
-            if user_data['email'] == request.data['email']:
+            if member['email'] == request.data['email']:
                 # We got a match!
+
+                # On enregistre la langue choisie par l'adhérent.
+                data = Member.validate_data({'options_langue': request.data['language']}, mode='update',
+                                            base_options=member['array_options'])
+                dolibarr.put(model='members/{}'.format(member['id']), data=data, api_key=dolibarr_token)
 
                 # We need to mail a token etc...
                 payload = {'login': request.data['login'],
@@ -69,11 +77,11 @@ def first_connection(request):
                                                                              jwt_token.decode("utf-8"))
 
                 # Activate user pre-selected language
-                activate(user_data['array_options']['options_langue'])
+                activate(member['array_options']['options_langue'])
 
                 # Translate subject & body for this email
                 subject = _('Première connexion à votre compte en ligne Eusko')
-                body = render_to_string('mails/first_connection.txt', {'token': confirm_url, 'user': user_data})
+                body = render_to_string('mails/first_connection.txt', {'token': confirm_url, 'user': member})
 
                 sendmail_euskalmoneta(subject=subject, body=body, to_email=request.data['email'])
                 return Response({'member': 'OK'})
@@ -114,20 +122,8 @@ def validate_first_connection(request):
         except DolibarrAPIException:
             pass
 
-        # 1) Créer une réponse à une SecurityQuestion (créer aussi une SecurityAnswer).
-        if serializer.data.get('question_id', False):
-            # We got a question_id
-            q = models.SecurityQuestion.objects.get(id=serializer.data['question_id'])
-
-        elif serializer.data.get('question_text', False):
-            # We didn't got a question_id, but a question_text: we need to create a new SecurityQuestion object
-            q = models.SecurityQuestion.objects.create(question=serializer.data['question_text'])
-
-        else:
-            return Response({'status': ('Error: You need to provide at least one thse two fields: '
-                                        'question_id or question_text')}, status=status.HTTP_400_BAD_REQUEST)
-
-        res = models.SecurityAnswer.objects.create(owner=token_data['login'], question=q)
+        # 1) Créer une SecurityAnswer.
+        res = models.SecurityAnswer.objects.create(owner=token_data['login'], question=serializer.data['question'])
         res.set_answer(raw_answer=serializer.data['answer'])
         res.save()
 
@@ -153,7 +149,7 @@ def validate_first_connection(request):
         if not user_group_res == 1:
             raise EuskalMonetaAPIException
 
-        # 4) Dans Cyclos, activer l'utilisateur
+        # 4) Dans Cyclos, initialiser le mot de passe de l'utilisateur
         cyclos = CyclosAPI(mode='login')
         cyclos_token = cyclos.login(
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
@@ -161,13 +157,6 @@ def validate_first_connection(request):
 
         cyclos_user_id = cyclos.get_member_id_from_login(member_login=token_data['login'], token=cyclos_token)
 
-        active_user_data = {
-            'user': cyclos_user_id,  # ID de l'utilisateur
-            'status': 'ACTIVE'
-        }
-        cyclos.post(method='userStatus/changeStatus', data=active_user_data, token=cyclos_token)
-
-        # 5) Dans Cyclos, initialiser le mot de passe d'un utilisateur
         password_data = {
             'user': cyclos_user_id,  # ID de l'utilisateur
             'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
@@ -259,7 +248,7 @@ def validate_lost_password(request):
         if not answer.check_answer(serializer.data['answer']):
             return Response({'status': 'NOK'}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Dans Cyclos, activer l'utilisateur (au cas où il soit à l'état bloqué)
+        # Dans Cyclos, reset le mot de passe de l'utilisateur
         cyclos = CyclosAPI(mode='login')
         cyclos_token = cyclos.login(
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
@@ -267,13 +256,6 @@ def validate_lost_password(request):
 
         cyclos_user_id = cyclos.get_member_id_from_login(member_login=token_data['login'], token=cyclos_token)
 
-        active_user_data = {
-            'user': cyclos_user_id,  # ID de l'utilisateur
-            'status': 'ACTIVE'
-        }
-        cyclos.post(method='userStatus/changeStatus', data=active_user_data, token=cyclos_token)
-
-        # Dans Cyclos, reset le mot de passe d'un utilisateur
         password_data = {
             'user': cyclos_user_id,  # ID de l'utilisateur
             'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
@@ -358,8 +340,10 @@ def export_history_adherent(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    begin_date = serializer.data['begin'].replace(hour=0, minute=0, second=0).isoformat()
-    end_date = serializer.data['end'].replace(hour=23, minute=59, second=59).isoformat()
+    # Quand on envoie une requête à Cyclos, une date signifie le jour indiqué à zéro heure donc pour avoir un
+    # historique de date à date, il faut que end_date soit le lendemain de la date de fin souhaitée.
+    begin_date = serializer.data['begin'].isoformat()
+    end_date = (serializer.data['end'] + timedelta(days=1)).isoformat()
 
     # On récupère un résumé des comptes de l'utilisateur à la date
     # begin_date, ce qui nous permet d'avoir l'id du compte et son solde
@@ -387,23 +371,27 @@ def export_history_adherent(request):
     account_history_res = cyclos.post(method='account/searchAccountHistory', data=account_history_query_data)
     account_history = account_history_res['result']['pageItems']
 
-    # On calcule le solde pour chaque ligne de l'historique.
+    # Pour chaque ligne de l'historique :
+    # - on calcule le solde (en faisant le cumul avec les lignes précédentes)
+    # - on met la date au format JJ/MM/AAAA (on n'affiche pas l'heure dans l'historique)
+    # - on ajoute "Vers : xxx" ou "De : xxx" dans la description sauf lorsque l'autre compte est un compte système
     balance = initial_balance
     for line in account_history:
         balance = float(balance) + float(line['amount'])
         line['balance'] = balance
+        line['date'] = arrow.get(line['date']).format('DD/MM/YYYY')
+        if line['relatedAccount']['type']['nature'] != 'SYSTEM':
+            line['description'] = "{}\r\n{} : {}".format(line['description'],
+                                                         'Vers' if float(line['amount']) < 0 else 'De',
+                                                         line['relatedAccount']['owner']['display'])
 
     # On ajoute une première ligne avec le solde initial du compte.
     account_history.insert(0, {
-        'date': begin_date,
+        'date': arrow.get(begin_date).format('DD/MM/YYYY'),
         'description': 'Solde initial',
         'amount': 0,
         'balance': initial_balance,
     })
-
-    # On formate les dates pour les rendre plus lisibles.
-    for line in account_history:
-        line['date'] = arrow.get(line['date']).format('DD-MM-YYYY à HH:mm')
 
     # On fabrique l'objet qui va servir à l'export PDF ou CSV.
     context = {
@@ -416,7 +404,8 @@ def export_history_adherent(request):
             'end': arrow.get(serializer.data['end']).format('DD MMMM YYYY', locale='fr'),
         },
     }
-    if request.query_params['mode'] == 'pdf':
+
+    if request.accepted_media_type == 'application/pdf':
         response = wkhtmltopdf_views.PDFTemplateResponse(
             request=request, context=context, template="summary/summary.html")
         pdf_content = response.rendered_content
@@ -427,7 +416,7 @@ def export_history_adherent(request):
         }
 
         return Response(pdf_content, headers=headers)
-    else:
+    elif request.accepted_media_type == 'text/csv':
         csv_content = [{'Date': line['date'],
                         'Libellé': line['description'],
                         'Crédit': "{0:.2f}".format(float(line['amount'])).replace('.', ',')
@@ -437,6 +426,8 @@ def export_history_adherent(request):
                         'Solde': "{0:.2f}".format(float(line['balance'])).replace('.', ',')}
                        for line in context['account_history']]
         return Response(csv_content)
+    else:
+        return Response(status=status.HTTP_406_NOT_ACCEPTABLE)
 
 
 @api_view(['GET'])
@@ -550,9 +541,14 @@ def one_time_transfer(request):
     Transfer d'eusko entre compte d'adhérent.
     """
     try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
     serializer = serializers.OneTimeTransferSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
@@ -561,12 +557,32 @@ def one_time_transfer(request):
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
         'amount': serializer.data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-        'from': serializer.data['debit'],
+        'from': cyclos.user_id,
         'to': serializer.data['beneficiaire'],
         'description': serializer.data['description'],
     }
+    payment_res = cyclos.post(method='payment/perform', data=query_data)
 
-    return Response(cyclos.post(method='payment/perform', data=query_data))
+    # Si on arrive jusqu'ici, c'est que le paiement dans Cyclos s'est exécuté sans erreur.
+    # On récupère les infos de l'utilisateur Cyclos correspondant au bénéficiaire (pour connaître son numéro d'adhérent)
+    # puis on charge les informations de cet adhérent dans Dolibarr, pour savoir s'il souhaite recevoir une notification
+    # lorsqu'il reçoit un virement. Si c'est le cas, on lui envoie un email.
+    data = cyclos.get(method='user/load', id=serializer.data['beneficiaire'])
+    beneficiaire_cyclos = data['result']
+    beneficiaire_dolibarr = dolibarr.get(model='members',
+                                         sqlfilters="login='{}'".format(beneficiaire_cyclos['username']))[0]
+    if beneficiaire_dolibarr['array_options']['options_notifications_virements']:
+        # Activate user pre-selected language
+        activate(beneficiaire_dolibarr['array_options']['options_langue'])
+        # Translate subject & body for this email
+        subject = _('Compte Eusko : virement reçu')
+        body = render_to_string('mails/virement_recu.txt',
+                                {'user': beneficiaire_dolibarr,
+                                 'emetteur': cyclos.user_profile['result']['display'],
+                                 'montant': serializer.data['amount']})
+        sendmail_euskalmoneta(subject=subject, body=body, to_email=beneficiaire_dolibarr['email'])
+
+    return Response(payment_res)
 
 
 @api_view(['POST'])
@@ -587,7 +603,7 @@ def reconvert_eusko(request):
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_numerique']),
         'amount': serializer.data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-        'from': serializer.data['debit'],
+        'from': cyclos.user_id,
         'to': 'SYSTEM',
         'description': serializer.data['description'],
     }
@@ -867,3 +883,121 @@ def members_cel_subscription(request):
            'member': current_member}
 
     return Response(res, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+def montant_don(request):
+    """
+    Retourne le montant du don 3% généré par l'utilisateur depuis le 1er juillet dernier.
+    """
+    log.debug("montant_don()")
+    # Connexion à Cyclos.
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On récupère tous les crédits du compte de l'utilisateur qui ont été faits depuis le 1er juillet dernier et qui
+    # sont du type "Change numérique en ligne - Versement des eusko" (changes par prélèvement automatique ou virement)
+    # et "Crédit du compte" (chargements de compte en BDC).
+    accounts_summary_data = cyclos.post(method='account/getAccountsSummary', data=[cyclos.user_id, None])
+    current_user_account = accounts_summary_data['result'][0]
+    log.debug("current_user_account={}".format(current_user_account))
+    today = date.today()
+    begin_date = datetime(today.year if today.month >= 7 else today.year-1, 7, 1).isoformat()
+    end_date = datetime.now().replace(microsecond=0).isoformat()
+    log.debug("begin_date={}".format(begin_date))
+    log.debug("end_date={}".format(end_date))
+    payments = _search_account_history(
+        cyclos=cyclos,
+        account=current_user_account['id'],
+        direction='CREDIT',
+        begin_date=begin_date,
+        end_date=end_date,
+        payment_types=[
+            str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),
+            str(settings.CYCLOS_CONSTANTS['payment_types']['credit_du_compte']),
+        ]
+    )
+
+    montant_don = sum([float(payment['amount']) for payment in payments]) * 0.03
+
+    response_data = {'montant_don': montant_don}
+    log.debug("response_data = %s", response_data)
+    return Response(response_data)
+
+
+@api_view(['POST'])
+def execute_prelevements(request):
+    """
+    Exécute la liste des prélèvements donnée en paramètre.
+    """
+    log.debug("prelevements()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.ExecutePrelevementSerializer(data=request.data, many=True)
+    serializer.is_valid(raise_exception=True)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+    prelevements = serializer.validated_data
+
+    # Connexion à Cyclos avec l'utilisateur courant, pour faire les recherches d'utilisateur par numéro de compte.
+    cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+
+    # On récupère l'utilisateur créditeur à partir de son numéro de compte.
+    numero_compte_crediteur = get_current_user_account_number(request)
+    data = cyclos.post(method='user/search', data={'keywords': numero_compte_crediteur})
+    crediteur = data['result']['pageItems'][0]
+
+    # Connexion à Cyclos avec l'utilisateur Anonyme, pour exécuter les prélèvements.
+    cyclos_anonyme = CyclosAPI(mode='login')
+    cyclos_token_anonyme = cyclos_anonyme.login(
+        auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                   settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
+
+    # Pour chaque prélèvement à faire, on recherche le mandat correspondant et on vérifie s'il est valide.
+    # Si c'est le cas, on fait le prélèvement (le paiement est fait par l'utilisateur Anonyme).
+    for prelevement in prelevements:
+        try:
+            # On récupère le débiteur à partir de son numéro de compte.
+            try:
+                data = cyclos.post(method='user/search', data={'keywords': prelevement['account']})
+                debiteur = data['result']['pageItems'][0]
+                prelevement['name'] = debiteur['display']
+            except IndexError:
+                prelevement['name'] = None
+                raise Exception(_("Ce numéro de compte n'existe pas"))
+            try:
+                mandat = Mandat.objects.get(numero_compte_crediteur=numero_compte_crediteur,
+                                            numero_compte_debiteur=prelevement['account'])
+            except Mandat.DoesNotExist:
+                raise Exception(_("Pas d'autorisation de prélèvement"))
+            if mandat.statut == Mandat.EN_ATTENTE:
+                raise Exception(_("Pas d'autorisation de prélèvement (autorisation en attente de validation)"))
+            elif mandat.statut == Mandat.REFUSE:
+                raise Exception(_("Pas d'autorisation de prélèvement (autorisation refusée)"))
+            elif mandat.statut == Mandat.REVOQUE:
+                raise Exception(_("Pas d'autorisation de prélèvement (autorisation révoquée)"))
+            # On fait le paiement (on accepte les montants écrits avec un point ou une virgule).
+            query_data = {
+                'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
+                'amount': float(prelevement['amount'].replace(',', '.')),
+                'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+                'from': debiteur['id'],
+                'to': crediteur['id'],
+                'description': prelevement['description'],
+            }
+            try:
+                cyclos_anonyme.post(method='payment/perform', data=query_data, token=cyclos_token_anonyme)
+            except CyclosAPIException as err:
+                if str(err).find('INSUFFICIENT_BALANCE') != -1:
+                    raise Exception(_("Solde insuffisant"))
+                else:
+                    raise err
+            prelevement['status'] = 1
+            prelevement['description'] = _("Prélèvement effectué")
+        except Exception as e:
+            prelevement['status'] = 0
+            prelevement['description'] = str(e)
+
+    return Response(prelevements)

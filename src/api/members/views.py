@@ -92,7 +92,7 @@ class MembersAPIView(BaseAPIView):
         elif name and len(name) >= 3:
             # We want to search in members by name (firstname, lastname or societe)
             try:
-                sqlfilters = "firstname like '%{name}%' or lastname like '%{name}%' or societe like '%{name}%'".format(name=name)
+                sqlfilters = "firstname like '%25{name}%25' or lastname like '%25{name}%25' or societe like '%25{name}%25'".format(name=name)
                 response = self.dolibarr.get(model='members', sqlfilters=sqlfilters, api_key=dolibarr_token)
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
@@ -134,7 +134,7 @@ class MembersAPIView(BaseAPIView):
             data = Member.validate_data(request.data, mode='update', base_options=response['array_options'])
 
             try:
-                # Envoi mail lorsque l'option "Je souhaite être informé..." à été modifiée
+                # Envoi d'un email lorsque l'option "Recevoir les actualités liées à l'Eusko" est modifiée
                 if (response['array_options']['options_recevoir_actus'] !=
                    data['array_options']['options_recevoir_actus']):
                     Member.send_mail_newsletter(
@@ -142,13 +142,14 @@ class MembersAPIView(BaseAPIView):
                         new_status=data['array_options']['options_recevoir_actus'],
                         lang=response['array_options']['options_langue'])
 
-                # Envoi mail lorsque l'option "Je souhaite être informé..." à été modifiée
+                # Envoi d'un email lorsque l'option "Montant du change automatique" est modifiée
                 if (response['array_options']['options_prelevement_change_montant'] !=
                    data['array_options']['options_prelevement_change_montant']):
                     Member.send_mail_change_auto(
                         login=str(request.user), profile=request.user.profile,
                         mode=data['mode'], new_amount=data['array_options']['options_prelevement_change_montant'],
-                        comment=data['prelevement_change_comment'], lang=response['array_options']['options_langue'])
+                        comment=data['prelevement_change_comment'], email=response['email'],
+                        lang=response['array_options']['options_langue'])
 
             except KeyError:
                 pass
@@ -277,14 +278,28 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                'id_link_payment_member': res_id_link_payment_member,
                'member': current_member}
 
-        # Cyclos: Register member subscription payment
-        member_cyclos_id = self.cyclos.get_member_id_from_login(current_member['login'])
-
         if current_member['type'].lower() == 'particulier':
             member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
         else:
             member_name = current_member['company']
 
+        # Get Cyclos member and create it if it does not exist.
+        try:
+            member_cyclos_id = self.cyclos.get_member_id_from_login(current_member['login'])
+        except CyclosAPIException:
+            log.debug("Member not found in Cyclos, will create it.")
+            create_user_data = {
+                'group': str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte']),
+                'name': '{} {}'.format(current_member['firstname'], current_member['lastname']),
+                'username': current_member['login'],
+                'skipActivationEmail': True,
+            }
+            log.debug("create_user_data = {}".format(create_user_data))
+            response_data = self.cyclos.post(method='user/register', data=create_user_data)
+            member_cyclos_id = response_data['result']['user']['id']
+        log.debug("member_cyclos_id = {}".format(member_cyclos_id))
+
+        # Cyclos: Register member subscription payment
         query_data = {}
 
         if 'Eusko' in data['payment_mode']:
