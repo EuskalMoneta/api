@@ -15,6 +15,7 @@ from rest_framework_csv.renderers import CSVRenderer
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from gestioninterne import serializers
+from misc import sendmail_euskalmoneta
 
 log = logging.getLogger()
 
@@ -1450,6 +1451,9 @@ def paiement_cotisation_eusko_numerique(request):
 @permission_classes((AllowAny, ))
 def notification_paiement_helloasso(request):
     try:
+        numero_adherent = None
+        adherent_cyclos_id = None
+        user_data = None
         log.debug('notification_paiement_helloasso()')
         log.debug('request.data={}'.format(request.data))
         serializer = serializers.NotificationPaiementHelloAssoSerializer(data=request.data)
@@ -1462,7 +1466,6 @@ def notification_paiement_helloasso(request):
         action_id = serializer.validated_data['action_id']
 
         # On récupère le numéro d'adhérent indiqué dans le formulaire HelloAsso.
-        numero_adherent = ''
         r = requests.get('https://api.helloasso.com/v3/actions/{}.json'.format(action_id),
                          auth=HTTPBasicAuth('euskal-moneta', 'yP5hp4kgNB7syct83ErgK'))
         if r.status_code != requests.codes.ok:
@@ -1528,8 +1531,6 @@ def notification_paiement_helloasso(request):
         }
         cyclos.post(method='payment/perform', data=change_numerique_eusko, token=cyclos_token)
     except Exception as e:
-        subject = _()
-        body = render_to_string('mails/refuse_cgu.txt', {'user': member_data})
         sendmail_euskalmoneta(
             subject="Problème lors du traitement d'un paiement reçu via HelloAsso",
             body=
