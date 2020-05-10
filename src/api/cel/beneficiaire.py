@@ -28,14 +28,27 @@ class BeneficiaireViewSet(viewsets.ModelViewSet):
         """
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        cyclos_account_number = serializer.validated_data['cyclos_account_number']
 
+        # Si ce bénéficiaire existe déjà, on renvoie simplement OK.
+        try:
+            beneficiaire = Beneficiaire.objects.get(owner=self.request.user,
+                                                    cyclos_account_number=cyclos_account_number)
+            if beneficiaire:
+                serializer = self.get_serializer(beneficiaire)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        except Beneficiaire.DoesNotExist:
+            pass
+
+        # Le bénéficiaire n'existe pas, on va le créer.
+        # On cherche dans Cyclos l'utilisateur correspondant au numéro de compte du bénéficiaire à créer.
         try:
             cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
         except CyclosAPIException:
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
-        # On fait une recherche dans Cyclos par le numéro de compte du bénéficiaire à créer.
-        data = cyclos.post(method='user/search', data={'keywords': serializer.validated_data['cyclos_account_number']})
+        data = cyclos.post(method='user/search', data={'keywords': cyclos_account_number})
+        if data['result']['totalCount'] == 0:
+            return Response({'error': "Ce numéro de compte n'existe pas."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         cyclos_user = data['result']['pageItems'][0]
 
         # Enregistrement du bénéficiaire en base de données.
