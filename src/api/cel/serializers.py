@@ -70,8 +70,13 @@ class SecurityAnswerSerializer(serializers.Serializer):
 class BeneficiaireSerializer(serializers.ModelSerializer):
 
     class Meta:
+        """
+        Pour créer un bénéficiaire, le seul champ nécessaire est 'cyclos_account_number'. Tous les autres champs sont en
+        lecture seule et servent uniquement lors de la récupération d'un ou plusieurs bénéficiaires.
+        """
         model = models.Beneficiaire
-        fields = ('id', 'owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number')
+        fields = ['id', 'owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number']
+        read_only_fields = ['owner', 'cyclos_id', 'cyclos_name']
 
 
 class MandatSerializer(serializers.ModelSerializer):
