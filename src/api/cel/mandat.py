@@ -48,9 +48,24 @@ class MandatViewSet(viewsets.ModelViewSet):
 
         C'est le créditeur qui crée le mandat, en donnant le numéro de compte du débiteur.
         """
-        serializer = MandatSerializer(data=request.data)
+        serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
+        numero_compte_debiteur = serializer.validated_data['numero_compte_debiteur']
 
+        # Le créditeur est l'utilisateur courant. On récupère son numéro de compte dans Cyclos.
+        numero_compte_crediteur = get_current_user_account_number(request)
+
+        # Si ce mandat existe déjà, on renvoie simplement OK.
+        try:
+            mandat = Mandat.objects.get(numero_compte_crediteur=numero_compte_crediteur,
+                                        numero_compte_debiteur=numero_compte_debiteur)
+            if mandat:
+                serializer = self.get_serializer(mandat)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        except Mandat.DoesNotExist:
+            pass
+
+        # Le mandat n'existe pas, on va le créer.
         try:
             dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         except DolibarrAPIException:
@@ -61,14 +76,15 @@ class MandatViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
         # Pour avoir le nom du débiteur, on fait une recherche dans Cyclos par son numéro de compte.
-        data = cyclos.post(method='user/search', data={'keywords': serializer.validated_data['numero_compte_debiteur']})
+        data = cyclos.post(method='user/search', data={'keywords': numero_compte_debiteur})
+        if data['result']['totalCount'] == 0:
+            return Response({'error': "Ce numéro de compte n'existe pas."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         debiteur = data['result']['pageItems'][0]
 
         # Enregistrement du mandat en base de données.
-        # Le créditeur est l'utilisateur courant. On récupère son numéro de compte dans Cyclos.
         mandat = serializer.save(
             nom_debiteur=debiteur['display'],
-            numero_compte_crediteur=get_current_user_account_number(request),
+            numero_compte_crediteur=numero_compte_crediteur,
             nom_crediteur=cyclos.user_profile['result']['display']
         )
 
@@ -84,7 +100,7 @@ class MandatViewSet(viewsets.ModelViewSet):
         sendmail_euskalmoneta(subject=subject, body=body, to_email=debiteur_dolibarr['email'])
 
         # Le mandat créé est envoyé dans la réponse.
-        serializer = MandatSerializer(mandat)
+        serializer = self.get_serializer(mandat)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, pk=None):
