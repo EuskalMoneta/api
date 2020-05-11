@@ -536,10 +536,20 @@ def euskokart_unblock(request):
 
 
 @api_view(['POST'])
-def one_time_transfer(request):
+def execute_virements(request):
     """
-    Transfer d'eusko entre compte d'adhérent.
+    Exécute la liste des virements donnée en paramètre.
     """
+    log.debug("virements()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.ExecuteVirementSerializer(data=request.data, many=True)
+    serializer.is_valid(raise_exception=True)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+    virements = serializer.validated_data
+
+    # Connexion à Dolibarr et Cyclos avec l'utilisateur courant.
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
     except DolibarrAPIException:
@@ -549,40 +559,54 @@ def one_time_transfer(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = serializers.OneTimeTransferSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+    for virement in virements:
+        try:
+            # On récupère le destinataire du virement à partir de son numéro de compte.
+            try:
+                data = cyclos.post(method='user/search', data={'keywords': virement['account']})
+                destinataire_cyclos = data['result']['pageItems'][0]
+                virement['name'] = destinataire_cyclos['display']
+            except IndexError:
+                virement['name'] = None
+                raise Exception(_("Ce numéro de compte n'existe pas"))
+            # On fait le paiement.
+            query_data = {
+                'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
+                'amount': virement['amount'],
+                'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+                'from': cyclos.user_id,
+                'to': destinataire_cyclos['id'],
+                'description': virement['description'],
+            }
+            try:
+                cyclos.post(method='payment/perform', data=query_data)
+            except CyclosAPIException as err:
+                if str(err).find('INSUFFICIENT_BALANCE') != -1:
+                    raise Exception(_("Solde insuffisant"))
+                else:
+                    raise err
+            # Le paiement dans Cyclos s'est exécuté sans erreur.
+            # On récupère dans Dolibarr les informations sur le destinataire du virement, pour savoir s'il souhaite
+            # recevoir une notification lorsqu'il reçoit un virement. Si c'est le cas, on lui envoie un email.
+            destinataire_dolibarr = dolibarr.get(model='members',
+                                                 sqlfilters="login='{}'".format(destinataire_cyclos['username']))[0]
+            if destinataire_dolibarr['array_options']['options_notifications_virements']:
+                # Activate user pre-selected language
+                activate(destinataire_dolibarr['array_options']['options_langue'])
+                # Translate subject & body for this email
+                subject = _('Compte Eusko : virement reçu')
+                body = render_to_string('mails/virement_recu.txt',
+                                        {'user': destinataire_dolibarr,
+                                         'emetteur': cyclos.user_profile['result']['display'],
+                                         'montant': serializer.data['amount']})
+                sendmail_euskalmoneta(subject=subject, body=body, to_email=destinataire_dolibarr['email'])
+            virements['status'] = 1
+            virements['description'] = _("Virement effectué")
+        except Exception as e:
+            virements['status'] = 0
+            virements['description'] = str(e)
 
-    # payment/perform
-    query_data = {
-        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
-        'amount': serializer.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-        'from': cyclos.user_id,
-        'to': serializer.data['beneficiaire'],
-        'description': serializer.data['description'],
-    }
-    payment_res = cyclos.post(method='payment/perform', data=query_data)
-
-    # Si on arrive jusqu'ici, c'est que le paiement dans Cyclos s'est exécuté sans erreur.
-    # On récupère les infos de l'utilisateur Cyclos correspondant au bénéficiaire (pour connaître son numéro d'adhérent)
-    # puis on charge les informations de cet adhérent dans Dolibarr, pour savoir s'il souhaite recevoir une notification
-    # lorsqu'il reçoit un virement. Si c'est le cas, on lui envoie un email.
-    data = cyclos.get(method='user/load', id=serializer.data['beneficiaire'])
-    beneficiaire_cyclos = data['result']
-    beneficiaire_dolibarr = dolibarr.get(model='members',
-                                         sqlfilters="login='{}'".format(beneficiaire_cyclos['username']))[0]
-    if beneficiaire_dolibarr['array_options']['options_notifications_virements']:
-        # Activate user pre-selected language
-        activate(beneficiaire_dolibarr['array_options']['options_langue'])
-        # Translate subject & body for this email
-        subject = _('Compte Eusko : virement reçu')
-        body = render_to_string('mails/virement_recu.txt',
-                                {'user': beneficiaire_dolibarr,
-                                 'emetteur': cyclos.user_profile['result']['display'],
-                                 'montant': serializer.data['amount']})
-        sendmail_euskalmoneta(subject=subject, body=body, to_email=beneficiaire_dolibarr['email'])
-
-    return Response(payment_res)
+    return Response(virements)
 
 
 @api_view(['POST'])

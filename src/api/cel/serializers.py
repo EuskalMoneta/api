@@ -99,9 +99,8 @@ class PredefinedSecurityQuestionSerializer(serializers.ModelSerializer):
         fields = ('id', 'question', 'language')
 
 
-class OneTimeTransferSerializer(serializers.Serializer):
-
-    beneficiaire = serializers.IntegerField()
+class ExecuteVirementSerializer(serializers.Serializer):
+    account = serializers.CharField()
     amount = serializers.FloatField()
     description = serializers.CharField()
 
