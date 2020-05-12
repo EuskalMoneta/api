@@ -589,7 +589,7 @@ def execute_virements(request):
             # On récupère dans Dolibarr les informations sur le destinataire du virement, pour savoir s'il souhaite
             # recevoir une notification lorsqu'il reçoit un virement. Si c'est le cas, on lui envoie un email.
             destinataire_dolibarr = dolibarr.get(model='members',
-                                                 sqlfilters="login='{}'".format(destinataire_cyclos['username']))[0]
+                                                 sqlfilters="login='{}'".format(destinataire_cyclos['shortDisplay']))[0]
             if destinataire_dolibarr['array_options']['options_notifications_virements']:
                 # Activate user pre-selected language
                 activate(destinataire_dolibarr['array_options']['options_langue'])
@@ -598,13 +598,13 @@ def execute_virements(request):
                 body = render_to_string('mails/virement_recu.txt',
                                         {'user': destinataire_dolibarr,
                                          'emetteur': cyclos.user_profile['result']['display'],
-                                         'montant': serializer.data['amount']})
+                                         'montant': virement['amount']})
                 sendmail_euskalmoneta(subject=subject, body=body, to_email=destinataire_dolibarr['email'])
-            virements['status'] = 1
-            virements['description'] = _("Virement effectué")
+            virement['status'] = 1
+            virement['description'] = _("Virement effectué")
         except Exception as e:
-            virements['status'] = 0
-            virements['description'] = str(e)
+            virement['status'] = 0
+            virement['description'] = str(e)
 
     return Response(virements)
 
