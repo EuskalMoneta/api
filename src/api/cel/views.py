@@ -1002,10 +1002,10 @@ def execute_prelevements(request):
                 raise Exception(_("Pas d'autorisation de prélèvement (autorisation refusée)"))
             elif mandat.statut == Mandat.REVOQUE:
                 raise Exception(_("Pas d'autorisation de prélèvement (autorisation révoquée)"))
-            # On fait le paiement (on accepte les montants écrits avec un point ou une virgule).
+            # On fait le paiement.
             query_data = {
                 'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
-                'amount': float(prelevement['amount'].replace(',', '.')),
+                'amount': prelevement['amount'],
                 'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
                 'from': debiteur['id'],
                 'to': crediteur['id'],

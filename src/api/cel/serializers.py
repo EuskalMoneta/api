@@ -128,5 +128,5 @@ class MembersSubscriptionSerializer(serializers.Serializer):
 
 class ExecutePrelevementSerializer(serializers.Serializer):
     account = serializers.CharField()
-    amount = serializers.CharField()
+    amount = serializers.FloatField()
     description = serializers.CharField()
