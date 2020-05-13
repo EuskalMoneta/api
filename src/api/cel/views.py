@@ -601,10 +601,10 @@ def execute_virements(request):
                                          'montant': virement['amount']})
                 sendmail_euskalmoneta(subject=subject, body=body, to_email=destinataire_dolibarr['email'])
             virement['status'] = 1
-            virement['description'] = _("Virement effectué")
+            virement['message'] = _("Virement effectué")
         except Exception as e:
             virement['status'] = 0
-            virement['description'] = str(e)
+            virement['message'] = str(e)
 
     return Response(virements)
 
@@ -1019,9 +1019,9 @@ def execute_prelevements(request):
                 else:
                     raise err
             prelevement['status'] = 1
-            prelevement['description'] = _("Prélèvement effectué")
+            prelevement['message'] = _("Prélèvement effectué")
         except Exception as e:
             prelevement['status'] = 0
-            prelevement['description'] = str(e)
+            prelevement['message'] = str(e)
 
     return Response(prelevements)
