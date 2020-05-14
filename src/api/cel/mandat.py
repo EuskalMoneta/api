@@ -78,7 +78,8 @@ class MandatViewSet(viewsets.ModelViewSet):
         # Pour avoir le nom du débiteur, on fait une recherche dans Cyclos par son numéro de compte.
         data = cyclos.post(method='user/search', data={'keywords': numero_compte_debiteur})
         if data['result']['totalCount'] == 0:
-            return Response({'error': "Ce numéro de compte n'existe pas."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response({'error': _("Ce numéro de compte n'existe pas")},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         debiteur = data['result']['pageItems'][0]
 
         # Enregistrement du mandat en base de données.

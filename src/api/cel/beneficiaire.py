@@ -1,7 +1,5 @@
-from django.core.exceptions import ObjectDoesNotExist
-from django.forms.models import model_to_dict
-from rest_framework import exceptions, serializers as drf_serializers, status, viewsets
-from rest_framework.decorators import list_route
+from django.utils.translation import gettext as _
+from rest_framework import status, viewsets
 from rest_framework.response import Response
 
 from cel.models import Beneficiaire
@@ -48,7 +46,8 @@ class BeneficiaireViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
         data = cyclos.post(method='user/search', data={'keywords': cyclos_account_number})
         if data['result']['totalCount'] == 0:
-            return Response({'error': "Ce numéro de compte n'existe pas."}, status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+            return Response({'error': _("Ce numéro de compte n'existe pas")},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
         cyclos_user = data['result']['pageItems'][0]
 
         # Enregistrement du bénéficiaire en base de données.
