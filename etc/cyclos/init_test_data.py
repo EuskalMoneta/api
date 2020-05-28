@@ -240,19 +240,6 @@ for login, name in adherents.items():
         login=login,
     )
 
-porteurs = {
-    'P001': 'Porteur 1',
-    'P002': 'Porteur 2',
-    'P003': 'Porteur 3',
-    'P004': 'Porteur 4',
-}
-for login, name in porteurs.items():
-    create_user(
-        group='Porteurs',
-        name=name,
-        login=login,
-    )
-
 # Récupération des constantes
 
 logger.info('Récupération des constantes depuis le YAML...')

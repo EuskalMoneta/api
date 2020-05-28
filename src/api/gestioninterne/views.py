@@ -46,7 +46,7 @@ def sortie_coffre(request):
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                'linkedEntityValue': request.data['porteur']  # porteur sélectionné par l'utilisateur
+                'stringValue': request.data['porteur']  # porteur sélectionné par l'utilisateur
             },
         ],
         'description': request.data['description'],        # description saisie par l'utilisateur
@@ -107,7 +107,7 @@ def entree_coffre(request):
 
         try:
             porteur_id = [
-                value['linkedEntityValue']['id']
+                value['stringValue']
                 for value in payment['customValues']
                 if value['field']['id'] == str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']) and
                 value['field']['internalName'] == 'porteur'
@@ -136,7 +136,7 @@ def entree_coffre(request):
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                'linkedEntityValue': porteur_id  # porteur de l'opération d'origine
+                'stringValue': porteur_id  # porteur de l'opération d'origine
             },
         ]
 
