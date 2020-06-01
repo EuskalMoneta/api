@@ -105,6 +105,11 @@ class ExecuteVirementSerializer(serializers.Serializer):
     description = serializers.CharField()
 
 
+class ExecuteVirementAssoMlcSerializer(serializers.Serializer):
+    amount = serializers.FloatField()
+    description = serializers.CharField()
+
+
 class ReconvertEuskoSerializer(serializers.Serializer):
 
     amount = serializers.FloatField()
