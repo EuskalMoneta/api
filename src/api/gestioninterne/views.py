@@ -144,7 +144,7 @@ def entree_coffre(request):
         if payment['type']['id'] == str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_retours_eusko_bdc']):
             try:
                 adherent_id = [
-                    value['linkedEntityValue']['id']
+                    value['stringValue']
                     for value in payment['customValues']
                     if value['field']['id'] == str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']) and  # noqa
                     value['field']['internalName'] == 'adherent'
@@ -156,7 +156,7 @@ def entree_coffre(request):
             # Le champ Adhérent n'est présent que pour les entrées coffre correspondant des retours d'eusko
             custom_values.append({
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent_facultatif']),
-                'linkedEntityValue': adherent_id  # adhérent associé à l'opération d'origine
+                'stringValue': adherent_id  # adhérent associé à l'opération d'origine
             })
 
             # Si l'opération d'origine est une sortie retour d'eusko, la description doit être, sur 2 lignes :

@@ -284,7 +284,6 @@ def change_euro_eusko(request):
     serializer = serializers.ChangeEuroEuskoSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
-    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
@@ -310,7 +309,7 @@ def change_euro_eusko(request):
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
-                'linkedEntityValue': member_cyclos_id  # ID de l'adhérent
+                'stringValue': request.data['member_login'] # login de l'adhérent
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
@@ -351,8 +350,6 @@ def reconversion(request):
         return Response({'error': 'Forbidden, reconversion is not available for non-business members!'},
                         status=status.HTTP_403_FORBIDDEN)
 
-    member_cyclos_id = cyclos.get_member_id_from_login(request.data['member_login'])
-
     # payment/perform
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko']),
@@ -363,7 +360,7 @@ def reconversion(request):
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
-                'linkedEntityValue': member_cyclos_id  # ID de l'adhérent
+                'stringValue': request.data['member_login']  # ID de l'adhérent
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_facture']),
@@ -756,8 +753,8 @@ def sortie_retour_eusko(request):
 
     for payment in request.data['selected_payments']:
         try:
-            adherent_id = [
-                value['linkedEntityValue']['id']
+            adherent_login = [
+                value['stringValue']
                 for value in payment['customValues']
                 if value['field']['id'] == str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']) and
                 value['field']['internalName'] == 'adherent'
@@ -776,7 +773,7 @@ def sortie_retour_eusko(request):
             'customValues': [
                 {
                     'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
-                    'linkedEntityValue': adherent_id,  # ID de l'adhérent
+                    'stringValue': adherent_login,  # login de l'adhérent
                 },
                 {
                     'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
@@ -839,7 +836,7 @@ def depot_eusko_numerique(request):
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
-                'linkedEntityValue': member_cyclos_id  # ID de l'adhérent
+                'stringValue': request.data['member_login'] # login de l'adhérent
             },
         ],
         'description': 'Dépôt - {} - {}'.format(request.data['member_login'], member_name),
@@ -954,7 +951,7 @@ def retrait_eusko_numerique(request):
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
-                'linkedEntityValue': member_cyclos_id,  # ID de l'adhérent
+                'stringValue': request.data['member_login']  # login de l'adhérent
             },
         ],
         'description': 'Retrait - {} - {}'.format(request.data['member_login'], member_name),
@@ -1080,7 +1077,7 @@ def change_euro_eusko_numeriques(request):
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
-                'linkedEntityValue': member_cyclos_id  # ID de l'adhérent
+                'stringValue': request.data['member_login'] # login de l'adhérent
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
