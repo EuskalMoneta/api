@@ -135,3 +135,19 @@ class ExecutePrelevementSerializer(serializers.Serializer):
     account = serializers.CharField()
     amount = serializers.FloatField()
     description = serializers.CharField()
+
+
+class CreerCompteVeeSerializer(serializers.Serializer):
+    lastname = serializers.CharField()
+    firstname = serializers.CharField()
+    email = serializers.EmailField()
+    address = serializers.CharField()
+    zip = serializers.CharField()
+    town = serializers.CharField()
+    country_id = serializers.IntegerField()
+    phone = serializers.CharField()
+    document = serializers.CharField()
+    birth = serializers.DateField()
+    password = serializers.CharField()
+    question = serializers.CharField()
+    answer = serializers.CharField()

@@ -1056,3 +1056,20 @@ def execute_prelevements(request):
             prelevement['message'] = str(e)
 
     return Response(prelevements)
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def creer_compte_vee(request):
+    """
+    Crée un compte Vacances en eusko.
+    """
+    log.debug("creer_compte_vee()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.CreerCompteVeeSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+
+    return Response(status=status.HTTP_201_CREATED)

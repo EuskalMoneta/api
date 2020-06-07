@@ -123,6 +123,8 @@ urlpatterns = [
     url(r'^montant-don/$', cel_views.montant_don),
     url(r'^execute-prelevements/$', cel_views.execute_prelevements),
 
+    url(r'^creer-compte-vee/$', cel_views.creer_compte_vee),
+
     # URL de callback pour les notifications envoyées par HelloAsso
     # cf https://dev.helloasso.com/v3/notifications
     url(r'^notification-paiement-helloasso/$', gi_views.notification_paiement_helloasso),
