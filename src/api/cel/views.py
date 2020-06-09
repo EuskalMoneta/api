@@ -136,7 +136,7 @@ def validate_first_connection(request):
         cyclos_user_id = cyclos.get_member_id_from_login(member_login=token_data['login'], token=cyclos_token)
         change_cyclos_user_password(cyclos_token, cyclos_user_id, request.data['new_password'])
 
-        return Response({'status': 'success'})
+        return Response({'login': token_data['login']})
 
     except (EuskalMonetaAPIException, DolibarrAPIException, CyclosAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to get user data for this login!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -1074,7 +1074,7 @@ def creer_compte_vee(request):
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-    return Response(num_adherent, status=status.HTTP_201_CREATED)
+    return Response({'login': num_adherent}, status=status.HTTP_201_CREATED)
 
 
 def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, address, zip, town, country_id, phone,
