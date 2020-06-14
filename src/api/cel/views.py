@@ -1055,20 +1055,24 @@ def creer_compte_vee(request):
         cyclos_token = cyclos.login(
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
                                                        settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
-        # 1) Générer un nouveau numéro d'adhérent.
+        # Générer un nouveau numéro d'adhérent.
         num_adherent = 'T00001'
-        # 2) Créer l'adhérent Dolibarr.
-        create_dolibarr_member(
+        # Créer l'adhérent Dolibarr.
+        dolibarr_member_rowid = create_dolibarr_member(
             dolibarr, num_adherent, '3', lastname, firstname, serializer.validated_data['email'],
             serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
             serializer.validated_data['country_id'], serializer.validated_data['phone'],
             serializer.validated_data['birth'])
-        # 3) Créer l'utilisateur Dolibarr lié à cet adhérent.
+        # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
+        add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
+                                             filename="{}-Pièce-d'identité.pdf".format(num_adherent),
+                                             filecontent=serializer.validated_data['id_document'])
+        # Créer l'utilisateur Dolibarr lié à cet adhérent.
         create_dolibarr_user_linked_to_member(dolibarr, num_adherent)
-        # 4) Créer l'utilisateur Cyclos.
+        # Créer l'utilisateur Cyclos.
         create_cyclos_user(cyclos_token, 'adherents_utilisateurs', '{} {}'.format(firstname, lastname), num_adherent,
                            serializer.validated_data['password'])
-        # 5) Enregistrer la question/réponse de sécurité.
+        # Enregistrer la question/réponse de sécurité.
         create_security_qa(num_adherent, serializer.validated_data['question'], serializer.validated_data['answer'])
     except Exception as e:
         log.exception(e)
@@ -1124,6 +1128,26 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
         }
     })
     return dolibarr_member_rowid
+
+
+def add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid, filename, filecontent):
+    """
+    Ajouter une pièce jointe à un adhérent dans Dolibarr.
+    :param dolibarr: connexion à Dolibarr (instance de DolibarrAPI)
+    :param dolibarr_member_rowid: rowid de l'adhérent
+    :param filename: nom du fichier
+    :param filecontent: contenu du fichier encodé en base64
+    :return:
+    """
+    dolibarr.post(model='documents/upload', data={
+        "filename": filename,
+        "modulepart": "adherent",
+        "ref": dolibarr_member_rowid,
+        "subdir": "",
+        "filecontent": filecontent,
+        "fileencoding": "base64",
+        "overwriteifexists": 0
+    })
 
 
 def create_cyclos_user(cyclos_token, group, name, login, password=None):
