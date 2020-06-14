@@ -1145,6 +1145,9 @@ def create_cyclos_user(cyclos_token, group, name, login, password=None):
     }
     res = cyclos.post(method='user/register', data=data, token=cyclos_token)
     cyclos_user_id = res['result']['user']['id']
+    # S'il s'agit d'un groupe dans lequel les utilisateurs ont un QR code, il faut générer celui-ci.
+    if group in ('adherents_utilisateurs', 'adherents_prestataires'):
+        generate_qr_code_for_cyclos_user(cyclos_token, cyclos_user_id, login)
     # Si un mot de passe est fourni, cela signifie que cet utilisateur doit pouvoir se connecter donc il faut l'activer.
     if password:
         activate_cyclos_user(cyclos_token, cyclos_user_id)
@@ -1183,6 +1186,25 @@ def change_cyclos_user_password(cyclos_token, cyclos_user_id, password):
     }
     cyclos = CyclosAPI()
     cyclos.post(method='password/change', data=data, token=cyclos_token)
+
+
+def generate_qr_code_for_cyclos_user(cyclos_token, cyclos_user_id, login):
+    """
+    Génère un QR code pour un utilisateur Cyclos et active ce QR code.
+    :param cyclos_token: token de connexion à Cyclos
+    :param user_id: id de l'utilisateur Cyclos
+    :param login: numéro d'adhérent
+    :return:
+    """
+    cyclos = CyclosAPI()
+    data = {
+        'type': 'qr_code',
+        'user': cyclos_user_id,
+        'value': login,
+    }
+    res = cyclos.post(method='token/save', data=data, token=cyclos_token)
+    qr_code_id = res['result']
+    cyclos.post(method='token/activatePending', data=[qr_code_id], token=cyclos_token)
 
 
 def create_security_qa(login, question, answer):
