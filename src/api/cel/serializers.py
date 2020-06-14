@@ -151,3 +151,9 @@ class CreerCompteVeeSerializer(serializers.Serializer):
     password = serializers.CharField()
     question = serializers.CharField()
     answer = serializers.CharField()
+
+
+class CreerCompteSerializer(CreerCompteVeeSerializer):
+    iban = serializers.CharField()
+    automatic_change_amount = serializers.IntegerField()
+    sepa_document = serializers.CharField()

@@ -124,6 +124,7 @@ urlpatterns = [
     url(r'^execute-prelevements/$', cel_views.execute_prelevements),
 
     url(r'^creer-compte-vee/$', cel_views.creer_compte_vee),
+    url(r'^creer-compte/$', cel_views.creer_compte),
 
     # URL de callback pour les notifications envoyées par HelloAsso
     # cf https://dev.helloasso.com/v3/notifications
