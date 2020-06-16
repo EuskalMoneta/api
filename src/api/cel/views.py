@@ -1,6 +1,7 @@
 from base64 import b64encode
 from datetime import date, datetime, timedelta
 import logging
+import mimetypes
 from uuid import uuid4
 
 import arrow
@@ -1064,9 +1065,12 @@ def creer_compte_vee(request):
             serializer.validated_data['country_id'], serializer.validated_data['phone'],
             serializer.validated_data['birth'], compte_eusko=True)
         # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
+        header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
+        mime_type = header.lstrip('data:').rstrip(';base64')
+        extension = mimetypes.guess_extension(mime_type)
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
-                                             filename="{}-Pièce-d'identité.pdf".format(num_adherent),
-                                             filecontent=serializer.validated_data['id_document'])
+                                             filename="{}-Pièce-d'identité{}".format(num_adherent, extension),
+                                             filecontent=base64_encoded_data)
         # Créer l'utilisateur Dolibarr lié à cet adhérent.
         create_dolibarr_user_linked_to_member(dolibarr, num_adherent)
         # Créer l'utilisateur Cyclos.
@@ -1117,9 +1121,12 @@ def creer_compte(request):
             serializer.validated_data['birth'], compte_eusko=True, iban=serializer.validated_data['iban'],
             automatic_change_amount=serializer.validated_data['automatic_change_amount'])
         # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
+        header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
+        mime_type = header.lstrip('data:').rstrip(';base64')
+        extension = mimetypes.guess_extension(mime_type)
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
-                                             filename="{}-Pièce-d'identité.pdf".format(num_adherent),
-                                             filecontent=serializer.validated_data['id_document'])
+                                             filename="{}-Pièce-d'identité{}".format(num_adherent, extension),
+                                             filecontent=base64_encoded_data)
         # Joindre le mandat SEPA à la fiche Adhérent dans Dolibarr.
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Mandat-SEPA.pdf".format(num_adherent),
