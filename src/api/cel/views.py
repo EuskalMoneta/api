@@ -1057,7 +1057,10 @@ def creer_compte_vee(request):
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
                                                        settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
         # Générer un nouveau numéro d'adhérent.
-        num_adherent = 'T00001'
+        adherent = models.AdherentTouriste()
+        adherent.save()
+        num_adherent = 'T{:05d}'.format(adherent.id)
+        log.debug("num_adherent={}".format(num_adherent))
         # Créer l'adhérent Dolibarr.
         dolibarr_member_rowid = create_dolibarr_member(
             dolibarr, num_adherent, '3', lastname, firstname, serializer.validated_data['email'],
@@ -1112,7 +1115,10 @@ def creer_compte(request):
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
                                                        settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
         # Générer un nouveau numéro d'adhérent.
-        num_adherent = 'E10001'
+        adherent = models.AdherentParticulier()
+        adherent.save()
+        num_adherent = 'E{:05d}'.format(adherent.id)
+        log.debug("num_adherent={}".format(num_adherent))
         # Créer l'adhérent Dolibarr.
         dolibarr_member_rowid = create_dolibarr_member(
             dolibarr, num_adherent, '3', lastname, firstname, serializer.validated_data['email'],

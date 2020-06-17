@@ -95,3 +95,11 @@ class SecurityAnswer(models.Model):
 
     def has_usable_answer(self):
         return hashers.is_password_usable(self.answer)
+
+
+class AdherentParticulier(models.Model):
+    pass
+
+
+class AdherentTouriste(models.Model):
+    pass
