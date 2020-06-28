@@ -1063,7 +1063,7 @@ def creer_compte_vee(request):
         log.debug("num_adherent={}".format(num_adherent))
         # Créer l'adhérent Dolibarr.
         dolibarr_member_rowid = create_dolibarr_member(
-            dolibarr, num_adherent, '3', lastname, firstname, serializer.validated_data['email'],
+            dolibarr, num_adherent, '8', lastname, firstname, serializer.validated_data['email'],
             serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
             serializer.validated_data['country_id'], serializer.validated_data['phone'],
             serializer.validated_data['birth'], compte_eusko=True)
