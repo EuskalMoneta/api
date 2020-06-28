@@ -151,6 +151,7 @@ class CreerCompteVeeSerializer(serializers.Serializer):
     password = serializers.CharField()
     question = serializers.CharField()
     answer = serializers.CharField()
+    pin_code = serializers.CharField()
 
 
 class CreerCompteSerializer(CreerCompteVeeSerializer):

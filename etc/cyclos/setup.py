@@ -2373,6 +2373,7 @@ set_admin_group_permissions(
     disabled_users='MANAGE',
     user_password_actions=[
         'login',
+        'pin',
     ],
     access_user_accounts=[
         ID_COMPTE_ADHERENT,
