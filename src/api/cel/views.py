@@ -1,6 +1,7 @@
 from base64 import b64encode
 from datetime import date, datetime, timedelta
 import logging
+import mimetypes
 from uuid import uuid4
 
 import arrow
@@ -122,50 +123,21 @@ def validate_first_connection(request):
         except DolibarrAPIException:
             pass
 
-        # 1) Créer une SecurityAnswer.
-        res = models.SecurityAnswer.objects.create(owner=token_data['login'], question=serializer.data['question'])
-        res.set_answer(raw_answer=serializer.data['answer'])
-        res.save()
+        # 1) Créer la question/réponse de sécurité.
+        create_security_qa(token_data['login'], serializer.data['question'], serializer.data['answer'])
 
-        if not res:
-            Response({'error': 'Unable to save security answer!'}, status=status.HTTP_400_BAD_REQUEST)
+        # 2) Dans Dolibarr, créer un utilisateur lié à l'adhérent.
+        create_dolibarr_user_linked_to_member(dolibarr, token_data['login'])
 
-        # 2) Dans Dolibarr, créer un utilisateur lié à l'adhérent
-        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(token_data['login']), api_key=dolibarr_token)[0]
-
-        create_user_data = {
-            'login': member['login'],
-            'admin': 0,
-            'employee': 0,
-            'lastname': member['lastname'],
-            'firstname': member['firstname'],
-            'fk_member': member['id'],
-        }
-        user_id = dolibarr.post(model='users', data=create_user_data, api_key=dolibarr_token)
-
-        # 3) Dans Dolibarr, ajouter ce nouvel utilisateur dans le groupe "Adhérents"
-        user_group_model = 'users/{}/setGroup/{}'.format(user_id, settings.DOLIBARR_CONSTANTS['groups']['adherents'])
-        user_group_res = dolibarr.get(model=user_group_model, api_key=dolibarr_token)
-        if not user_group_res == 1:
-            raise EuskalMonetaAPIException
-
-        # 4) Dans Cyclos, initialiser le mot de passe de l'utilisateur
+        # 3) Dans Cyclos, initialiser le mot de passe de l'utilisateur.
         cyclos = CyclosAPI(mode='login')
         cyclos_token = cyclos.login(
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
                                                        settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
-
         cyclos_user_id = cyclos.get_member_id_from_login(member_login=token_data['login'], token=cyclos_token)
+        change_cyclos_user_password(cyclos_token, cyclos_user_id, request.data['new_password'])
 
-        password_data = {
-            'user': cyclos_user_id,  # ID de l'utilisateur
-            'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
-            'newPassword': request.data['new_password'],  # saisi par l'utilisateur
-            'confirmNewPassword': request.data['confirm_password'],  # saisi par l'utilisateur
-        }
-        cyclos.post(method='password/change', data=password_data, token=cyclos_token)
-
-        return Response({'status': 'success'})
+        return Response({'login': token_data['login']})
 
     except (EuskalMonetaAPIException, DolibarrAPIException, CyclosAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to get user data for this login!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -535,12 +507,60 @@ def euskokart_unblock(request):
     return Response(euskokart_data)
 
 
+def execute_virement(dolibarr, cyclos, virement):
+    try:
+        # On récupère le destinataire du virement à partir de son numéro de compte.
+        try:
+            data = cyclos.post(method='user/search', data={'keywords': virement['account']})
+            destinataire_cyclos = data['result']['pageItems'][0]
+            virement['name'] = destinataire_cyclos['display']
+        except IndexError:
+            virement['name'] = None
+            raise Exception(_("Ce numéro de compte n'existe pas"))
+        # On fait le paiement.
+        query_data = {
+            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
+            'amount': virement['amount'],
+            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+            'from': cyclos.user_id,
+            'to': destinataire_cyclos['id'],
+            'description': virement['description'],
+        }
+        try:
+            cyclos.post(method='payment/perform', data=query_data)
+        except CyclosAPIException as err:
+            if str(err).find('INSUFFICIENT_BALANCE') != -1:
+                raise Exception(_("Solde insuffisant"))
+            else:
+                raise err
+        # Le paiement dans Cyclos s'est exécuté sans erreur.
+        # On récupère dans Dolibarr les informations sur le destinataire du virement, pour savoir s'il souhaite
+        # recevoir une notification lorsqu'il reçoit un virement. Si c'est le cas, on lui envoie un email.
+        destinataire_dolibarr = dolibarr.get(model='members',
+                                             sqlfilters="login='{}'".format(destinataire_cyclos['shortDisplay']))[0]
+        if destinataire_dolibarr['array_options']['options_notifications_virements']:
+            # Activate user pre-selected language
+            activate(destinataire_dolibarr['array_options']['options_langue'])
+            # Translate subject & body for this email
+            subject = _('Compte Eusko : virement reçu')
+            body = render_to_string('mails/virement_recu.txt',
+                                    {'user': destinataire_dolibarr,
+                                     'emetteur': cyclos.user_profile['result']['display'],
+                                     'montant': virement['amount']})
+            sendmail_euskalmoneta(subject=subject, body=body, to_email=destinataire_dolibarr['email'])
+        virement['status'] = 1
+        virement['message'] = _("Virement effectué")
+    except Exception as e:
+        virement['status'] = 0
+        virement['message'] = str(e)
+
+
 @api_view(['POST'])
 def execute_virements(request):
     """
     Exécute la liste des virements donnée en paramètre.
     """
-    log.debug("virements()")
+    log.debug("execute_virements()")
 
     log.debug("request.data={}".format(request.data))
     serializer = serializers.ExecuteVirementSerializer(data=request.data, many=True)
@@ -560,53 +580,36 @@ def execute_virements(request):
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
     for virement in virements:
-        try:
-            # On récupère le destinataire du virement à partir de son numéro de compte.
-            try:
-                data = cyclos.post(method='user/search', data={'keywords': virement['account']})
-                destinataire_cyclos = data['result']['pageItems'][0]
-                virement['name'] = destinataire_cyclos['display']
-            except IndexError:
-                virement['name'] = None
-                raise Exception(_("Ce numéro de compte n'existe pas"))
-            # On fait le paiement.
-            query_data = {
-                'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
-                'amount': virement['amount'],
-                'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-                'from': cyclos.user_id,
-                'to': destinataire_cyclos['id'],
-                'description': virement['description'],
-            }
-            try:
-                cyclos.post(method='payment/perform', data=query_data)
-            except CyclosAPIException as err:
-                if str(err).find('INSUFFICIENT_BALANCE') != -1:
-                    raise Exception(_("Solde insuffisant"))
-                else:
-                    raise err
-            # Le paiement dans Cyclos s'est exécuté sans erreur.
-            # On récupère dans Dolibarr les informations sur le destinataire du virement, pour savoir s'il souhaite
-            # recevoir une notification lorsqu'il reçoit un virement. Si c'est le cas, on lui envoie un email.
-            destinataire_dolibarr = dolibarr.get(model='members',
-                                                 sqlfilters="login='{}'".format(destinataire_cyclos['shortDisplay']))[0]
-            if destinataire_dolibarr['array_options']['options_notifications_virements']:
-                # Activate user pre-selected language
-                activate(destinataire_dolibarr['array_options']['options_langue'])
-                # Translate subject & body for this email
-                subject = _('Compte Eusko : virement reçu')
-                body = render_to_string('mails/virement_recu.txt',
-                                        {'user': destinataire_dolibarr,
-                                         'emetteur': cyclos.user_profile['result']['display'],
-                                         'montant': virement['amount']})
-                sendmail_euskalmoneta(subject=subject, body=body, to_email=destinataire_dolibarr['email'])
-            virement['status'] = 1
-            virement['message'] = _("Virement effectué")
-        except Exception as e:
-            virement['status'] = 0
-            virement['message'] = str(e)
+        execute_virement(dolibarr, cyclos, virement)
 
     return Response(virements)
+
+
+@api_view(['POST'])
+def execute_virement_asso_mlc(request):
+    """
+    Exécute un virement à destination de l'association porteuse de la MLC.
+    """
+    serializer = serializers.ExecuteVirementAssoMlcSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    virement = serializer.validated_data
+
+    # Connexion à Dolibarr et Cyclos avec l'utilisateur courant.
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Au lieu du numéro de compte, on donne le numéro d'adhérent du
+    # destinataire du virement (l'association porteuse de la MLC, qui
+    # par convention a le numéro d'adhérent Z00001).
+    virement['account'] = 'Z00001'
+    execute_virement(dolibarr, cyclos, virement)
+    return Response(virement)
 
 
 @api_view(['POST'])
@@ -956,7 +959,7 @@ def execute_prelevements(request):
     """
     Exécute la liste des prélèvements donnée en paramètre.
     """
-    log.debug("prelevements()")
+    log.debug("execute_prelevements()")
 
     log.debug("request.data={}".format(request.data))
     serializer = serializers.ExecutePrelevementSerializer(data=request.data, many=True)
@@ -1025,3 +1028,337 @@ def execute_prelevements(request):
             prelevement['message'] = str(e)
 
     return Response(prelevements)
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def creer_compte_vee(request):
+    """
+    Crée un compte Vacances en eusko.
+    """
+    log.debug("creer_compte_vee()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.CreerCompteVeeSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+
+    lastname = serializer.validated_data['lastname']
+    firstname = serializer.validated_data['firstname']
+
+    try:
+        # Connexion à Dolibarr et Cyclos avec l'utilisateur Anonyme.
+        dolibarr = DolibarrAPI()
+        dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                       password=settings.APPS_ANONYMOUS_PASSWORD)
+        cyclos = CyclosAPI(mode='login')
+        cyclos_token = cyclos.login(
+            auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                       settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
+        # Générer un nouveau numéro d'adhérent.
+        adherent = models.AdherentTouriste()
+        adherent.save()
+        num_adherent = 'T{:05d}'.format(adherent.id)
+        log.debug("num_adherent={}".format(num_adherent))
+        # Créer l'adhérent Dolibarr.
+        dolibarr_member_rowid = create_dolibarr_member(
+            dolibarr, num_adherent, '8', lastname, firstname, serializer.validated_data['email'],
+            serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
+            serializer.validated_data['country_id'], serializer.validated_data['phone'],
+            serializer.validated_data['birth'], compte_eusko=True)
+        # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
+        header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
+        mime_type = header.lstrip('data:').rstrip(';base64')
+        extension = mimetypes.guess_extension(mime_type)
+        add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
+                                             filename="{}-Pièce-d'identité{}".format(num_adherent, extension),
+                                             filecontent=base64_encoded_data)
+        # Créer l'utilisateur Dolibarr lié à cet adhérent.
+        create_dolibarr_user_linked_to_member(dolibarr, num_adherent)
+        # Créer l'utilisateur Cyclos.
+        create_cyclos_user(cyclos_token, 'adherents_utilisateurs', '{} {}'.format(firstname, lastname), num_adherent,
+                           serializer.validated_data['password'], serializer.validated_data['pin_code'])
+        # Enregistrer la question/réponse de sécurité.
+        create_security_qa(num_adherent, serializer.validated_data['question'], serializer.validated_data['answer'])
+    except Exception as e:
+        log.exception(e)
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({'login': num_adherent}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def creer_compte(request):
+    """
+    Crée un compte eusko.
+    """
+    log.debug("creer_compte()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.CreerCompteSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+
+    lastname = serializer.validated_data['lastname']
+    firstname = serializer.validated_data['firstname']
+
+    try:
+        # Connexion à Dolibarr et Cyclos avec l'utilisateur Anonyme.
+        dolibarr = DolibarrAPI()
+        dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                       password=settings.APPS_ANONYMOUS_PASSWORD)
+        cyclos = CyclosAPI(mode='login')
+        cyclos_token = cyclos.login(
+            auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                       settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
+        # Générer un nouveau numéro d'adhérent.
+        adherent = models.AdherentParticulier()
+        adherent.save()
+        num_adherent = 'E{:05d}'.format(adherent.id)
+        log.debug("num_adherent={}".format(num_adherent))
+        # Créer l'adhérent Dolibarr.
+        dolibarr_member_rowid = create_dolibarr_member(
+            dolibarr, num_adherent, '3', lastname, firstname, serializer.validated_data['email'],
+            serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
+            serializer.validated_data['country_id'], serializer.validated_data['phone'],
+            serializer.validated_data['birth'], compte_eusko=True, iban=serializer.validated_data['iban'],
+            automatic_change_amount=serializer.validated_data['automatic_change_amount'])
+        # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
+        header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
+        mime_type = header.lstrip('data:').rstrip(';base64')
+        extension = mimetypes.guess_extension(mime_type)
+        add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
+                                             filename="{}-Pièce-d'identité{}".format(num_adherent, extension),
+                                             filecontent=base64_encoded_data)
+        # Joindre le mandat SEPA à la fiche Adhérent dans Dolibarr.
+        add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
+                                             filename="{}-Mandat-SEPA.pdf".format(num_adherent),
+                                             filecontent=serializer.validated_data['sepa_document'])
+        # Créer l'utilisateur Dolibarr lié à cet adhérent.
+        create_dolibarr_user_linked_to_member(dolibarr, num_adherent)
+        # Créer l'utilisateur Cyclos.
+        create_cyclos_user(cyclos_token, 'adherents_utilisateurs', '{} {}'.format(firstname, lastname), num_adherent,
+                           serializer.validated_data['password'], serializer.validated_data['pin_code'])
+        # Enregistrer la question/réponse de sécurité.
+        create_security_qa(num_adherent, serializer.validated_data['question'], serializer.validated_data['answer'])
+    except Exception as e:
+        log.exception(e)
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({'login': num_adherent}, status=status.HTTP_201_CREATED)
+
+
+def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, address, zip, town, country_id, phone,
+                           birth, compte_eusko, iban=None, automatic_change_amount=None):
+    """
+    Crée un adhérent dans Dolibarr.
+    :param dolibarr: connexion à Dolibarr (instance de DolibarrAPI)
+    :param login: numéro d'adhérent
+    :param type:
+    :param lastname:
+    :param firstname:
+    :param email:
+    :param address:
+    :param zip:
+    :param town:
+    :param country_id:
+    :param phone:
+    :param birth:
+    :param compte_eusko: indique si l'adhérent ouvre un compte eusko ou pas
+    :param iban:
+    :param automatic_change_amount:
+    :return: rowid de l'adhérent créé
+    """
+    dolibarr_member_rowid = dolibarr.post(model='members', data={
+        'login': login,
+        'typeid': type,
+        'morphy': 'phy',
+        'lastname': lastname,
+        'firstname': firstname,
+        'email': email,
+        'address': address,
+        'zip': zip,
+        'town': town,
+        'country_id': country_id,
+        'phone': phone,
+        'birth': datetime(birth.year, birth.month, birth.day).timestamp(),
+        'public': '0',
+        'statut': '1',
+        'array_options': {
+            'options_recevoir_actus': True,
+            'options_accepte_cgu_eusko_numerique': compte_eusko,
+            'options_documents_pour_ouverture_du_compte_valides': compte_eusko,
+            'options_accord_pour_ouverture_de_compte': 'oui' if compte_eusko else 'non',
+            'options_prelevement_change_montant': automatic_change_amount,
+            'options_prelevement_change_periodicite': 1 if automatic_change_amount else None,
+            'options_iban': iban,
+            'options_notifications_validation_mandat_prelevement': compte_eusko,
+            'options_notifications_refus_ou_annulation_mandat_prelevement': compte_eusko,
+            'options_notifications_prelevements': compte_eusko,
+            'options_notifications_virements': compte_eusko,
+            'options_recevoir_bons_plans': compte_eusko,
+        }
+    })
+    return dolibarr_member_rowid
+
+
+def add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid, filename, filecontent):
+    """
+    Ajouter une pièce jointe à un adhérent dans Dolibarr.
+    :param dolibarr: connexion à Dolibarr (instance de DolibarrAPI)
+    :param dolibarr_member_rowid: rowid de l'adhérent
+    :param filename: nom du fichier
+    :param filecontent: contenu du fichier encodé en base64
+    :return:
+    """
+    dolibarr.post(model='documents/upload', data={
+        "filename": filename,
+        "modulepart": "adherent",
+        "ref": dolibarr_member_rowid,
+        "subdir": "",
+        "filecontent": filecontent,
+        "fileencoding": "base64",
+        "overwriteifexists": 0
+    })
+
+
+def create_cyclos_user(cyclos_token, group, name, login, password=None, pin_code=None):
+    """
+    Crée un utilisateur dans Cyclos.
+    :param cyclos_token: token de connexion à Cyclos
+    :param group:
+    :param name:
+    :param login: numéro d'adhérent
+    :param password: mot de passe de l'utilisateur (optionnel)
+    :param pin_code: code PIN de l'utilisateur (optionnel)
+    :return: id de l'utilisateur créé
+    """
+    cyclos = CyclosAPI()
+    data = {
+        'group': str(settings.CYCLOS_CONSTANTS['groups'][group]),
+        'name': name,
+        'username': login,
+        'skipActivationEmail': True,
+    }
+    res = cyclos.post(method='user/register', data=data, token=cyclos_token)
+    cyclos_user_id = res['result']['user']['id']
+    # S'il s'agit d'un groupe dans lequel les utilisateurs ont un QR code, il faut générer celui-ci.
+    if group in ('adherents_utilisateurs', 'adherents_prestataires'):
+        generate_qr_code_for_cyclos_user(cyclos_token, cyclos_user_id, login)
+    # Si un mot de passe est fourni, cela signifie que cet utilisateur doit pouvoir se connecter donc il faut l'activer.
+    if password:
+        activate_cyclos_user(cyclos_token, cyclos_user_id)
+        change_cyclos_user_password(cyclos_token, cyclos_user_id, password)
+    if pin_code:
+        change_cyclos_user_pincode(cyclos_token, cyclos_user_id, pin_code)
+    return cyclos_user_id
+
+
+def activate_cyclos_user(cyclos_token, cyclos_user_id):
+    """
+    Activer un utilisateur Cyclos.
+    :param cyclos_token: token de connexion à Cyclos
+    :param user_id: id de l'utilisateur Cyclos
+    :return:
+    """
+    data = {
+        'user': cyclos_user_id,
+        'status': 'ACTIVE',
+    }
+    cyclos = CyclosAPI()
+    cyclos.post(method='userStatus/changeStatus', data=data, token=cyclos_token)
+
+
+def change_cyclos_user_password(cyclos_token, cyclos_user_id, password):
+    """
+    Change le mot de passe d'un utilisateur Cyclos.
+    :param cyclos_token: token de connexion à Cyclos
+    :param user_id: id de l'utilisateur Cyclos
+    :param password: nouveau mot de passe de l'utilisateur
+    :return:
+    """
+    data = {
+        'user': cyclos_user_id,
+        'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+        'newPassword': password,
+        'confirmNewPassword': password,
+    }
+    cyclos = CyclosAPI()
+    cyclos.post(method='password/change', data=data, token=cyclos_token)
+
+
+def change_cyclos_user_pincode(cyclos_token, cyclos_user_id, pin_code):
+    """
+    Change le code PIN d'un utilisateur Cyclos.
+    :param cyclos_token: token de connexion à Cyclos
+    :param user_id: id de l'utilisateur Cyclos
+    :param pin_code: nouveau code PIN de l'utilisateur
+    :return:
+    """
+    data = {
+        'user': cyclos_user_id,
+        'type': str(settings.CYCLOS_CONSTANTS['password_types']['pin']),
+        'newPassword': pin_code,
+        'confirmNewPassword': pin_code,
+    }
+    cyclos = CyclosAPI()
+    cyclos.post(method='password/change', data=data, token=cyclos_token)
+
+
+def generate_qr_code_for_cyclos_user(cyclos_token, cyclos_user_id, login):
+    """
+    Génère un QR code pour un utilisateur Cyclos et active ce QR code.
+    :param cyclos_token: token de connexion à Cyclos
+    :param user_id: id de l'utilisateur Cyclos
+    :param login: numéro d'adhérent
+    :return:
+    """
+    cyclos = CyclosAPI()
+    data = {
+        'type': 'qr_code',
+        'user': cyclos_user_id,
+        'value': login,
+    }
+    res = cyclos.post(method='token/save', data=data, token=cyclos_token)
+    qr_code_id = res['result']
+    cyclos.post(method='token/activatePending', data=[qr_code_id], token=cyclos_token)
+
+
+def create_security_qa(login, question, answer):
+    """
+    Crée une question/réponse de sécurité pour le numéro d'adhérent donné.
+    :param login: numéro d'adhérent
+    :param question:
+    :param answer:
+    :return:
+    """
+    res = models.SecurityAnswer.objects.create(owner=login, question=question)
+    res.set_answer(raw_answer=answer)
+    res.save()
+    if not res:
+        raise Exception('Unable to save security answer.')
+
+
+def create_dolibarr_user_linked_to_member(dolibarr, login):
+    """
+    Crée un utilisateur Dolibarr lié à l'adhérent donné en paramètre et ajoute cet utilisateur dans le groupe Adhérents.
+    :param dolibarr:
+    :param login: numéro d'adhérent
+    :return:
+    """
+    member = dolibarr.get(model='members', sqlfilters="login='{}'".format(login))[0]
+    dolibarr_user_id = dolibarr.post(model='users', data={
+        'login': login,
+        'admin': 0,
+        'employee': 0,
+        'lastname': member['lastname'],
+        'firstname': member['firstname'],
+        'fk_member': member['id'],
+    })
+    res = dolibarr.get(model='users/{}/setGroup/{}'.format(dolibarr_user_id,
+                                                           settings.DOLIBARR_CONSTANTS['groups']['adherents']))
+    if res != 1:
+        raise Exception('Unable to set group.')

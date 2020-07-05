@@ -17,7 +17,7 @@ class Member:
 
     @staticmethod
     def validate_num_adherent(data):
-        if (data.startswith("E") or data.startswith("Z")) and len(data) == 6:
+        if (data.startswith("E") or data.startswith("Z") or data.startswith("T")) and len(data) == 6:
             return True
         else:
             return False

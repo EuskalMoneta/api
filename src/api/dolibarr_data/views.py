@@ -151,6 +151,7 @@ def associations(request):
 
 
 @api_view(['GET'])
+@permission_classes((AllowAny, ))
 def towns_by_zipcode(request):
     """
     List all towns, filtered by a zipcode.
@@ -159,16 +160,27 @@ def towns_by_zipcode(request):
     if not search:
         return Response({'error': 'Zipcode must not be empty'}, status=status.HTTP_400_BAD_REQUEST)
 
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    if request.user.is_authenticated:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    else:
+        dolibarr = DolibarrAPI()
+        dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                       password=settings.APPS_ANONYMOUS_PASSWORD)
     return Response(dolibarr.get(model='setup/dictionary/towns', zipcode=search))
 
 
 @api_view(['GET'])
+@permission_classes((AllowAny, ))
 def countries(request):
     """
     Get the list of countries.
     """
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    if request.user.is_authenticated:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    else:
+        dolibarr = DolibarrAPI()
+        dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                       password=settings.APPS_ANONYMOUS_PASSWORD)
     return Response(dolibarr.get(model='setup/dictionary/countries', lang='fr_FR'))
 
 

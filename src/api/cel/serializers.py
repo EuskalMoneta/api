@@ -105,6 +105,11 @@ class ExecuteVirementSerializer(serializers.Serializer):
     description = serializers.CharField()
 
 
+class ExecuteVirementAssoMlcSerializer(serializers.Serializer):
+    amount = serializers.FloatField()
+    description = serializers.CharField()
+
+
 class ReconvertEuskoSerializer(serializers.Serializer):
 
     amount = serializers.FloatField()
@@ -130,3 +135,26 @@ class ExecutePrelevementSerializer(serializers.Serializer):
     account = serializers.CharField()
     amount = serializers.FloatField()
     description = serializers.CharField()
+
+
+class CreerCompteVeeSerializer(serializers.Serializer):
+    lastname = serializers.CharField()
+    firstname = serializers.CharField()
+    email = serializers.EmailField()
+    address = serializers.CharField()
+    zip = serializers.CharField()
+    town = serializers.CharField()
+    country_id = serializers.IntegerField()
+    phone = serializers.CharField()
+    id_document = serializers.CharField()
+    birth = serializers.DateField()
+    password = serializers.CharField()
+    question = serializers.CharField()
+    answer = serializers.CharField()
+    pin_code = serializers.CharField()
+
+
+class CreerCompteSerializer(CreerCompteVeeSerializer):
+    iban = serializers.CharField()
+    automatic_change_amount = serializers.IntegerField()
+    sepa_document = serializers.CharField()

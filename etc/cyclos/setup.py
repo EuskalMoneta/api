@@ -2369,9 +2369,11 @@ set_admin_group_permissions(
         'LOGIN_NAME',
     ],
     change_group='MANAGE',
+    user_registration=True,
     disabled_users='MANAGE',
     user_password_actions=[
         'login',
+        'pin',
     ],
     access_user_accounts=[
         ID_COMPTE_ADHERENT,
