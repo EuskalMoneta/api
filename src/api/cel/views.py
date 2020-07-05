@@ -1063,7 +1063,7 @@ def creer_compte_vee(request):
         log.debug("num_adherent={}".format(num_adherent))
         # Créer l'adhérent Dolibarr.
         dolibarr_member_rowid = create_dolibarr_member(
-            dolibarr, num_adherent, '3', lastname, firstname, serializer.validated_data['email'],
+            dolibarr, num_adherent, '8', lastname, firstname, serializer.validated_data['email'],
             serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
             serializer.validated_data['country_id'], serializer.validated_data['phone'],
             serializer.validated_data['birth'], compte_eusko=True)
@@ -1078,7 +1078,7 @@ def creer_compte_vee(request):
         create_dolibarr_user_linked_to_member(dolibarr, num_adherent)
         # Créer l'utilisateur Cyclos.
         create_cyclos_user(cyclos_token, 'adherents_utilisateurs', '{} {}'.format(firstname, lastname), num_adherent,
-                           serializer.validated_data['password'])
+                           serializer.validated_data['password'], serializer.validated_data['pin_code'])
         # Enregistrer la question/réponse de sécurité.
         create_security_qa(num_adherent, serializer.validated_data['question'], serializer.validated_data['answer'])
     except Exception as e:
@@ -1141,7 +1141,7 @@ def creer_compte(request):
         create_dolibarr_user_linked_to_member(dolibarr, num_adherent)
         # Créer l'utilisateur Cyclos.
         create_cyclos_user(cyclos_token, 'adherents_utilisateurs', '{} {}'.format(firstname, lastname), num_adherent,
-                           serializer.validated_data['password'])
+                           serializer.validated_data['password'], serializer.validated_data['pin_code'])
         # Enregistrer la question/réponse de sécurité.
         create_security_qa(num_adherent, serializer.validated_data['question'], serializer.validated_data['answer'])
     except Exception as e:
@@ -1225,7 +1225,7 @@ def add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid, filena
     })
 
 
-def create_cyclos_user(cyclos_token, group, name, login, password=None):
+def create_cyclos_user(cyclos_token, group, name, login, password=None, pin_code=None):
     """
     Crée un utilisateur dans Cyclos.
     :param cyclos_token: token de connexion à Cyclos
@@ -1233,6 +1233,7 @@ def create_cyclos_user(cyclos_token, group, name, login, password=None):
     :param name:
     :param login: numéro d'adhérent
     :param password: mot de passe de l'utilisateur (optionnel)
+    :param pin_code: code PIN de l'utilisateur (optionnel)
     :return: id de l'utilisateur créé
     """
     cyclos = CyclosAPI()
@@ -1251,6 +1252,8 @@ def create_cyclos_user(cyclos_token, group, name, login, password=None):
     if password:
         activate_cyclos_user(cyclos_token, cyclos_user_id)
         change_cyclos_user_password(cyclos_token, cyclos_user_id, password)
+    if pin_code:
+        change_cyclos_user_pincode(cyclos_token, cyclos_user_id, pin_code)
     return cyclos_user_id
 
 
@@ -1282,6 +1285,24 @@ def change_cyclos_user_password(cyclos_token, cyclos_user_id, password):
         'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
         'newPassword': password,
         'confirmNewPassword': password,
+    }
+    cyclos = CyclosAPI()
+    cyclos.post(method='password/change', data=data, token=cyclos_token)
+
+
+def change_cyclos_user_pincode(cyclos_token, cyclos_user_id, pin_code):
+    """
+    Change le code PIN d'un utilisateur Cyclos.
+    :param cyclos_token: token de connexion à Cyclos
+    :param user_id: id de l'utilisateur Cyclos
+    :param pin_code: nouveau code PIN de l'utilisateur
+    :return:
+    """
+    data = {
+        'user': cyclos_user_id,
+        'type': str(settings.CYCLOS_CONSTANTS['password_types']['pin']),
+        'newPassword': pin_code,
+        'confirmNewPassword': pin_code,
     }
     cyclos = CyclosAPI()
     cyclos.post(method='password/change', data=data, token=cyclos_token)
