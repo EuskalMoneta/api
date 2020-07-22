@@ -1069,10 +1069,17 @@ def creer_compte_vee(request):
             serializer.validated_data['birth'], compte_eusko=True)
         # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
         header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
-        mime_type = header.lstrip('data:').rstrip(';base64')
+        mime_type = header[len('data:'):-len(';base64')]
         extension = mimetypes.guess_extension(mime_type)
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Pièce-d'identité{}".format(num_adherent, extension),
+                                             filecontent=base64_encoded_data)
+        # Joindre le rapport IDCheck à la fiche Adhérent dans Dolibarr.
+        header, base64_encoded_data = serializer.validated_data['idcheck_report'].split(",", 1)
+        mime_type = header[len('data:'):-len(';base64')]
+        extension = mimetypes.guess_extension(mime_type)
+        add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
+                                             filename="{}-Rapport-IDCheck{}".format(num_adherent, extension),
                                              filecontent=base64_encoded_data)
         # Créer l'utilisateur Dolibarr lié à cet adhérent.
         create_dolibarr_user_linked_to_member(dolibarr, num_adherent)
@@ -1132,6 +1139,13 @@ def creer_compte(request):
         extension = mimetypes.guess_extension(mime_type)
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Pièce-d'identité{}".format(num_adherent, extension),
+                                             filecontent=base64_encoded_data)
+        # Joindre le rapport IDCheck à la fiche Adhérent dans Dolibarr.
+        header, base64_encoded_data = serializer.validated_data['idcheck_report'].split(",", 1)
+        mime_type = header.lstrip('data:').rstrip(';base64')
+        extension = mimetypes.guess_extension(mime_type)
+        add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
+                                             filename="{}-Rapport-IDCheck{}".format(num_adherent, extension),
                                              filecontent=base64_encoded_data)
         # Joindre le mandat SEPA à la fiche Adhérent dans Dolibarr.
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
