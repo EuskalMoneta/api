@@ -1197,7 +1197,7 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
         'zip': zip,
         'town': town,
         'country_id': country_id,
-        'phone': phone,
+        'phone_mobile': phone,
         'birth': datetime(birth.year, birth.month, birth.day).timestamp(),
         'public': '0',
         'statut': '1',
