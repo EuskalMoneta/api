@@ -4,8 +4,6 @@ import arrow
 from django import forms
 from django.conf import settings
 from django.core.validators import validate_email
-from django.template.loader import render_to_string
-from django.utils.translation import activate, gettext as _
 from rest_framework import status
 from rest_framework.response import Response
 
@@ -14,7 +12,6 @@ from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPIException
 from members.serializers import MemberSerializer, MembersSubscriptionsSerializer, MemberPartialSerializer
 from members.misc import Member, Subscription
-from misc import sendmail_euskalmoneta
 from pagination import CustomPagination
 
 log = logging.getLogger()
@@ -56,17 +53,6 @@ class MembersAPIView(BaseAPIView):
             'skipActivationEmail': True,
         }
         self.cyclos.post(method='user/register', data=create_user_data)
-
-        if data['email']:
-            # Activate user pre-selected language
-            # TODO: Ask member for his prefered lang
-            # activate(data['options_langue'])
-
-            # Translate subject & body for this email
-            subject = _('Votre adhésion à Euskal Moneta')
-            body = render_to_string('mails/create_member.txt', {'user': data})
-
-            sendmail_euskalmoneta(subject=subject, body=body, to_email=data['email'])
 
         return Response(response_obj, status=status.HTTP_201_CREATED)
 
@@ -336,20 +322,6 @@ class MembersSubscriptionsAPIView(BaseAPIView):
         })
 
         self.cyclos.post(method='payment/perform', data=query_data)
-
-        if current_member['email']:
-            # Activate user pre-selected language
-            # TODO: Ask member for his prefered lang
-            # activate(data['options_langue'])
-
-            # Translate subject & body for this email
-            subject = _('Votre cotisation à Euskal Moneta')
-            body = render_to_string(
-                'mails/subscription.txt',
-                {'user': current_member, 'amount': data['amount'], 'currency': currency,
-                 'enddate': arrow.get(current_member['datefin']).to('Europe/Paris').format('DD/MM/YYYY')})
-
-            sendmail_euskalmoneta(subject=subject, body=body, to_email=current_member['email'])
 
         return Response(res, status=status.HTTP_201_CREATED)
 

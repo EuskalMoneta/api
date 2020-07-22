@@ -161,6 +161,12 @@ class Member:
             pass
 
         try:
+            data['array_options'].update({'options_recevoir_bons_plans': data['options_recevoir_bons_plans']})
+            del data['options_recevoir_bons_plans']
+        except KeyError:
+            pass
+
+        try:
             data['array_options'].update({
                 'options_prelevement_cotisation_montant': data['options_prelevement_cotisation_montant']})
             del data['options_prelevement_cotisation_montant']
