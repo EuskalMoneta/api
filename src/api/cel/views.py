@@ -708,49 +708,42 @@ def euskokart_pin(request):
 
 @api_view(['POST'])
 def euskokart_update_pin(request):
+    serializer = serializers.UpdatePinSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # Connexion à Cyclos avec l'utilisateur courant pour avoir son identifiant.
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = serializers.UpdatePinSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
-
-    query_data = {
-        'user': cyclos.user_id,
-        'type': str(settings.CYCLOS_CONSTANTS['password_types']['pin']),
-        'newPassword': serializer.data['pin1'],
-        'confirmNewPassword': serializer.data['pin2']
-    }
+    # Connexion à Cyclos avec l'utilisateur Anonyme pour modifier le code PIN de l'utilisateur courant.
+    cyclos_anonyme = CyclosAPI(mode='login')
+    cyclos_token_anonyme = cyclos_anonyme.login(
+        auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                   settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
 
     try:
-        query_data.update({'oldPassword': serializer.data['ex_pin']})
-        mode = 'modifiy'
-    except KeyError:
-        mode = 'add'
-
-    try:
-        cyclos.post(method='password/change', data=query_data)
+        password_data = {
+            'user': cyclos.user_id,
+            'type': str(settings.CYCLOS_CONSTANTS['password_types']['pin']),
+            'newPassword': serializer.validated_data['pin'],
+            'confirmNewPassword': serializer.validated_data['pin']
+        }
+        cyclos_anonyme.post(method='password/change', data=password_data, token=cyclos_token_anonyme)
     except CyclosAPIException:
         return Response({'error': 'Unable to set your pin code!'}, status=status.HTTP_401_UNAUTHORIZED)
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        response = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))[0]
 
         # Activate user pre-selected language
-        activate(response[0]['array_options']['options_langue'])
+        activate(member['array_options']['options_langue'])
 
-        if mode == 'modifiy':
-            subject = _('Modification du code secret de votre euskokart')
-            response_data = {'status': 'Pin modified!'}
-        elif mode == 'add':
-            subject = _('Choix du code secret de votre euskokart')
-            response_data = {'status': 'Pin added!'}
-
-        body = render_to_string('mails/euskokart_update_pin.txt', {'mode': mode, 'user': response[0]})
-
-        sendmail_euskalmoneta(subject=subject, body=body, to_email=response[0]['email'])
+        subject = _('Modification de votre code PIN')
+        body = render_to_string('mails/euskokart_update_pin.txt', {'user': member})
+        sendmail_euskalmoneta(subject=subject, body=body, to_email=member['email'])
     except DolibarrAPIException as e:
         return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -758,7 +751,7 @@ def euskokart_update_pin(request):
         return Response({'error': 'Unable to send mail! error : {}'.format(e)},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(response_data, status=status.HTTP_202_ACCEPTED)
+    return Response(status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])

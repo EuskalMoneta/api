@@ -11,11 +11,7 @@
   {% endblocktrans %}
 {% endif %}
 
-{% if mode == 'add' %}
-  {% trans "Le code secret de votre euskokart vient d'être défini" %}.
-{% else %}
-  {% trans "Le code secret de votre euskokart vient d'être modifié" %}.
-{% endif %}
+{% trans "Votre code PIN pour utiliser l'application euskopay ou votre euskokart vient d'être modifié" %}.
 
 {% trans "Si vous n'êtes pas à l'initiative de cette action, veuillez nous contacter" %}.
 

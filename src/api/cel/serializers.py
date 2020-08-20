@@ -119,9 +119,7 @@ class ReconvertEuskoSerializer(serializers.Serializer):
 class UpdatePinSerializer(serializers.Serializer):
 
     # PINs are integers, but IntegerField() can't starts with 0, thus we needed to use CharField()
-    pin1 = serializers.CharField()
-    pin2 = serializers.CharField()
-    ex_pin = serializers.CharField(required=False)
+    pin = serializers.CharField(max_length=4)
 
 
 class MembersSubscriptionSerializer(serializers.Serializer):
