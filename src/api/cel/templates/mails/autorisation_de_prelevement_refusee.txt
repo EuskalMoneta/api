@@ -1,15 +1,7 @@
 {% load staticfiles i18n %}
 {% load template_tags %}
 
-{% if user|get_item:'company' %}
-{% blocktrans with name=user|get_item:'company' %}
-Bonjour {{ name }},
-{% endblocktrans %}
-{% else %}
-{% blocktrans with name=user|get_item:'firstname' %}
-Bonjour {{ name }},
-{% endblocktrans %}
-{% endif %}
+{% include "./bonjour.txt" %}
 
 {% blocktrans %}
 {{ debiteur }} a refusé votre demande d'autorisation de prélèvements sur son compte Eusko.
