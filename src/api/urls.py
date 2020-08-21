@@ -125,10 +125,6 @@ urlpatterns = [
 
     url(r'^creer-compte-vee/$', cel_views.creer_compte_vee),
     url(r'^creer-compte/$', cel_views.creer_compte),
-
-    # URL de callback pour les notifications envoyées par HelloAsso
-    # cf https://dev.helloasso.com/v3/notifications
-    url(r'^notification-paiement-helloasso/$', gi_views.notification_paiement_helloasso),
 ]
 
 urlpatterns += router.urls
