@@ -1032,7 +1032,7 @@ def change_password(request):
     # password/change
     change_password_data = {
         'user': cyclos.user_id,  # ID de l'utilisateur
-        'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+        'type': 'login',
         'oldPassword': request.data['old_password'],  # saisi par l'utilisateur
         'newPassword': request.data['new_password'],  # saisi par l'utilisateur
         'confirmNewPassword': request.data['confirm_password'],  # saisi par l'utilisateur

@@ -230,7 +230,7 @@ def validate_lost_password(request):
 
         password_data = {
             'user': cyclos_user_id,  # ID de l'utilisateur
-            'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+            'type': 'login',
             'newPassword': serializer.data['new_password'],  # saisi par l'utilisateur
             'confirmNewPassword': serializer.data['confirm_password'],  # saisi par l'utilisateur
         }
@@ -702,7 +702,7 @@ def euskokart_pin(request):
     response = cyclos.post(method='password/getData', data=cyclos.user_id)
     pin_code = [p
                 for p in response['result']['passwords']
-                if p['type']['id'] == str(settings.CYCLOS_CONSTANTS['password_types']['pin'])][0]
+                if p['type']['internalName'] == 'pin'][0]
     return Response(pin_code['status'])
 
 
@@ -726,7 +726,7 @@ def euskokart_update_pin(request):
     try:
         password_data = {
             'user': cyclos.user_id,
-            'type': str(settings.CYCLOS_CONSTANTS['password_types']['pin']),
+            'type': 'pin',
             'newPassword': serializer.validated_data['pin'],
             'confirmNewPassword': serializer.validated_data['pin']
         }
@@ -1289,7 +1289,7 @@ def change_cyclos_user_password(cyclos_token, cyclos_user_id, password):
     """
     data = {
         'user': cyclos_user_id,
-        'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+        'type': 'login',
         'newPassword': password,
         'confirmNewPassword': password,
     }
@@ -1307,7 +1307,7 @@ def change_cyclos_user_pincode(cyclos_token, cyclos_user_id, pin_code):
     """
     data = {
         'user': cyclos_user_id,
-        'type': str(settings.CYCLOS_CONSTANTS['password_types']['pin']),
+        'type': 'pin',
         'newPassword': pin_code,
         'confirmNewPassword': pin_code,
     }

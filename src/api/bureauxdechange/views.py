@@ -44,7 +44,7 @@ class BDCAPIView(BaseAPIView):
             'username': request.data['login'],
             'passwords': [
                 {
-                    'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+                    'type': 'login',
                     'value': request.data['login'],
                     'confirmationValue': request.data['login'],
                     'assign': True,

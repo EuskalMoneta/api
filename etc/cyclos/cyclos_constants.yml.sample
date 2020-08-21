@@ -28,11 +28,6 @@ groups:
   gestion_interne: -7371965223075135701
   operateurs_bdc: -7371965193010364629
   porteurs: -7371965188715397333
-password_types:
-  login_password: -7371965214485201109
-  one_time_password: -7371965193010364629
-  pin: -7371965223075135701
-  transaction_password: -7371965218780168405
 payment_modes:
   cheque: -7371965214485201109
   especes: -7371965218780168405
