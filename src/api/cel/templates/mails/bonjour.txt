@@ -1,11 +1,11 @@
 {% load staticfiles i18n %}
 
-{% if user|get_item:'login'|first in 'ET' %}
-{% blocktrans with name=user|get_item:'firstname' %}
+{% if user.login|first in 'ET' %}
+{% blocktrans with name=user.firstname %}
 Bonjour {{ name }},
 {% endblocktrans %}
 {% else %}
-{% blocktrans with name=user|get_item:'company' %}
+{% blocktrans with name=user.company %}
 Bonjour {{ name }},
 {% endblocktrans %}
 {% endif %}
