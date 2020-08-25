@@ -76,17 +76,9 @@ def create_user(group, name, login, password=None, custom_values=None):
         'skipActivationEmail': True,
     }
     if password:
-        # FIXME code à déplacer pour ne pas l'exécuter à chaque fois
-        r = requests.get(eusko_web_services + 'passwordType/list',
-                         headers=headers)
-        check_request_status(r)
-        password_types = r.json()['result']
-        for password_type in password_types:
-            if password_type['internalName'] == 'login':
-                login_password = password_type
         user_registration['passwords'] = [
             {
-                'type': login_password,
+                'type': 'login',
                 'value': password,
                 'confirmationValue': password,
                 'assign': True,

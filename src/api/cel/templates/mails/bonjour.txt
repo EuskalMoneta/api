@@ -1,0 +1,11 @@
+{% load staticfiles i18n %}
+
+{% if user.login|first in 'ET' %}
+{% blocktrans with name=user.firstname %}
+Bonjour {{ name }},
+{% endblocktrans %}
+{% else %}
+{% blocktrans with name=user.company %}
+Bonjour {{ name }},
+{% endblocktrans %}
+{% endif %}

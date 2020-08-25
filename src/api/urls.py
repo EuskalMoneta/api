@@ -107,7 +107,8 @@ urlpatterns = [
     url(r'^export-history-adherent/$', cel_views.export_history_adherent),
     url(r'^export-rie-adherent/$', cel_views.export_rie_adherent),
     url(r'^has-account/$', cel_views.has_account),
-    url(r'^one-time-transfer/$', cel_views.one_time_transfer),
+    url(r'^execute-virements/$', cel_views.execute_virements),
+    url(r'^execute-virement-asso-mlc/$', cel_views.execute_virement_asso_mlc),
     url(r'^reconvert-eusko/$', cel_views.reconvert_eusko),
     url(r'^user-rights/$', cel_views.user_rights),
     url(r'^accept-cgu/$', cel_views.accept_cgu),
@@ -122,9 +123,8 @@ urlpatterns = [
     url(r'^montant-don/$', cel_views.montant_don),
     url(r'^execute-prelevements/$', cel_views.execute_prelevements),
 
-    # URL de callback pour les notifications envoyées par HelloAsso
-    # cf https://dev.helloasso.com/v3/notifications
-    url(r'^notification-paiement-helloasso/$', gi_views.notification_paiement_helloasso),
+    url(r'^creer-compte-vee/$', cel_views.creer_compte_vee),
+    url(r'^creer-compte/$', cel_views.creer_compte),
 ]
 
 urlpatterns += router.urls

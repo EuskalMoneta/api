@@ -1,11 +1,10 @@
 {% load staticfiles i18n %}
-{% load template_tags %}
 
 <!doctype html>
 <html>
     <head>
         <meta charset="utf-8">
-        <title>Historique du {{ period|get_item:'begin' }} au {{ period|get_item:'end' }}</title>
+        <title>Historique du {{ period.begin }} au {{ period.end }}</title>
         <style>
             table {
                 border-collapse:collapse;
@@ -72,7 +71,7 @@
         </header>
         <article>
             <h4 style="text-align:center">
-                {% blocktrans with begin=period|get_item:'begin' end=period|get_item:'end' %}Historique du {{ begin }} au {{ end }}{% endblocktrans %}</h4>
+                {% blocktrans with begin=period.begin end=period.end %}Historique du {{ begin }} au {{ end }}{% endblocktrans %}</h4>
             <table>
                 <tr>
                     <td class="rowtitle">
@@ -94,23 +93,23 @@
                 {% for item in account_history %}
                 <tr>
                     <td>
-                        {{ item|get_item:'date' }}
+                        {{ item.date }}
                     </td>
                     <td class="align-left">
-                        {{ item|get_item:'description'|linebreaks }}
+                        {{ item.description|linebreaks }}
                     </td>
                     <td class="align-right">
-                    {% if item|get_item:'amount' < "0" %}
-                        {{ item|get_item:'amount' | floatformat:2 }}
+                    {% if item.amount < "0" %}
+                        {{ item.amount | floatformat:2 }}
                     {% endif %}
                     </td>
                     <td class="align-right">
-                    {% if item|get_item:'amount' > "0" %}
-                        {{ item|get_item:'amount' | floatformat:2 }}
+                    {% if item.amount > "0" %}
+                        {{ item.amount | floatformat:2 }}
                     {% endif %}
                     </td>
                     <td class="align-right">
-                        {{ item|get_item:'balance' | floatformat:2 }}
+                        {{ item.balance | floatformat:2 }}
                     </td>
                 </tr>
                 {% endfor %}

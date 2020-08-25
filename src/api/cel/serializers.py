@@ -70,8 +70,13 @@ class SecurityAnswerSerializer(serializers.Serializer):
 class BeneficiaireSerializer(serializers.ModelSerializer):
 
     class Meta:
+        """
+        Pour créer un bénéficiaire, le seul champ nécessaire est 'cyclos_account_number'. Tous les autres champs sont en
+        lecture seule et servent uniquement lors de la récupération d'un ou plusieurs bénéficiaires.
+        """
         model = models.Beneficiaire
-        fields = ('id', 'owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number')
+        fields = ['id', 'owner', 'cyclos_id', 'cyclos_name', 'cyclos_account_number']
+        read_only_fields = ['owner', 'cyclos_id', 'cyclos_name']
 
 
 class MandatSerializer(serializers.ModelSerializer):
@@ -94,9 +99,13 @@ class PredefinedSecurityQuestionSerializer(serializers.ModelSerializer):
         fields = ('id', 'question', 'language')
 
 
-class OneTimeTransferSerializer(serializers.Serializer):
+class ExecuteVirementSerializer(serializers.Serializer):
+    account = serializers.CharField()
+    amount = serializers.FloatField()
+    description = serializers.CharField()
 
-    beneficiaire = serializers.IntegerField()
+
+class ExecuteVirementAssoMlcSerializer(serializers.Serializer):
     amount = serializers.FloatField()
     description = serializers.CharField()
 
@@ -110,9 +119,7 @@ class ReconvertEuskoSerializer(serializers.Serializer):
 class UpdatePinSerializer(serializers.Serializer):
 
     # PINs are integers, but IntegerField() can't starts with 0, thus we needed to use CharField()
-    pin1 = serializers.CharField()
-    pin2 = serializers.CharField()
-    ex_pin = serializers.CharField(required=False)
+    pin = serializers.CharField(max_length=4)
 
 
 class MembersSubscriptionSerializer(serializers.Serializer):
@@ -124,5 +131,29 @@ class MembersSubscriptionSerializer(serializers.Serializer):
 
 class ExecutePrelevementSerializer(serializers.Serializer):
     account = serializers.CharField()
-    amount = serializers.CharField()
+    amount = serializers.FloatField()
     description = serializers.CharField()
+
+
+class CreerCompteVeeSerializer(serializers.Serializer):
+    lastname = serializers.CharField()
+    firstname = serializers.CharField()
+    email = serializers.EmailField()
+    address = serializers.CharField()
+    zip = serializers.CharField()
+    town = serializers.CharField()
+    country_id = serializers.IntegerField()
+    phone = serializers.CharField()
+    id_document = serializers.CharField()
+    idcheck_report = serializers.CharField()
+    birth = serializers.DateField()
+    password = serializers.CharField()
+    question = serializers.CharField()
+    answer = serializers.CharField()
+    pin_code = serializers.CharField()
+
+
+class CreerCompteSerializer(CreerCompteVeeSerializer):
+    iban = serializers.CharField()
+    automatic_change_amount = serializers.IntegerField()
+    sepa_document = serializers.CharField()

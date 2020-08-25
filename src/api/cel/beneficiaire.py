@@ -1,73 +1,62 @@
-from django.core.exceptions import ObjectDoesNotExist
-from django.forms.models import model_to_dict
-from rest_framework import exceptions, serializers as drf_serializers, status, viewsets
-from rest_framework.decorators import list_route
+from django.utils.translation import gettext as _
+from rest_framework import status, viewsets
 from rest_framework.response import Response
 
-from cel import models, serializers
+from cel.models import Beneficiaire
+from cel.serializers import BeneficiaireSerializer
 from cyclos_api import CyclosAPI, CyclosAPIException
 
 
 class BeneficiaireViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet pour les mandats.
+
+    list(), retrieve() et destroy() sont fournis par ModelViewSet et utilisent serializer_class et get_queryset().
+    On utilise http_method_names pour limiter les méthodes disponibles (interdire PATCH, PUT, DELETE).
+    """
+    serializer_class = BeneficiaireSerializer
     http_method_names = ['get', 'post', 'delete']
-    serializer_class = serializers.BeneficiaireSerializer
 
     def get_queryset(self):
-        return models.Beneficiaire.objects.filter(owner=self.request.user)
-
-    @list_route(methods=['get'])
-    def search(self, request, *args, **kwargs):
-        query = request.query_params.get('number', False)
-        res = None
-        if not query or len(query) != 9:
-            return exceptions.ParseError()
-
-        try:
-            cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
-
-            # user/search by account number only
-            data = cyclos.post(method='user/search', data={'keywords': str(request.query_params['number'])})
-
-            res = [{'label': item['display'], 'id': item['id']}
-                   for item in data['result']['pageItems']][0]
-        except (KeyError, IndexError, CyclosAPIException):
-            Response(status=status.HTTP_204_NO_CONTENT)
-
-        return Response(res) if res else Response(status=status.HTTP_204_NO_CONTENT)
+        return Beneficiaire.objects.filter(owner=self.request.user)
 
     def create(self, request, *args, **kwargs):
+        """
+        Créer un bénéficiaire en donnant son numéro de compte.
+        """
         serializer = self.get_serializer(data=request.data)
-        try:
-            serializer.is_valid(raise_exception=True)
-        except drf_serializers.ValidationError:
-            if 'non_field_errors' not in serializer.errors:
-                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        serializer.is_valid(raise_exception=True)
+        cyclos_account_number = serializer.validated_data['cyclos_account_number']
 
-        cyclos_account_number = request.data.get('cyclos_account_number', False)
-        if not cyclos_account_number:
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
-        # Check is this Beneficiaire doesn't already exists before we create a new one,
-        # as we don't want any duplicate
-        obj = None
+        # Si ce bénéficiaire existe déjà, on renvoie simplement OK.
         try:
-            obj = models.Beneficiaire.objects.get(owner=str(request.user),
-                                                  cyclos_account_number=cyclos_account_number)
-        except ObjectDoesNotExist:
+            beneficiaire = Beneficiaire.objects.get(owner=self.request.user,
+                                                    cyclos_account_number=cyclos_account_number)
+            if beneficiaire:
+                serializer = self.get_serializer(beneficiaire)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+        except Beneficiaire.DoesNotExist:
             pass
 
-        # Save the new object
-        if not obj:
-            serializer.save()
-            obj = models.Beneficiaire.objects.get(owner=str(request.user),
-                                                  cyclos_account_number=cyclos_account_number)
-
-        return Response(model_to_dict(obj), status=status.HTTP_201_CREATED)
-
-    def destroy(self, request, pk, *args, **kwargs):
+        # Le bénéficiaire n'existe pas, on va le créer.
+        # On cherche dans Cyclos l'utilisateur correspondant au numéro de compte du bénéficiaire à créer.
         try:
-            models.Beneficiaire.objects.get(id=pk).delete()
-        except ObjectDoesNotExist:
-            return Response(status=status.HTTP_204_NO_CONTENT)
+            cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
+        except CyclosAPIException:
+            return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+        data = cyclos.post(method='user/search', data={'keywords': cyclos_account_number})
+        if data['result']['totalCount'] == 0:
+            return Response({'error': _("Ce numéro de compte n'existe pas")},
+                            status=status.HTTP_422_UNPROCESSABLE_ENTITY)
+        cyclos_user = data['result']['pageItems'][0]
 
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        # Enregistrement du bénéficiaire en base de données.
+        beneficiaire = serializer.save(
+            owner=str(request.user),
+            cyclos_id=cyclos_user['id'],
+            cyclos_name=cyclos_user['display']
+        )
+
+        # Le bénéficiaire créé est envoyé dans la réponse.
+        serializer = self.get_serializer(beneficiaire)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

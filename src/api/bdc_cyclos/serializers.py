@@ -9,7 +9,7 @@ class EntreeStockBDCSerializer(serializers.Serializer):
 
 class SortieStockBDCSerializer(serializers.Serializer):
 
-    amount = serializers.CharField()
+    amount = serializers.IntegerField()
     porteur = serializers.CharField()
     description = serializers.CharField()
     login_bdc = serializers.CharField(required=False)
@@ -17,7 +17,7 @@ class SortieStockBDCSerializer(serializers.Serializer):
 
 class ChangeEuroEuskoSerializer(serializers.Serializer):
 
-    amount = serializers.CharField()
+    amount = serializers.IntegerField()
     payment_mode = serializers.CharField()
     payment_mode_name = serializers.CharField()
     member_login = serializers.CharField()
@@ -25,7 +25,7 @@ class ChangeEuroEuskoSerializer(serializers.Serializer):
 
 class ReconversionSerializer(serializers.Serializer):
 
-    amount = serializers.CharField()
+    amount = serializers.IntegerField()
     facture = serializers.CharField()
     member_login = serializers.CharField()
 
@@ -42,10 +42,10 @@ class AccountsHistorySerializer(serializers.Serializer):
 class BankDepositSerializer(serializers.Serializer):
 
     bordereau = serializers.CharField(required=False)
-    deposit_amount = serializers.CharField(allow_blank=True)
+    deposit_amount = serializers.IntegerField()
     deposit_bank = serializers.CharField()
     deposit_bank_name = serializers.CharField()
-    deposit_calculated_amount = serializers.CharField()
+    deposit_calculated_amount = serializers.IntegerField()
     disable_bordereau = serializers.BooleanField()
     login_bdc = serializers.CharField()
     payment_mode = serializers.CharField()
@@ -54,7 +54,7 @@ class BankDepositSerializer(serializers.Serializer):
 
 
 class CashDepositSerializer(serializers.Serializer):
-    deposit_amount = serializers.CharField()
+    deposit_amount = serializers.IntegerField()
     login_bdc = serializers.CharField()
     mode = serializers.CharField()
     porteur = serializers.CharField(required=False)
@@ -62,20 +62,19 @@ class CashDepositSerializer(serializers.Serializer):
 
 
 class SortieRetourEuskoSerializer(serializers.Serializer):
-    deposit_amount = serializers.CharField()
     login_bdc = serializers.CharField()
     porteur = serializers.CharField()
     selected_payments = serializers.ListField()
 
 
 class DepotEuskoNumeriqueSerializer(serializers.Serializer):
-    amount = serializers.CharField()
+    amount = serializers.IntegerField()
     login_bdc = serializers.CharField()
     member_login = serializers.CharField()
 
 
 class RetraitEuskoNumeriqueSerializer(serializers.Serializer):
-    amount = serializers.CharField()
+    amount = serializers.IntegerField()
     login_bdc = serializers.CharField()
     member_login = serializers.CharField()
 

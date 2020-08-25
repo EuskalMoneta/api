@@ -114,19 +114,6 @@ logger.debug('ID_CANAL_WEB_SERVICES = %s', ID_CANAL_WEB_SERVICES)
 logger.debug('ID_CANAL_PAY_AT_POS = %s', ID_CANAL_PAY_AT_POS)
 logger.debug('ID_CANAL_MOBILE_APP = %s', ID_CANAL_MOBILE_APP)
 
-# Récupération de la liste des types de mots de passe.
-logger.info('Récupération de la liste des types de mots de passe...')
-r = requests.get(global_web_services + 'passwordType/list', headers=headers)
-check_request_status(r)
-password_types = r.json()['result']
-for password_type in password_types:
-    if password_type['internalName'] == 'login':
-        ID_PASSWORD_LOGIN = password_type['id']
-    elif password_type['internalName'] == 'pin':
-        ID_PASSWORD_PIN = password_type['id']
-logger.debug('ID_PASSWORD_LOGIN = %s', ID_PASSWORD_LOGIN)
-logger.debug('ID_PASSWORD_PIN = %s', ID_PASSWORD_PIN)
-
 # Récupération de la liste des méthodes d'identification.
 logger.info("Récupération de la liste des méthodes d'identification...")
 r = requests.get(global_web_services + 'principalType/list', headers=headers)
@@ -378,7 +365,7 @@ new_pos_config = get_data_for_new_channel_configuration(
 new_pos_config['defined'] = True
 new_pos_config['enabled'] = True
 new_pos_config['userAccess'] = 'DEFAULT_ENABLED'
-new_pos_config['confirmationPassword'] = ID_PASSWORD_PIN
+new_pos_config['confirmationPassword'] = 'pin'
 logger.info('Sauvegarde de la nouvelle configuration de canal...')
 r = requests.post(
     eusko_web_services + 'channelConfiguration/save',
@@ -2369,9 +2356,11 @@ set_admin_group_permissions(
         'LOGIN_NAME',
     ],
     change_group='MANAGE',
+    user_registration=True,
     disabled_users='MANAGE',
     user_password_actions=[
         'login',
+        'pin',
     ],
     access_user_accounts=[
         ID_COMPTE_ADHERENT,
@@ -2411,14 +2400,6 @@ create_user(
     name='Compte dédié eusko numérique',
     login='CD_NUMERIQUE',
 )
-
-
-########################################################################
-# Récupération de la liste des types de mot de passe.
-r = requests.get(eusko_web_services + 'passwordType/list',
-                 headers=headers)
-for passwordType in r.json()['result']:
-    add_constant('password_types', passwordType['name'], passwordType['id'])
 
 
 ########################################################################
