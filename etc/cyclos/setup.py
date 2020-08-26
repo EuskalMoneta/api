@@ -580,7 +580,7 @@ def add_custom_field_to_transfer_type(transfer_type_id, custom_field_id):
 ID_CHAMP_PERSO_PAIEMENT_BDC = create_transaction_custom_field_linked_user(
     name='BDC',
 )
-ID_CHAMP_PERSO_PAIEMENT_PORTEUR = create_transaction_custom_field_linked_user(
+ID_CHAMP_PERSO_PAIEMENT_PORTEUR = create_transaction_custom_field_text(
     name='Porteur',
 )
 ID_CHAMP_PERSO_PAIEMENT_ADHERENT = create_transaction_custom_field_linked_user(
@@ -2181,13 +2181,6 @@ ID_PRODUIT_UTILISATEURS_BASIQUES_SANS_COMPTE = create_member_product(
         'login',
     ],
 )
-# Porteurs.
-ID_GROUPE_PORTEURS = create_member_group(
-    name='Porteurs',
-    products=[
-        ID_PRODUIT_UTILISATEURS_BASIQUES_SANS_COMPTE,
-    ]
-)
 # Adhérents sans compte.
 ID_GROUPE_ADHERENTS_SANS_COMPTE = create_member_group(
     name='Adhérents sans compte',
@@ -2203,7 +2196,6 @@ all_user_groups = [
     ID_GROUPE_COMPTES_DEDIES,
     ID_GROUPE_ADHERENTS_PRESTATAIRES,
     ID_GROUPE_ADHERENTS_UTILISATEURS,
-    ID_GROUPE_PORTEURS,
     ID_GROUPE_ADHERENTS_SANS_COMPTE,
 ]
 
