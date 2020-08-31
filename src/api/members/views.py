@@ -264,7 +264,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                'id_link_payment_member': res_id_link_payment_member,
                'member': current_member}
 
-        if current_member['type'].lower() == 'particulier':
+        if current_member['type'].lower() in ('particulier', 'touriste'):
             member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
         else:
             member_name = current_member['company']

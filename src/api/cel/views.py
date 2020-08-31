@@ -812,7 +812,7 @@ def members_cel_subscription(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if current_member['type'].lower() == 'particulier':
+    if current_member['type'].lower() in ('particulier', 'touriste'):
         member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
     else:
         member_name = current_member['company']
