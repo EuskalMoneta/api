@@ -62,6 +62,22 @@ def first_connection(request):
             if member['email'] == request.data['email']:
                 # We got a match!
 
+                # On vérifie si cet adhérent a un compte numérique.
+                cyclos = CyclosAPI(mode='login')
+                cyclos_token = cyclos.login(
+                    auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                               settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
+                data = cyclos.post(method='user/search',
+                                   data={
+                                       'keywords': request.data['login'],
+                                       'groups': ['adherents_prestataires', 'adherents_utilisateurs'],
+                                       'userStatus': ['ACTIVE'],
+                                   },
+                                   token=cyclos_token)
+                if data['result']['totalCount'] == 0:
+                    return Response({'error': _("Cet adhérent ou cette adhérente n'a pas de compte eusko.")},
+                                    status=status.HTTP_400_BAD_REQUEST)
+
                 # On enregistre la langue choisie par l'adhérent.
                 data = Member.validate_data({'options_langue': request.data['language']}, mode='update',
                                             base_options=member['array_options'])
@@ -87,7 +103,8 @@ def first_connection(request):
                 sendmail_euskalmoneta(subject=subject, body=body, to_email=request.data['email'])
                 return Response({'member': 'OK'})
             else:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': _("Pas d'adhérent.e correspondant à ce numéro d'adhérent.e et cette adresse email.")},
+                                status=status.HTTP_400_BAD_REQUEST)
 
         else:
             return Response({'error': 'You need to provide a *VALID* login parameter! (Format: E12345)'},
