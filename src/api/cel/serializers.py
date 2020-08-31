@@ -122,13 +122,6 @@ class UpdatePinSerializer(serializers.Serializer):
     pin = serializers.CharField(max_length=4)
 
 
-class MembersSubscriptionSerializer(serializers.Serializer):
-    start_date = serializers.DateTimeField(format=None)
-    end_date = serializers.DateTimeField(format=None)
-    amount = serializers.IntegerField()
-    label = serializers.CharField()
-
-
 class ExecutePrelevementSerializer(serializers.Serializer):
     account = serializers.CharField()
     amount = serializers.FloatField()

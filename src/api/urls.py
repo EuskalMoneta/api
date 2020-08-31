@@ -119,7 +119,6 @@ urlpatterns = [
     url(r'^euskokart-unblock/$', cel_views.euskokart_unblock),
     url(r'^euskokart-pin/$', cel_views.euskokart_pin),
     url(r'^euskokart-upd-pin/$', cel_views.euskokart_update_pin),
-    url(r'^member-cel-subscription/$', cel_views.members_cel_subscription),
     url(r'^montant-don/$', cel_views.montant_don),
     url(r'^execute-prelevements/$', cel_views.execute_prelevements),
 
