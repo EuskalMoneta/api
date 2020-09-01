@@ -78,7 +78,7 @@ class MembersAPIView(BaseAPIView):
         elif name and len(name) >= 3:
             # We want to search in members by name (firstname, lastname or societe)
             try:
-                sqlfilters = "firstname like '%25{name}%25' or lastname like '%25{name}%25' or societe like '%25{name}%25'".format(name=name)
+                sqlfilters = "(firstname like '%25{name}%25' or lastname like '%25{name}%25' or societe like '%25{name}%25') and statut=1".format(name=name)
                 response = self.dolibarr.get(model='members', sqlfilters=sqlfilters, api_key=dolibarr_token)
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
@@ -91,7 +91,7 @@ class MembersAPIView(BaseAPIView):
         elif email:
             try:
                 validate_email(email)
-                user_results = self.dolibarr.get(model='members', sqlfilters="email='{}'".format(email), api_key=dolibarr_token)
+                user_results = self.dolibarr.get(model='members', sqlfilters="email='{}' and statut=1".format(email), api_key=dolibarr_token)
                 user_data = [item
                              for item in user_results
                              if item['email'] == email][0]
@@ -100,7 +100,7 @@ class MembersAPIView(BaseAPIView):
                 return Response({'error': 'You need to provide a *VALID* ?email parameter! (Format: E12345)'},
                                 status=status.HTTP_400_BAD_REQUEST)
         else:
-            objects = self.dolibarr.get(model='members', api_key=dolibarr_token)
+            objects = self.dolibarr.get(model='members', sqlfilters="statut=1", api_key=dolibarr_token)
             paginator = CustomPagination()
             result_page = paginator.paginate_queryset(objects, request)
 
@@ -264,7 +264,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                'id_link_payment_member': res_id_link_payment_member,
                'member': current_member}
 
-        if current_member['type'].lower() == 'particulier':
+        if current_member['type'].lower() in ('particulier', 'touriste'):
             member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
         else:
             member_name = current_member['company']

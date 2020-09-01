@@ -119,16 +119,7 @@ class ReconvertEuskoSerializer(serializers.Serializer):
 class UpdatePinSerializer(serializers.Serializer):
 
     # PINs are integers, but IntegerField() can't starts with 0, thus we needed to use CharField()
-    pin1 = serializers.CharField()
-    pin2 = serializers.CharField()
-    ex_pin = serializers.CharField(required=False)
-
-
-class MembersSubscriptionSerializer(serializers.Serializer):
-    start_date = serializers.DateTimeField(format=None)
-    end_date = serializers.DateTimeField(format=None)
-    amount = serializers.IntegerField()
-    label = serializers.CharField()
+    pin = serializers.CharField(max_length=4)
 
 
 class ExecutePrelevementSerializer(serializers.Serializer):

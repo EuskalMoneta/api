@@ -52,7 +52,7 @@ def import_csv(request, filename):
                 ref=row['reference'],
                 adherent_name=row['debiteur'],
                 adherent_id=row['code'],
-                montant=float(row['montant'].replace(',', '.').strip(' €')),
+                montant=float(row['montant'].replace(',', '.').strip(' €').replace(' ', '')),
                 date=datetime.strptime(row['date-execution'], '%d/%m/%Y %H:%M:%S'),
                 operation_date=None)
 

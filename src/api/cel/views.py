@@ -62,6 +62,22 @@ def first_connection(request):
             if member['email'] == request.data['email']:
                 # We got a match!
 
+                # On vérifie si cet adhérent a un compte numérique.
+                cyclos = CyclosAPI(mode='login')
+                cyclos_token = cyclos.login(
+                    auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                               settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
+                data = cyclos.post(method='user/search',
+                                   data={
+                                       'keywords': request.data['login'],
+                                       'groups': ['adherents_prestataires', 'adherents_utilisateurs'],
+                                       'userStatus': ['ACTIVE'],
+                                   },
+                                   token=cyclos_token)
+                if data['result']['totalCount'] == 0:
+                    return Response({'error': _("Cet adhérent ou cette adhérente n'a pas de compte eusko.")},
+                                    status=status.HTTP_400_BAD_REQUEST)
+
                 # On enregistre la langue choisie par l'adhérent.
                 data = Member.validate_data({'options_langue': request.data['language']}, mode='update',
                                             base_options=member['array_options'])
@@ -87,7 +103,8 @@ def first_connection(request):
                 sendmail_euskalmoneta(subject=subject, body=body, to_email=request.data['email'])
                 return Response({'member': 'OK'})
             else:
-                return Response(status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': _("Pas d'adhérent.e correspondant à ce numéro d'adhérent.e et cette adresse email.")},
+                                status=status.HTTP_400_BAD_REQUEST)
 
         else:
             return Response({'error': 'You need to provide a *VALID* login parameter! (Format: E12345)'},
@@ -230,7 +247,7 @@ def validate_lost_password(request):
 
         password_data = {
             'user': cyclos_user_id,  # ID de l'utilisateur
-            'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+            'type': 'login',
             'newPassword': serializer.data['new_password'],  # saisi par l'utilisateur
             'confirmNewPassword': serializer.data['confirm_password'],  # saisi par l'utilisateur
         }
@@ -702,55 +719,48 @@ def euskokart_pin(request):
     response = cyclos.post(method='password/getData', data=cyclos.user_id)
     pin_code = [p
                 for p in response['result']['passwords']
-                if p['type']['id'] == str(settings.CYCLOS_CONSTANTS['password_types']['pin'])][0]
+                if p['type']['internalName'] == 'pin'][0]
     return Response(pin_code['status'])
 
 
 @api_view(['POST'])
 def euskokart_update_pin(request):
+    serializer = serializers.UpdatePinSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    # Connexion à Cyclos avec l'utilisateur courant pour avoir son identifiant.
     try:
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    serializer = serializers.UpdatePinSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
-
-    query_data = {
-        'user': cyclos.user_id,
-        'type': str(settings.CYCLOS_CONSTANTS['password_types']['pin']),
-        'newPassword': serializer.data['pin1'],
-        'confirmNewPassword': serializer.data['pin2']
-    }
+    # Connexion à Cyclos avec l'utilisateur Anonyme pour modifier le code PIN de l'utilisateur courant.
+    cyclos_anonyme = CyclosAPI(mode='login')
+    cyclos_token_anonyme = cyclos_anonyme.login(
+        auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                   settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
 
     try:
-        query_data.update({'oldPassword': serializer.data['ex_pin']})
-        mode = 'modifiy'
-    except KeyError:
-        mode = 'add'
-
-    try:
-        cyclos.post(method='password/change', data=query_data)
+        password_data = {
+            'user': cyclos.user_id,
+            'type': 'pin',
+            'newPassword': serializer.validated_data['pin'],
+            'confirmNewPassword': serializer.validated_data['pin']
+        }
+        cyclos_anonyme.post(method='password/change', data=password_data, token=cyclos_token_anonyme)
     except CyclosAPIException:
         return Response({'error': 'Unable to set your pin code!'}, status=status.HTTP_401_UNAUTHORIZED)
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        response = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))[0]
 
         # Activate user pre-selected language
-        activate(response[0]['array_options']['options_langue'])
+        activate(member['array_options']['options_langue'])
 
-        if mode == 'modifiy':
-            subject = _('Modification du code secret de votre euskokart')
-            response_data = {'status': 'Pin modified!'}
-        elif mode == 'add':
-            subject = _('Choix du code secret de votre euskokart')
-            response_data = {'status': 'Pin added!'}
-
-        body = render_to_string('mails/euskokart_update_pin.txt', {'mode': mode, 'user': response[0]})
-
-        sendmail_euskalmoneta(subject=subject, body=body, to_email=response[0]['email'])
+        subject = _('Modification de votre code PIN')
+        body = render_to_string('mails/euskokart_update_pin.txt', {'user': member})
+        sendmail_euskalmoneta(subject=subject, body=body, to_email=member['email'])
     except DolibarrAPIException as e:
         return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
                         status=status.HTTP_400_BAD_REQUEST)
@@ -758,7 +768,7 @@ def euskokart_update_pin(request):
         return Response({'error': 'Unable to send mail! error : {}'.format(e)},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    return Response(response_data, status=status.HTTP_202_ACCEPTED)
+    return Response(status=status.HTTP_200_OK)
 
 
 @api_view(['POST'])
@@ -799,117 +809,6 @@ def refuse_cgu(request):
         return Response({'status': 'OK'})
     except (DolibarrAPIException, KeyError, IndexError):
         return Response({'error': 'Unable to update CGU field!'}, status=status.HTTP_400_BAD_REQUEST)
-
-
-@api_view(['POST'])
-def members_cel_subscription(request):
-
-    serializer = serializers.MembersSubscriptionSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
-    try:
-        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))
-    except DolibarrAPIException as e:
-        return Response({'error': 'Unable to resolve user in dolibarr! error : {}'.format(e)},
-                        status=status.HTTP_400_BAD_REQUEST)
-
-    current_member = dolibarr.get(model='members', id=member[0]['id'])
-    try:
-        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    if current_member['type'].lower() == 'particulier':
-        member_name = '{} {}'.format(current_member['firstname'], current_member['lastname'])
-    else:
-        member_name = current_member['company']
-
-    try:
-        data = cyclos.post(method='user/search', data={'keywords': 'Z00001'})
-        euskal_moneta_cyclos_id = data['result']['pageItems'][0]['id']
-    except (KeyError, IndexError, CyclosAPIException) as e:
-        log.critical(e)
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    query_data = {
-        'type': str(settings.CYCLOS_CONSTANTS['payment_types']['virement_inter_adherent']),
-        'amount': serializer.data['amount'],
-        'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-        'from': cyclos.user_id,
-        'to': euskal_moneta_cyclos_id,
-        'description': 'Cotisation - {} - {}'.format(current_member['login'], member_name),
-    }
-    cyclos.post(method='payment/perform', data=query_data)
-
-    # Register new subscription
-    data_res_subscription = {'start_date': serializer.data['start_date'].strftime('%s'),
-                             'end_date': serializer.data['end_date'].strftime('%s'),
-                             'amount': serializer.data['amount'], 'label': serializer.data['label']}
-
-    try:
-        res_id_subscription = dolibarr.post(
-            model='members/{}/subscriptions'.format(member[0]['id']), data=data_res_subscription)
-    except Exception as e:
-        log.critical("data_res_subscription: {}".format(data_res_subscription))
-        log.critical(e)
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-    if str(res_id_subscription) == '-1':
-        return Response({'data returned': str(res_id_subscription)}, status=status.HTTP_409_CONFLICT)
-    # Register new payment
-    payment_account = 4
-    payment_type = 'VIR'
-    data_res_payment = {'date': arrow.now('Europe/Paris').timestamp, 'type': payment_type,
-                        'label': serializer.data['label'], 'amount': serializer.data['amount']}
-    model_res_payment = 'bankaccounts/{}/lines'.format(payment_account)
-    try:
-        res_id_payment = dolibarr.post(
-            model=model_res_payment, data=data_res_payment)
-
-        log.info("res_id_payment: {}".format(res_id_payment))
-    except DolibarrAPIException as e:
-        log.critical("model: {}".format(model_res_payment))
-        log.critical("data_res_payment: {}".format(data_res_payment))
-        log.critical(e)
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Link this new subscription with this new payment
-    data_link_sub_payment = {'fk_bank': res_id_payment}
-    model_link_sub_payment = 'subscriptions/{}'.format(res_id_subscription)
-    try:
-        res_id_link_sub_payment = dolibarr.put(
-            model=model_link_sub_payment, data=data_link_sub_payment)
-
-        log.info("res_id_link_sub_payment: {}".format(res_id_link_sub_payment))
-    except DolibarrAPIException as e:
-        log.critical("model: {}".format(model_link_sub_payment))
-        log.critical("data_link_sub_payment: {}".format(data_link_sub_payment))
-        log.critical(e)
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    # Link this payment with the related-member
-    data_link_payment_member = {'label': '{} {}'.format(member[0]['firstname'], member[0]['lastname']),
-                                'type': 'member', 'url_id': member[0]['id'],
-                                'url': '{}/adherents/card.php?rowid={}'.format(
-                                    settings.DOLIBARR_PUBLIC_URL, member[0]['id'])}
-    model_link_payment_member = 'bankaccounts/{}/lines/{}/links'.format(payment_account, res_id_payment)
-    try:
-        res_id_link_payment_member = dolibarr.post(
-            model=model_link_payment_member, data=data_link_payment_member)
-
-        log.info("res_id_link_payment_member: {}".format(res_id_link_payment_member))
-    except DolibarrAPIException as e:
-        log.critical("model: {}".format(model_link_payment_member))
-        log.critical("data_link_payment_member: {}".format(data_link_payment_member))
-        log.critical(e)
-        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-    res = {'id_subscription': res_id_subscription,
-           'id_payment': res_id_payment,
-           'link_sub_payment': res_id_link_sub_payment,
-           'id_link_payment_member': res_id_link_payment_member,
-           'member': current_member}
-
-    return Response(res, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])
@@ -1296,7 +1195,7 @@ def change_cyclos_user_password(cyclos_token, cyclos_user_id, password):
     """
     data = {
         'user': cyclos_user_id,
-        'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+        'type': 'login',
         'newPassword': password,
         'confirmNewPassword': password,
     }
@@ -1314,7 +1213,7 @@ def change_cyclos_user_pincode(cyclos_token, cyclos_user_id, pin_code):
     """
     data = {
         'user': cyclos_user_id,
-        'type': str(settings.CYCLOS_CONSTANTS['password_types']['pin']),
+        'type': 'pin',
         'newPassword': pin_code,
         'confirmNewPassword': pin_code,
     }

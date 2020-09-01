@@ -255,7 +255,7 @@ def sortie_stock(request):
     # payment/perform
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_stock_bdc']),
-        'amount': request.data['amount'],
+        'amount': serializer.validated_data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
         'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'to': 'SYSTEM',
@@ -295,7 +295,7 @@ def change_euro_eusko(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'particulier':
+    if dolibarr_member['type'].lower() in ('particulier', 'touriste'):
         member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
     else:
         member_name = dolibarr_member['company']
@@ -303,7 +303,7 @@ def change_euro_eusko(request):
     # payment/perform
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_billets_versement_des_euro']),
-        'amount': request.data['amount'],
+        'amount': serializer.validated_data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': 'SYSTEM',
         'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
@@ -347,7 +347,7 @@ def reconversion(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'particulier':
+    if dolibarr_member['type'].lower() in ('particulier', 'touriste'):
         return Response({'error': 'Forbidden, reconversion is not available for non-business members!'},
                         status=status.HTTP_403_FORBIDDEN)
 
@@ -356,7 +356,7 @@ def reconversion(request):
     # payment/perform
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['reconversion_billets_versement_des_eusko']),
-        'amount': request.data['amount'],
+        'amount': serializer.validated_data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
         'from': 'SYSTEM',
         'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
@@ -535,7 +535,7 @@ def bank_deposit(request):
 
     bank_deposit_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['depot_en_banque']),
-        'amount': request.data['deposit_calculated_amount'],  # montant total calculé
+        'amount': serializer.validated_data['deposit_calculated_amount'],  # montant total calculé
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'to': request.data['deposit_bank'],  # ID de la banque de dépôt (Crédit Agricole ou La Banque Postale)
@@ -571,15 +571,8 @@ def bank_deposit(request):
     }
     cyclos.post(method='payment/perform', data=bank_deposit_data)
 
-    if request.data['deposit_amount']:
-        deposit_amount = float(request.data['deposit_amount'])
-    else:
-        deposit_amount = float(0)
-
-    if request.data['deposit_calculated_amount']:
-        deposit_calculated_amount = float(request.data['deposit_calculated_amount'])
-    else:
-        deposit_calculated_amount = float(0)
+    deposit_amount = serializer.validated_data['deposit_amount']
+    deposit_calculated_amount = serializer.validated_data['deposit_calculated_amount']
 
     if deposit_amount < deposit_calculated_amount:
         regularisation = deposit_calculated_amount - deposit_amount
@@ -704,7 +697,7 @@ def cash_deposit(request):
     # Enregistrer la remise d'espèces
     cash_deposit_data = {
         'type': payment_type,
-        'amount': request.data['deposit_amount'],  # montant total calculé
+        'amount': serializer.validated_data['deposit_amount'],  # montant total calculé
         'currency': currency,
         'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'to': 'SYSTEM',  # System account
@@ -831,7 +824,7 @@ def depot_eusko_numerique(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'particulier':
+    if dolibarr_member['type'].lower() in ('particulier', 'touriste'):
         member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
     else:
         member_name = dolibarr_member['company']
@@ -839,7 +832,7 @@ def depot_eusko_numerique(request):
     # Retour des Eusko billets
     retour_eusko_billets_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['depot_de_billets']),
-        'amount': request.data['amount'],  # montant saisi
+        'amount': serializer.validated_data['amount'],  # montant saisi
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
         'from': 'SYSTEM',
         'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
@@ -856,7 +849,7 @@ def depot_eusko_numerique(request):
     # Crédit du compte Eusko numérique du prestataire
     depot_eusko_numerique_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['credit_du_compte']),
-        'amount': request.data['amount'],  # montant saisi
+        'amount': serializer.validated_data['amount'],  # montant saisi
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
         'from': 'SYSTEM',
         'to': member_cyclos_id,  # ID de l'adhérent
@@ -897,7 +890,7 @@ def retrait_eusko_numerique(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'particulier':
+    if dolibarr_member['type'].lower() in ('particulier', 'touriste'):
         member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
     else:
         member_name = dolibarr_member['company']
@@ -916,7 +909,7 @@ def retrait_eusko_numerique(request):
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     try:
-        if float(member_account_summary_res['result'][0]['status']['balance']) < float(request.data['amount']):
+        if float(member_account_summary_res['result'][0]['status']['balance']) < serializer.validated_data['amount']:
             return Response({'error': "error-member-not-enough-money"})
     except (KeyError, IndexError):
         return Response({'error': "Unable to fetch account data!"},
@@ -931,13 +924,13 @@ def retrait_eusko_numerique(request):
         for item in bdc_account_summary_res['result']
         if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types']['stock_de_billets_bdc'])][0]
 
-    if float(bdc_account_summary_data['status']['balance']) < float(request.data['amount']):
+    if float(bdc_account_summary_data['status']['balance']) < serializer.validated_data['amount']:
         return Response({'error': "error-bureau-not-enough-money"})
 
     # Débit du compte
     debit_compte_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_du_compte']),
-        'amount': request.data['amount'],  # montant saisi
+        'amount': serializer.validated_data['amount'],  # montant saisi
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
         'from': member_cyclos_id,  # ID de l'adhérent
         'to': 'SYSTEM',
@@ -954,7 +947,7 @@ def retrait_eusko_numerique(request):
     # Retrait des billets
     retrait_billets_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['retrait_de_billets']),
-        'amount': request.data['amount'],  # montant saisi
+        'amount': serializer.validated_data['amount'],  # montant saisi
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
         'from': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
         'to': 'SYSTEM',
@@ -1039,7 +1032,7 @@ def change_password(request):
     # password/change
     change_password_data = {
         'user': cyclos.user_id,  # ID de l'utilisateur
-        'type': str(settings.CYCLOS_CONSTANTS['password_types']['login_password']),
+        'type': 'login',
         'oldPassword': request.data['old_password'],  # saisi par l'utilisateur
         'newPassword': request.data['new_password'],  # saisi par l'utilisateur
         'confirmNewPassword': request.data['confirm_password'],  # saisi par l'utilisateur
@@ -1072,7 +1065,7 @@ def change_euro_eusko_numeriques(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'particulier':
+    if dolibarr_member['type'].lower() in ('particulier', 'touriste'):
         member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
     else:
         member_name = dolibarr_member['company']
@@ -1080,7 +1073,7 @@ def change_euro_eusko_numeriques(request):
     # payment/perform
     bdc_query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_bdc_versement_des_euro']),
-        'amount': request.data['amount'],
+        'amount': serializer.validated_data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
         'from': 'SYSTEM',
         'to': cyclos.user_bdc_id,  # ID de l'utilisateur Bureau de change
@@ -1103,7 +1096,7 @@ def change_euro_eusko_numeriques(request):
     # payment/perform
     query_data = {
         'type': str(settings.CYCLOS_CONSTANTS['payment_types']['credit_du_compte']),
-        'amount': request.data['amount'],
+        'amount': serializer.validated_data['amount'],
         'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
         'from': 'SYSTEM',
         'to': member_cyclos_id,  # ID de l'adhérent

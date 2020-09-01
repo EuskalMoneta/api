@@ -119,16 +119,11 @@ urlpatterns = [
     url(r'^euskokart-unblock/$', cel_views.euskokart_unblock),
     url(r'^euskokart-pin/$', cel_views.euskokart_pin),
     url(r'^euskokart-upd-pin/$', cel_views.euskokart_update_pin),
-    url(r'^member-cel-subscription/$', cel_views.members_cel_subscription),
     url(r'^montant-don/$', cel_views.montant_don),
     url(r'^execute-prelevements/$', cel_views.execute_prelevements),
 
     url(r'^creer-compte-vee/$', cel_views.creer_compte_vee),
     url(r'^creer-compte/$', cel_views.creer_compte),
-
-    # URL de callback pour les notifications envoyées par HelloAsso
-    # cf https://dev.helloasso.com/v3/notifications
-    url(r'^notification-paiement-helloasso/$', gi_views.notification_paiement_helloasso),
 ]
 
 urlpatterns += router.urls
