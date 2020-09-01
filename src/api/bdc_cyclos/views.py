@@ -295,7 +295,7 @@ def change_euro_eusko(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'particulier':
+    if dolibarr_member['type'].lower() in ('particulier', 'touriste'):
         member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
     else:
         member_name = dolibarr_member['company']
@@ -347,7 +347,7 @@ def reconversion(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'particulier':
+    if dolibarr_member['type'].lower() in ('particulier', 'touriste'):
         return Response({'error': 'Forbidden, reconversion is not available for non-business members!'},
                         status=status.HTTP_403_FORBIDDEN)
 
@@ -824,7 +824,7 @@ def depot_eusko_numerique(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'particulier':
+    if dolibarr_member['type'].lower() in ('particulier', 'touriste'):
         member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
     else:
         member_name = dolibarr_member['company']
@@ -890,7 +890,7 @@ def retrait_eusko_numerique(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'particulier':
+    if dolibarr_member['type'].lower() in ('particulier', 'touriste'):
         member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
     else:
         member_name = dolibarr_member['company']
@@ -1065,7 +1065,7 @@ def change_euro_eusko_numeriques(request):
         return Response({'error': 'Unable to fetch Dolibarr data! Maybe your credentials are invalid!?'},
                         status=status.HTTP_400_BAD_REQUEST)
 
-    if dolibarr_member['type'].lower() == 'particulier':
+    if dolibarr_member['type'].lower() in ('particulier', 'touriste'):
         member_name = '{} {}'.format(dolibarr_member['firstname'], dolibarr_member['lastname'])
     else:
         member_name = dolibarr_member['company']

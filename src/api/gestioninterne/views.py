@@ -1341,7 +1341,7 @@ def paiement_cotisation_eusko_numerique(request):
     except:
         return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    if member['type'].lower() == 'particulier':
+    if member['type'].lower() in ('particulier', 'touriste'):
         member_name = '{} {}'.format(member['firstname'], member['lastname'])
     else:
         member_name = member['company']

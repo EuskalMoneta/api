@@ -34,7 +34,7 @@ def login(request):
             # we detected that our "username" variable is an email, we try to connect to dolibarr with it
             dolibarr_anonymous_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
                                                       password=settings.APPS_ANONYMOUS_PASSWORD)
-            user_results = dolibarr.get(model='members', sqlfilters="email='{}'".format(request.data['username']),
+            user_results = dolibarr.get(model='members', sqlfilters="email='{}' and statut=1".format(request.data['username']),
                                         api_key=dolibarr_anonymous_token)
             user_data = [item
                          for item in user_results
@@ -71,7 +71,7 @@ def verify_usergroup(request):
             # validate (or not) the fact that our "username" variable is an email
             validate_email(request.query_params['username'])
 
-            user_results = dolibarr.get(model='members', sqlfilters="email='{}'".format(request.query_params['username']))
+            user_results = dolibarr.get(model='members', sqlfilters="email='{}' and statut=1".format(request.query_params['username']))
             user_data = [item
                          for item in user_results
                          if item['email'] == request.query_params['username']][0]
