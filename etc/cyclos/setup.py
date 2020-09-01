@@ -918,7 +918,8 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
                                  to_account_type_id, custom_fields=[],
                                  status_flows=[], initial_statuses=[],
                                  channels=[ID_CANAL_MAIN_WEB, ID_CANAL_WEB_SERVICES],
-                                 principal_types=[]):
+                                 principal_types=[],
+                                 description_availability="OPTIONAL"):
     logger.info('Création du type de paiement "%s"...', name)
     r = requests.post(eusko_web_services + 'transferType/save',
                       headers=headers,
@@ -935,6 +936,7 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
                           'maxChargebackTime': {'amount': '2', 'field': 'MONTHS'},
                           'channels': channels,
                           'principalTypes': principal_types,
+                          'descriptionAvailability': description_availability,
                       })
     check_request_status(r)
     payment_transfer_type_id = r.json()['result']
@@ -949,7 +951,8 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
 
 
 def create_generated_transfer_type(name, direction, from_account_type_id,
-                                   to_account_type_id):
+                                   to_account_type_id,
+                                   description_availability="OPTIONAL"):
     logger.info('Création du type de paiement "%s"...', name)
     r = requests.post(eusko_web_services + 'transferType/save',
                       headers=headers,
@@ -960,6 +963,7 @@ def create_generated_transfer_type(name, direction, from_account_type_id,
                           'direction': direction,
                           'from': from_account_type_id,
                           'to': to_account_type_id,
+                          'descriptionAvailability': description_availability,
                       })
     check_request_status(r)
     generated_transfer_type_id = r.json()['result']
