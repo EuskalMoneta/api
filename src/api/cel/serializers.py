@@ -48,11 +48,6 @@ class ValidFirstConnectionSerializer(serializers.Serializer):
     answer = serializers.CharField()
 
 
-class EuskokartLockSerializer(serializers.Serializer):
-
-    id = serializers.CharField()
-
-
 class ValidLostPasswordSerializer(serializers.Serializer):
 
     token = serializers.CharField()
