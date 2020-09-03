@@ -542,6 +542,8 @@ def create_transaction_custom_field_text(name, unique=False,
                           'type': 'STRING',
                           'size': 'LARGE',
                           'control': 'TEXT',
+                          'valueMatch': 'TEXT',
+                          'maxWordSize': 100,
                           'unique': unique,
                           'required': required
                       })
@@ -561,6 +563,7 @@ def create_transaction_custom_field_decimal(name, required=True):
                           'internalName': get_internal_name(name),
                           'type': 'DECIMAL',
                           'control': 'TEXT',
+                          'decimalDigits': 2,
                           'required': required
                       })
     check_request_status(r)
@@ -675,6 +678,8 @@ def create_system_account_type(name, currency_id, limit_type):
         'currency': currency_id,
         'limitType': limit_type,
         'customFieldsForList': all_transaction_fields,
+        'showDescriptionInHistoryFilters': True,
+        'showDescriptionInHistoryList': True,
     }
     if limit_type == 'LIMITED':
         params['creditLimit'] = 0
@@ -695,6 +700,8 @@ def create_user_account_type(name, currency_id):
         'internalName': get_internal_name(name),
         'currency': currency_id,
         'customFieldsForList': all_transaction_fields,
+        'showDescriptionInHistoryFilters': True,
+        'showDescriptionInHistoryList': True,
     }
     r = requests.post(eusko_web_services + 'accountType/save',
                       headers=headers, json=params)
@@ -912,7 +919,7 @@ all_status_flows = [
 # permissions), ce qui garantit une capacité à intervenir si nécessaire.
 # D'autre part, ils peuvent tous être utilisés par l'API Eusko (ce n'est
 # pas forcément nécessaire mais c'est possible, il n'y aura pas de
-# question à se poser.
+# question à se poser).
 #
 def create_payment_transfer_type(name, direction, from_account_type_id,
                                  to_account_type_id, custom_fields=[],
@@ -930,6 +937,7 @@ def create_payment_transfer_type(name, direction, from_account_type_id,
                           'from': from_account_type_id,
                           'to': to_account_type_id,
                           'enabled': True,
+                          'descriptionAvailability': 'OPTIONAL',
                           'statusFlows': status_flows,
                           'initialStatuses': initial_statuses,
                           'maxChargebackTime': {'amount': '2', 'field': 'MONTHS'},
@@ -960,6 +968,7 @@ def create_generated_transfer_type(name, direction, from_account_type_id,
                           'direction': direction,
                           'from': from_account_type_id,
                           'to': to_account_type_id,
+                          'descriptionAvailability': 'OPTIONAL',
                       })
     check_request_status(r)
     generated_transfer_type_id = r.json()['result']
@@ -1648,7 +1657,8 @@ def create_user_custom_field_linked_user(name, required=True):
                           'type': 'LINKED_ENTITY',
                           'linkedEntityType': 'USER',
                           'control': 'ENTITY_SELECTION',
-                          'required': required
+                          'required': required,
+                          'purgeValues': True,
                       })
     check_request_status(r)
     custom_field_id = r.json()['result']
