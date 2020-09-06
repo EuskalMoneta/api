@@ -70,7 +70,7 @@ def first_connection(request):
                 data = cyclos.post(method='user/search',
                                    data={
                                        'keywords': request.data['login'],
-                                       'groups': ['adherents_prestataires', 'adherents_utilisateurs'],
+                                       'groups': ['adherents_prestataires', 'adherents_prestataires_avec_paiement_smartphone', 'adherents_utilisateurs'],
                                        'userStatus': ['ACTIVE'],
                                    },
                                    token=cyclos_token)
@@ -458,6 +458,7 @@ def has_account(request):
         group_constants_without_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte'])]
 
         group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires_avec_paiement_smartphone']),
                                         str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
 
         # Fetching info for our current user (we look for his groups)
@@ -617,6 +618,7 @@ def user_rights(request):
         group_constants_without_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte'])]
 
         group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires_avec_paiement_smartphone']),
                                         str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
 
         # Fetching info for our current user (we look for his groups)
@@ -1109,7 +1111,7 @@ def create_cyclos_user(cyclos_token, group, name, login, password=None, pin_code
     res = cyclos.post(method='user/register', data=data, token=cyclos_token)
     cyclos_user_id = res['result']['user']['id']
     # S'il s'agit d'un groupe dans lequel les utilisateurs ont un QR code, il faut générer celui-ci.
-    if group in ('adherents_utilisateurs', 'adherents_prestataires'):
+    if group in ('adherents_utilisateurs', 'adherents_prestataires', 'adherents_prestataires_avec_paiement_smartphone'):
         generate_qr_code_for_cyclos_user(cyclos_token, cyclos_user_id, login)
     # Si un mot de passe est fourni, cela signifie que cet utilisateur doit pouvoir se connecter donc il faut l'activer.
     if password:
