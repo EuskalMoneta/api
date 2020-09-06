@@ -97,6 +97,7 @@ def perform(request):
 
             # Determine whether or not our user is part of the appropriate group
             group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                            str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires_avec_paiement_smartphone']),
                                             str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
 
             # Fetching info for our current user (we look for his groups)

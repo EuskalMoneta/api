@@ -172,7 +172,7 @@ $dolibarr_main_db_collation='utf8_general_ci';
 // $dolibarr_main_authentication='openid,dolibarr';
 // $dolibarr_main_authentication='forceuser';	// Add also $dolibarr_auto_user='loginforuser';
 
-$dolibarr_main_authentication='cyclos4';
+$dolibarr_main_authentication='cyclos4,dolibarr';
 
 // Parameters used to setup Cyclos 4 authentication.
 // Uncomment them if dolibarr_main_authentication = 'cyclos4'

@@ -70,7 +70,7 @@ def first_connection(request):
                 data = cyclos.post(method='user/search',
                                    data={
                                        'keywords': request.data['login'],
-                                       'groups': ['adherents_prestataires', 'adherents_utilisateurs'],
+                                       'groups': ['adherents_prestataires', 'adherents_prestataires_avec_paiement_smartphone', 'adherents_utilisateurs'],
                                        'userStatus': ['ACTIVE'],
                                    },
                                    token=cyclos_token)
@@ -458,6 +458,7 @@ def has_account(request):
         group_constants_without_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte'])]
 
         group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires_avec_paiement_smartphone']),
                                         str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
 
         # Fetching info for our current user (we look for his groups)
@@ -472,56 +473,6 @@ def has_account(request):
             raise PermissionDenied()
     except KeyError:
         raise PermissionDenied()
-
-
-@api_view(['GET'])
-def euskokart_list(request):
-    try:
-        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    query_data = [str(settings.CYCLOS_CONSTANTS['tokens']['carte_nfc']), cyclos.user_id]
-
-    euskokart_data = cyclos.post(method='token/getListData', data=query_data)
-    try:
-        euskokart_res = [item for item in euskokart_data['result']['tokens']]
-    except KeyError:
-        return Response({'error': 'Unable to fetch euskokart data!'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    return Response(euskokart_res)
-
-
-@api_view(['GET'])
-def euskokart_block(request):
-    serializer = serializers.EuskokartLockSerializer(data=request.query_params)
-    serializer.is_valid(raise_exception=True)
-
-    try:
-        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    query_data = [serializer.data['id']]
-
-    euskokart_data = cyclos.post(method='token/block', data=query_data)
-    return Response(euskokart_data)
-
-
-@api_view(['GET'])
-def euskokart_unblock(request):
-    serializer = serializers.EuskokartLockSerializer(data=request.query_params)
-    serializer.is_valid(raise_exception=True)
-
-    try:
-        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
-    except CyclosAPIException:
-        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    query_data = [serializer.data['id']]
-
-    euskokart_data = cyclos.post(method='token/unblock', data=query_data)
-    return Response(euskokart_data)
 
 
 def execute_virement(dolibarr, cyclos, virement):
@@ -667,6 +618,7 @@ def user_rights(request):
         group_constants_without_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte'])]
 
         group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires_avec_paiement_smartphone']),
                                         str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
 
         # Fetching info for our current user (we look for his groups)
@@ -1159,7 +1111,7 @@ def create_cyclos_user(cyclos_token, group, name, login, password=None, pin_code
     res = cyclos.post(method='user/register', data=data, token=cyclos_token)
     cyclos_user_id = res['result']['user']['id']
     # S'il s'agit d'un groupe dans lequel les utilisateurs ont un QR code, il faut générer celui-ci.
-    if group in ('adherents_utilisateurs', 'adherents_prestataires'):
+    if group in ('adherents_utilisateurs', 'adherents_prestataires', 'adherents_prestataires_avec_paiement_smartphone'):
         generate_qr_code_for_cyclos_user(cyclos_token, cyclos_user_id, login)
     # Si un mot de passe est fourni, cela signifie que cet utilisateur doit pouvoir se connecter donc il faut l'activer.
     if password:
