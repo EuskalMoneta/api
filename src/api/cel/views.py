@@ -894,7 +894,8 @@ def creer_compte_vee(request):
         # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
         header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
         mime_type = header[len('data:'):-len(';base64')]
-        extension = mimetypes.guess_extension(mime_type)
+        # contournement du bug https://bugs.python.org/issue4963
+        extension = mimetypes.guess_extension(mime_type).replace('.jpeg', '.jpg').replace('.jpe', '.jpg')
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Pièce-d'identité{}".format(num_adherent, extension),
                                              filecontent=base64_encoded_data)
@@ -959,14 +960,15 @@ def creer_compte(request):
             automatic_change_amount=serializer.validated_data['automatic_change_amount'])
         # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
         header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
-        mime_type = header.lstrip('data:').rstrip(';base64')
-        extension = mimetypes.guess_extension(mime_type)
+        mime_type = header[len('data:'):-len(';base64')]
+        # contournement du bug https://bugs.python.org/issue4963
+        extension = mimetypes.guess_extension(mime_type).replace('.jpeg', '.jpg').replace('.jpe', '.jpg')
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Pièce-d'identité{}".format(num_adherent, extension),
                                              filecontent=base64_encoded_data)
         # Joindre le rapport IDCheck à la fiche Adhérent dans Dolibarr.
         header, base64_encoded_data = serializer.validated_data['idcheck_report'].split(",", 1)
-        mime_type = header.lstrip('data:').rstrip(';base64')
+        mime_type = header[len('data:'):-len(';base64')]
         extension = mimetypes.guess_extension(mime_type)
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Rapport-IDCheck{}".format(num_adherent, extension),
