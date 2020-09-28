@@ -448,33 +448,6 @@ def export_rie_adherent(request):
             return Response(pdf_content, headers=headers)
 
 
-@api_view(['GET'])
-def has_account(request):
-
-    try:
-        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='cel')
-
-        # Determine whether or not our user is an "utilisateur" or a "prestataire"
-        group_constants_without_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_sans_compte'])]
-
-        group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
-                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires_avec_paiement_smartphone']),
-                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
-
-        # Fetching info for our current user (we look for his groups)
-        data = cyclos.post(method='user/load', data=[cyclos.user_id], token=request.user.profile.cyclos_token)
-
-        # Determine whether or not our user is part of the appropriate group
-        if data['result']['group']['id'] in group_constants_without_account:
-            return Response({'status': False})
-        elif data['result']['group']['id'] in group_constants_with_account:
-            return Response({'status': True})
-        else:
-            raise PermissionDenied()
-    except KeyError:
-        raise PermissionDenied()
-
-
 def execute_virement(dolibarr, cyclos, virement):
     try:
         # On récupère le destinataire du virement à partir de son numéro de compte.
@@ -921,7 +894,8 @@ def creer_compte_vee(request):
         # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
         header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
         mime_type = header[len('data:'):-len(';base64')]
-        extension = mimetypes.guess_extension(mime_type)
+        # contournement du bug https://bugs.python.org/issue4963
+        extension = mimetypes.guess_extension(mime_type).replace('.jpeg', '.jpg').replace('.jpe', '.jpg')
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Pièce-d'identité{}".format(num_adherent, extension),
                                              filecontent=base64_encoded_data)
@@ -986,14 +960,15 @@ def creer_compte(request):
             automatic_change_amount=serializer.validated_data['automatic_change_amount'])
         # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
         header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
-        mime_type = header.lstrip('data:').rstrip(';base64')
-        extension = mimetypes.guess_extension(mime_type)
+        mime_type = header[len('data:'):-len(';base64')]
+        # contournement du bug https://bugs.python.org/issue4963
+        extension = mimetypes.guess_extension(mime_type).replace('.jpeg', '.jpg').replace('.jpe', '.jpg')
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Pièce-d'identité{}".format(num_adherent, extension),
                                              filecontent=base64_encoded_data)
         # Joindre le rapport IDCheck à la fiche Adhérent dans Dolibarr.
         header, base64_encoded_data = serializer.validated_data['idcheck_report'].split(",", 1)
-        mime_type = header.lstrip('data:').rstrip(';base64')
+        mime_type = header[len('data:'):-len(';base64')]
         extension = mimetypes.guess_extension(mime_type)
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Rapport-IDCheck{}".format(num_adherent, extension),

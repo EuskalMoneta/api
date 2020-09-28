@@ -106,7 +106,6 @@ urlpatterns = [
     url(r'^account-summary-adherents/$', cel_views.account_summary_for_adherents),
     url(r'^export-history-adherent/$', cel_views.export_history_adherent),
     url(r'^export-rie-adherent/$', cel_views.export_rie_adherent),
-    url(r'^has-account/$', cel_views.has_account),
     url(r'^execute-virements/$', cel_views.execute_virements),
     url(r'^execute-virement-asso-mlc/$', cel_views.execute_virement_asso_mlc),
     url(r'^reconvert-eusko/$', cel_views.reconvert_eusko),
