@@ -1174,16 +1174,16 @@ def generate_qr_code_for_cyclos_user(cyclos_token, cyclos_user_id, login):
 def create_security_qa(login, question, answer):
     """
     Crée une question/réponse de sécurité pour le numéro d'adhérent donné.
+    Si une question était déjà enregistrée pour cet adhérent, elle est mise à jour.
     :param login: numéro d'adhérent
     :param question:
     :param answer:
     :return:
     """
-    res = models.SecurityAnswer.objects.create(owner=login, question=question)
-    res.set_answer(raw_answer=answer)
-    res.save()
-    if not res:
-        raise Exception('Unable to save security answer.')
+    sa, created = models.SecurityAnswer.objects.get_or_create(owner=login)
+    sa.question=question
+    sa.set_answer(raw_answer=answer)
+    sa.save()
 
 
 def create_dolibarr_user_linked_to_member(dolibarr, login):
