@@ -90,11 +90,13 @@ def first_connection(request):
                            'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
                 jwt_token = jwt.encode(payload, settings.JWT_SECRET)
-                confirm_url = '{}/valide-premiere-connexion?token={}'.format(settings.CEL_PUBLIC_URL,
-                                                                             jwt_token.decode("utf-8"))
+                confirm_url = '{}/{}/valide-premiere-connexion?token={}'.format(
+                    settings.CEL_PUBLIC_URL,
+                    request.data['language'],
+                    jwt_token.decode("utf-8"))
 
-                # Activate user pre-selected language
-                activate(member['array_options']['options_langue'])
+                # On active la langue choisie par l'utilisateur.
+                activate(request.data['language'])
 
                 # Translate subject & body for this email
                 subject = _('Première connexion à votre compte en ligne Eusko')
@@ -193,11 +195,13 @@ def lost_password(request):
                            'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
                 jwt_token = jwt.encode(payload, settings.JWT_SECRET)
-                confirm_url = '{}/valide-passe-perdu?token={}'.format(settings.CEL_PUBLIC_URL,
-                                                                      jwt_token.decode("utf-8"))
+                confirm_url = '{}/{}/valide-passe-perdu?token={}'.format(
+                    settings.CEL_PUBLIC_URL,
+                    request.data['language'],
+                    jwt_token.decode("utf-8"))
 
-                # Activate user pre-selected language
-                activate(user_data['array_options']['options_langue'])
+                # On active la langue choisie par l'utilisateur.
+                activate(request.data['language'])
 
                 # Translate subject & body for this email
                 subject = _('Changement de mot de passe pour votre compte en ligne Eusko')
