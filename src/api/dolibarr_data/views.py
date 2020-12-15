@@ -181,7 +181,16 @@ def countries(request):
         dolibarr = DolibarrAPI()
         dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
                        password=settings.APPS_ANONYMOUS_PASSWORD)
-    return Response(dolibarr.get(model='setup/dictionary/countries', lang='fr_FR'))
+    # On récupère la liste de tous les pays indiqués comme actifs dans
+    # Dolibarr, on ne garde que l'identifiant et le nom de chaque pays,
+    # et on trie la liste par ordre alphabétique, à l'exception de la
+    # France qui est placée en premier.
+    countries = dolibarr.get(model='setup/dictionary/countries', lang='fr_FR', limit='0', sqlfilters='active=1')
+    france_id = next(c for c in countries if c['label'] == 'France')['id']
+    countries = [{'id': c['id'], 'label': c['label']} for c in countries if c['label'] != 'France']
+    countries.sort(key=lambda c: c['label'])
+    countries.insert(0, {'id': france_id, 'label': 'France'})
+    return Response(countries)
 
 
 @api_view(['GET'])
