@@ -961,7 +961,11 @@ def creer_compte(request):
             serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
             serializer.validated_data['country_id'], serializer.validated_data['phone'],
             serializer.validated_data['birth'], compte_eusko=True, iban=serializer.validated_data['iban'],
-            automatic_change_amount=serializer.validated_data['automatic_change_amount'])
+            automatic_change_amount=serializer.validated_data['automatic_change_amount'],
+            subscription_amount=serializer.validated_data['subscription_amount'],
+            subscription_periodicity=serializer.validated_data['subscription_periodicity'],
+            asso_id=serializer.validated_data['asso_id'],
+            asso_saisie_libre=serializer.validated_data['asso_saisie_libre'])
         # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
         header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
         mime_type = header[len('data:'):-len(';base64')]
@@ -996,7 +1000,8 @@ def creer_compte(request):
 
 
 def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, address, zip, town, country_id, phone,
-                           birth, compte_eusko, iban=None, automatic_change_amount=None):
+                           birth, compte_eusko, iban=None, automatic_change_amount=None, subscription_amount=None,
+                           subscription_periodicity=None, asso_id=None, asso_saisie_libre=None):
     """
     Crée un adhérent dans Dolibarr.
     :param dolibarr: connexion à Dolibarr (instance de DolibarrAPI)
@@ -1014,6 +1019,10 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
     :param compte_eusko: indique si l'adhérent ouvre un compte eusko ou pas
     :param iban:
     :param automatic_change_amount:
+    :param subscription_amount:
+    :param subscription_periodicity:
+    :param asso_id:
+    :param asso_saisie_libre:
     :return: rowid de l'adhérent créé
     """
     dolibarr_member_rowid = dolibarr.post(model='members', data={
@@ -1031,6 +1040,7 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
         'birth': datetime(birth.year, birth.month, birth.day).timestamp(),
         'public': '0',
         'statut': '1',
+        'fk_asso': asso_id,
         'array_options': {
             'options_recevoir_actus': True,
             'options_accepte_cgu_eusko_numerique': compte_eusko,
@@ -1039,6 +1049,10 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
             'options_prelevement_change_montant': automatic_change_amount,
             'options_prelevement_change_periodicite': 1 if automatic_change_amount else None,
             'options_iban': iban,
+            'options_prelevement_auto_cotisation_eusko': True if subscription_amount else None,
+            'options_prelevement_cotisation_montant': subscription_amount,
+            'options_prelevement_cotisation_periodicite': subscription_periodicity,
+            'options_asso_saisie_libre': asso_saisie_libre,
             'options_notifications_validation_mandat_prelevement': compte_eusko,
             'options_notifications_refus_ou_annulation_mandat_prelevement': compte_eusko,
             'options_notifications_prelevements': compte_eusko,

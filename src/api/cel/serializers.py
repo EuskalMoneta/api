@@ -151,3 +151,7 @@ class CreerCompteSerializer(CreerCompteVeeSerializer):
     iban = serializers.CharField()
     automatic_change_amount = serializers.IntegerField()
     sepa_document = serializers.CharField()
+    subscription_amount = serializers.IntegerField()
+    subscription_periodicity = serializers.IntegerField()
+    asso_id = serializers.IntegerField(allow_null=True)
+    asso_saisie_libre = serializers.CharField(allow_null=True)
