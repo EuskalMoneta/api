@@ -999,6 +999,62 @@ def creer_compte(request):
     return Response({'login': num_adherent}, status=status.HTTP_201_CREATED)
 
 
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def adherer(request):
+    """
+    Enregistre une nouvelle adhésion.
+    """
+    log.debug("adherer()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.AdhererSerializer(data=request.data)
+    serializer.is_valid(raise_exception=False)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+
+    lastname = serializer.validated_data['lastname']
+    firstname = serializer.validated_data['firstname']
+
+    try:
+        # Connexion à Dolibarr et Cyclos avec l'utilisateur Anonyme.
+        dolibarr = DolibarrAPI()
+        dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                       password=settings.APPS_ANONYMOUS_PASSWORD)
+        cyclos = CyclosAPI(mode='login')
+        cyclos_token = cyclos.login(
+            auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                       settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
+        # Générer un nouveau numéro d'adhérent.
+        adherent = models.AdherentParticulier()
+        adherent.save()
+        num_adherent = 'E{:05d}'.format(adherent.id)
+        log.debug("num_adherent={}".format(num_adherent))
+        # Créer l'adhérent Dolibarr.
+        dolibarr_member_rowid = create_dolibarr_member(
+            dolibarr, num_adherent, '3', lastname, firstname, serializer.validated_data['email'],
+            serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
+            serializer.validated_data['country_id'], serializer.validated_data['phone'],
+            serializer.validated_data['birth'], compte_eusko=False, iban=serializer.validated_data['iban'],
+            subscription_amount=serializer.validated_data['subscription_amount'],
+            subscription_periodicity=serializer.validated_data['subscription_periodicity'],
+            asso_id=serializer.validated_data['asso_id'],
+            asso_saisie_libre=serializer.validated_data['asso_saisie_libre'])
+        # Joindre le mandat SEPA à la fiche Adhérent dans Dolibarr.
+        add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
+                                             filename="{}-Mandat-SEPA.pdf".format(num_adherent),
+                                             filecontent=serializer.validated_data['sepa_document'])
+        # Créer l'utilisateur Cyclos.
+        create_cyclos_user(cyclos_token, 'adherents_sans_compte', '{} {}'.format(firstname, lastname), num_adherent)
+    except Exception as e:
+        log.exception(e)
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({'login': num_adherent}, status=status.HTTP_201_CREATED)
+
+
 def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, address, zip, town, country_id, phone,
                            birth, compte_eusko, iban=None, automatic_change_amount=None, subscription_amount=None,
                            subscription_periodicity=None, asso_id=None, asso_saisie_libre=None):
@@ -1045,11 +1101,12 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
             'options_recevoir_actus': True,
             'options_accepte_cgu_eusko_numerique': compte_eusko,
             'options_documents_pour_ouverture_du_compte_valides': compte_eusko,
-            'options_accord_pour_ouverture_de_compte': 'oui' if compte_eusko else 'non',
+            'options_accord_pour_ouverture_de_compte': 'oui' if compte_eusko else None,
             'options_prelevement_change_montant': automatic_change_amount,
             'options_prelevement_change_periodicite': 1 if automatic_change_amount else None,
             'options_iban': iban,
-            'options_prelevement_auto_cotisation_eusko': True if subscription_amount else None,
+            'options_prelevement_auto_cotisation': True if subscription_amount and not compte_eusko else None,
+            'options_prelevement_auto_cotisation_eusko': True if subscription_amount and compte_eusko else None,
             'options_prelevement_cotisation_montant': subscription_amount,
             'options_prelevement_cotisation_periodicite': subscription_periodicity,
             'options_asso_saisie_libre': asso_saisie_libre,

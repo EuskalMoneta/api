@@ -155,3 +155,21 @@ class CreerCompteSerializer(CreerCompteVeeSerializer):
     subscription_periodicity = serializers.IntegerField()
     asso_id = serializers.IntegerField(allow_null=True)
     asso_saisie_libre = serializers.CharField(allow_null=True)
+
+
+class AdhererSerializer(serializers.Serializer):
+    firstname = serializers.CharField()
+    lastname = serializers.CharField()
+    birth = serializers.DateField()
+    email = serializers.EmailField()
+    address = serializers.CharField()
+    zip = serializers.CharField()
+    town = serializers.CharField()
+    country_id = serializers.IntegerField()
+    phone = serializers.CharField()
+    subscription_amount = serializers.IntegerField()
+    subscription_periodicity = serializers.IntegerField()
+    iban = serializers.CharField()
+    sepa_document = serializers.CharField()
+    asso_id = serializers.IntegerField(allow_null=True)
+    asso_saisie_libre = serializers.CharField(allow_null=True)

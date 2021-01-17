@@ -119,6 +119,7 @@ urlpatterns = [
 
     url(r'^creer-compte-vee/$', cel_views.creer_compte_vee),
     url(r'^creer-compte/$', cel_views.creer_compte),
+    url(r'^adherer/$', cel_views.adherer),
 ]
 
 urlpatterns += router.urls
