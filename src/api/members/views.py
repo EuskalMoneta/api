@@ -5,11 +5,13 @@ from django import forms
 from django.conf import settings
 from django.core.validators import validate_email
 from rest_framework import status
+from rest_framework.decorators import permission_classes
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 
 from base_api import BaseAPIView
 from cyclos_api import CyclosAPI, CyclosAPIException
-from dolibarr_api import DolibarrAPIException
+from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from members.serializers import MemberSerializer, MembersSubscriptionsSerializer, MemberPartialSerializer
 from members.misc import Member, Subscription
 from pagination import CustomPagination
@@ -17,6 +19,7 @@ from pagination import CustomPagination
 log = logging.getLogger()
 
 
+@permission_classes((AllowAny, ))
 class MembersAPIView(BaseAPIView):
 
     def __init__(self, **kwargs):
@@ -61,7 +64,17 @@ class MembersAPIView(BaseAPIView):
         login = request.GET.get('login', '')
         name = request.GET.get('name', '')
         valid_login = Member.validate_num_adherent(login)
-        dolibarr_token = request.user.profile.dolibarr_token
+        token = request.GET.get('token', '')
+        # Si un token est fourni pour récupérer un adhérent, la
+        # recherche peut être faite de manière anonyme, sinon il faut
+        # être authentifié, afin d'éviter la fuite d'information sur les
+        # adhérents.
+        if token and not request.user.is_authenticated:
+            dolibarr = DolibarrAPI()
+            dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                                            password=settings.APPS_ANONYMOUS_PASSWORD)
+        else:
+            dolibarr_token = request.user.profile.dolibarr_token
 
         if login and valid_login:
             # We want to search in members by login (N° Adhérent)
@@ -99,6 +112,13 @@ class MembersAPIView(BaseAPIView):
             except forms.ValidationError:
                 return Response({'error': 'You need to provide a *VALID* ?email parameter! (Format: E12345)'},
                                 status=status.HTTP_400_BAD_REQUEST)
+        elif token:
+            try:
+                response = self.dolibarr.get(model='members', token=token, api_key=dolibarr_token)
+            except DolibarrAPIException:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(response)
+
         else:
             objects = self.dolibarr.get(model='members', sqlfilters="statut=1", api_key=dolibarr_token)
             paginator = CustomPagination()
