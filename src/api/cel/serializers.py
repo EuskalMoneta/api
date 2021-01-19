@@ -155,6 +155,7 @@ class CreerCompteSerializer(CreerCompteVeeSerializer):
     subscription_periodicity = serializers.IntegerField()
     asso_id = serializers.IntegerField(allow_null=True)
     asso_saisie_libre = serializers.CharField(allow_null=True)
+    login = serializers.CharField(required=False)
 
 
 class AdhererSerializer(serializers.Serializer):
@@ -173,3 +174,4 @@ class AdhererSerializer(serializers.Serializer):
     sepa_document = serializers.CharField()
     asso_id = serializers.IntegerField(allow_null=True)
     asso_saisie_libre = serializers.CharField(allow_null=True)
+    login = serializers.CharField(required=False)
