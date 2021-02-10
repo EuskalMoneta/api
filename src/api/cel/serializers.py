@@ -175,3 +175,10 @@ class AdhererSerializer(serializers.Serializer):
     asso_id = serializers.IntegerField(allow_null=True)
     asso_saisie_libre = serializers.CharField(allow_null=True)
     login = serializers.CharField(required=False)
+
+
+class EnregistrerMandatCotisationSerializer(serializers.Serializer):
+    login = serializers.CharField()
+    iban = serializers.CharField()
+    sepa_document = serializers.CharField()
+    subscription_periodicity = serializers.IntegerField()

@@ -971,16 +971,12 @@ def creer_compte(request):
         else:
             # Mettre à jour l'adhérent dans Dolibarr
             num_adherent = serializer.validated_data['login']
-            dolibarr_member_rowid = update_dolibarr_member(
-                dolibarr, num_adherent, lastname, firstname, serializer.validated_data['email'],
-                serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
-                serializer.validated_data['country_id'], serializer.validated_data['phone'],
-                serializer.validated_data['birth'], compte_eusko=True, iban=serializer.validated_data['iban'],
-                automatic_change_amount=serializer.validated_data['automatic_change_amount'],
-                subscription_amount=serializer.validated_data['subscription_amount'],
-                subscription_periodicity=serializer.validated_data['subscription_periodicity'],
-                asso_id=serializer.validated_data['asso_id'],
-                asso_saisie_libre=serializer.validated_data['asso_saisie_libre'])
+            data = serializer.validated_data
+            data['recevoir_actus'] = True
+            data['compte_eusko'] = True
+            data['prelevement_auto_cotisation'] = False
+            data['prelevement_auto_cotisation_eusko'] = True
+            dolibarr_member_rowid = update_dolibarr_member(dolibarr, num_adherent, data)
         # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
         header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
         mime_type = header[len('data:'):-len(';base64')]
@@ -1012,8 +1008,6 @@ def creer_compte(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response({'login': num_adherent}, status=status.HTTP_201_CREATED)
-
-
 
 
 @api_view(['POST'])
@@ -1062,15 +1056,12 @@ def adherer(request):
         else:
             # Mettre à jour l'adhérent dans Dolibarr
             num_adherent = serializer.validated_data['login']
-            dolibarr_member_rowid = update_dolibarr_member(
-                dolibarr, num_adherent, lastname, firstname, serializer.validated_data['email'],
-                serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
-                serializer.validated_data['country_id'], serializer.validated_data['phone'],
-                serializer.validated_data['birth'], compte_eusko=False, iban=serializer.validated_data['iban'],
-                subscription_amount=serializer.validated_data['subscription_amount'],
-                subscription_periodicity=serializer.validated_data['subscription_periodicity'],
-                asso_id=serializer.validated_data['asso_id'],
-                asso_saisie_libre=serializer.validated_data['asso_saisie_libre'])
+            data = serializer.validated_data
+            data['recevoir_actus'] = True
+            data['compte_eusko'] = False
+            data['prelevement_auto_cotisation'] = True
+            data['prelevement_auto_cotisation_eusko'] = False
+            dolibarr_member_rowid = update_dolibarr_member(dolibarr, num_adherent, data)
         # Joindre le mandat SEPA à la fiche Adhérent dans Dolibarr.
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Mandat-SEPA.pdf".format(num_adherent),
@@ -1082,6 +1073,42 @@ def adherer(request):
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response({'login': num_adherent}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def enregistrer_mandat_cotisation(request):
+    """
+    Enregistre un mandat de prélèvement SEPA pour la cotisation.
+    """
+    log.debug("enregistrer_mandat_cotisation()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.EnregistrerMandatCotisationSerializer(data=request.data)
+    serializer.is_valid(raise_exception=False)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+
+    try:
+        # Connexion à Dolibarr avec l'utilisateur Anonyme.
+        dolibarr = DolibarrAPI()
+        dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                       password=settings.APPS_ANONYMOUS_PASSWORD)
+        # Mettre à jour l'adhérent dans Dolibarr
+        num_adherent = serializer.validated_data['login']
+        data = serializer.validated_data
+        data['prelevement_auto_cotisation'] = True
+        data['prelevement_auto_cotisation_eusko'] = False
+        dolibarr_member_rowid = update_dolibarr_member(dolibarr, num_adherent, data)
+        # Joindre le mandat SEPA à la fiche Adhérent dans Dolibarr.
+        add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
+                                             filename="{}-Mandat-SEPA.pdf".format(num_adherent),
+                                             filecontent=serializer.validated_data['sepa_document'])
+    except Exception as e:
+        log.exception(e)
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response(status=status.HTTP_200_OK)
 
 
 def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, address, zip, town, country_id, phone,
@@ -1149,71 +1176,62 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
     return dolibarr_member_rowid
 
 
-def update_dolibarr_member(dolibarr, login, lastname, firstname, email, address, zip, town, country_id, phone,
-                           birth, compte_eusko, iban=None, automatic_change_amount=None, subscription_amount=None,
-                           subscription_periodicity=None, asso_id=None, asso_saisie_libre=None):
+def update_dolibarr_member(dolibarr, login, data):
     """
     Met à jour un adhérent dans Dolibarr.
     :param dolibarr: connexion à Dolibarr (instance de DolibarrAPI)
     :param login: numéro d'adhérent
-    :param lastname:
-    :param firstname:
-    :param email:
-    :param address:
-    :param zip:
-    :param town:
-    :param country_id:
-    :param phone:
-    :param birth:
-    :param compte_eusko: indique si l'adhérent ouvre un compte eusko ou pas
-    :param iban:
-    :param automatic_change_amount:
-    :param subscription_amount:
-    :param subscription_periodicity:
-    :param asso_id:
-    :param asso_saisie_libre:
     :return: rowid de l'adhérent mis à jour
     """
     member = dolibarr.get(model='members', sqlfilters="login='{}'".format(login))[0]
     dolibarr_member_rowid = member['id']
+    dolibarr_data = {}
+    for key in ('lastname', 'firstname', 'email', 'address', 'zip', 'town', 'country_id'):
+        if key in data:
+            dolibarr_data[key] = data[key]
+    if 'phone' in data:
+        dolibarr_data['phone_mobile'] = data['phone']
+    if 'birth' in data:
+        birth = data['birth']
+        dolibarr_data['birth'] = datetime(birth.year, birth.month, birth.day).timestamp()
+    if 'asso_id' in data:
+        dolibarr_data['fk_asso'] = data['asso_id']
     # Dans le PUT il faut renvoyer tous les attributs supplémentaires
     # sinon leurs valeurs seront perdues (c'est le fonctionnement de
     # Dolibarr qui veut ça).
     array_options = member['array_options']
-    array_options['options_recevoir_actus'] = True
-    array_options['options_accepte_cgu_eusko_numerique'] = compte_eusko
-    array_options['options_documents_pour_ouverture_du_compte_valides'] = compte_eusko
-    array_options['options_accord_pour_ouverture_de_compte'] = 'oui' if compte_eusko else None
-    array_options['options_prelevement_change_montant'] = automatic_change_amount
-    array_options['options_prelevement_change_periodicite'] = 1 if automatic_change_amount else None
-    array_options['options_iban'] = iban
-    array_options['options_prelevement_auto_cotisation'] = True if subscription_amount and not compte_eusko else None
-    array_options['options_prelevement_auto_cotisation_eusko'] = True if subscription_amount and compte_eusko else None
-    array_options['options_prelevement_cotisation_montant'] = subscription_amount
-    array_options['options_prelevement_cotisation_periodicite'] = subscription_periodicity
-    array_options['options_asso_saisie_libre'] = asso_saisie_libre
-    array_options['options_notifications_validation_mandat_prelevement'] = compte_eusko
-    array_options['options_notifications_refus_ou_annulation_mandat_prelevement'] = compte_eusko
-    array_options['options_notifications_prelevements'] = compte_eusko
-    array_options['options_notifications_virements'] = compte_eusko
-    array_options['options_recevoir_bons_plans'] = compte_eusko
-    dolibarr.put(model='members', data={
-            'lastname': lastname,
-            'firstname': firstname,
-            'email': email,
-            'address': address,
-            'zip': zip,
-            'town': town,
-            'country_id': country_id,
-            'phone_mobile': phone,
-            'birth': datetime(birth.year, birth.month, birth.day).timestamp(),
-            'public': '0',
-            'statut': '1',
-            'fk_asso': asso_id,
-            'array_options': array_options
-        },
-        id=dolibarr_member_rowid
-    )
+    if 'recevoir_actus' in data:
+        array_options['options_recevoir_actus'] = data['recevoir_actus']
+    if 'compte_eusko' in data:
+        compte_eusko = data['compte_eusko']
+        array_options['options_accepte_cgu_eusko_numerique'] = compte_eusko
+        array_options['options_documents_pour_ouverture_du_compte_valides'] = compte_eusko
+        array_options['options_accord_pour_ouverture_de_compte'] = 'oui' if compte_eusko else None
+        array_options['options_notifications_validation_mandat_prelevement'] = compte_eusko
+        array_options['options_notifications_refus_ou_annulation_mandat_prelevement'] = compte_eusko
+        array_options['options_notifications_prelevements'] = compte_eusko
+        array_options['options_notifications_virements'] = compte_eusko
+        array_options['options_recevoir_bons_plans'] = compte_eusko
+    if 'automatic_change_amount' in data:
+        automatic_change_amount = data['automatic_change_amount']
+        array_options['options_prelevement_change_montant'] = automatic_change_amount
+        # S'il y a change automatique, il est toujours mensuel.
+        array_options['options_prelevement_change_periodicite'] = 1 if automatic_change_amount else None
+    if 'iban' in data:
+        array_options['options_iban'] = data['iban']
+    if 'prelevement_auto_cotisation' in data:
+        array_options['options_prelevement_auto_cotisation'] = data['prelevement_auto_cotisation']
+    if 'prelevement_auto_cotisation_eusko' in data:
+        array_options['options_prelevement_auto_cotisation_eusko'] = data['prelevement_auto_cotisation_eusko']
+    if 'subscription_amount' in data:
+        array_options['options_prelevement_cotisation_montant'] = data['subscription_amount']
+    if 'subscription_periodicity' in data:
+        array_options['options_prelevement_cotisation_periodicite'] = data['subscription_periodicity']
+    if 'asso_saisie_libre' in data:
+        array_options['options_asso_saisie_libre'] = data['asso_saisie_libre']
+    dolibarr_data['array_options'] = array_options
+
+    dolibarr.put(model='members', id=dolibarr_member_rowid, data=dolibarr_data)
     return dolibarr_member_rowid
 
 
