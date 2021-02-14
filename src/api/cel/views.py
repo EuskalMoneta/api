@@ -1003,6 +1003,12 @@ def creer_compte(request):
                            serializer.validated_data['password'], serializer.validated_data['pin_code'])
         # Enregistrer la question/réponse de sécurité.
         create_security_qa(num_adherent, serializer.validated_data['question'], serializer.validated_data['answer'])
+        # Envoi d'un mail de notification.
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(num_adherent))[0]
+        activate('fr')
+        texte = render_to_string('mails/ouverture_compte.txt',
+                                 {'dolibarr_member': dolibarr_member}).strip('\n')
+        sendmail_euskalmoneta(subject=texte, body=texte)
     except Exception as e:
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1068,6 +1074,12 @@ def adherer(request):
                                              filecontent=serializer.validated_data['sepa_document'])
         # Créer l'utilisateur Cyclos.
         create_cyclos_user(cyclos_token, 'adherents_sans_compte', '{} {}'.format(firstname, lastname), num_adherent)
+        # Envoi d'un mail de notification.
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(num_adherent))[0]
+        activate('fr')
+        texte = render_to_string('mails/adhesion.txt',
+                                 {'dolibarr_member': dolibarr_member}).strip('\n')
+        sendmail_euskalmoneta(subject=texte, body=texte)
     except Exception as e:
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1104,6 +1116,12 @@ def enregistrer_mandat_cotisation(request):
         add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
                                              filename="{}-Mandat-SEPA.pdf".format(num_adherent),
                                              filecontent=serializer.validated_data['sepa_document'])
+        # Envoi d'un mail de notification.
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(num_adherent))[0]
+        activate('fr')
+        texte = render_to_string('mails/signature_mandat_cotisation.txt',
+                                 {'dolibarr_member': dolibarr_member}).strip('\n')
+        sendmail_euskalmoneta(subject=texte, body=texte)
     except Exception as e:
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
