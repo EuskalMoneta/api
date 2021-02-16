@@ -2,7 +2,7 @@
 
 {% if dolibarr_member.login|first in 'ET' %}
 {% blocktrans with prenom=dolibarr_member.firstname nom=dolibarr_member.lastname num_adherent=dolibarr_member.login %}
-{{ prenom }} {{ nom }} ({{ num_adherent }}) ({{ num_adherent }}) a signé un mandat de prélèvement SEPA pour sa cotisation.
+{{ prenom }} {{ nom }} ({{ num_adherent }}) a signé un mandat de prélèvement SEPA pour sa cotisation.
 {% endblocktrans %}
 {% else %}
 {% blocktrans with nom=dolibarr_member.company num_adherent=dolibarr_member.login %}
