@@ -1,0 +1,17 @@
+{% load staticfiles i18n %}
+
+{% if dolibarr_member.login|first in 'ET' %}
+{% blocktrans with prenom=dolibarr_member.firstname nom=dolibarr_member.lastname num_adherent=dolibarr_member.login %}
+{{ prenom }} {{ nom }} ({{ num_adherent }}) a modifié son IBAN.
+{% endblocktrans %}
+
+Nouvel IBAN : {{ nouvel_iban }}
+Adresse email : {{ dolibarr_member.email }}
+{% else %}
+{% blocktrans with nom=dolibarr_member.company num_adherent=dolibarr_member.login %}
+{{ nom }} ({{ num_adherent }}) a modifié son IBAN.
+
+Nouvel IBAN : {{ nouvel_iban }}
+Adresse email : {{ dolibarr_member.email }}
+{% endblocktrans %}
+{% endif %}

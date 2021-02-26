@@ -4,6 +4,8 @@ import arrow
 from django import forms
 from django.conf import settings
 from django.core.validators import validate_email
+from django.template.loader import render_to_string
+from django.utils.translation import activate, gettext as _
 from rest_framework import status
 from rest_framework.decorators import permission_classes
 from rest_framework.permissions import AllowAny
@@ -14,6 +16,7 @@ from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from members.serializers import MemberSerializer, MembersSubscriptionsSerializer, MemberPartialSerializer
 from members.misc import Member, Subscription
+from misc import sendmail_euskalmoneta
 from pagination import CustomPagination
 
 log = logging.getLogger()
@@ -134,28 +137,37 @@ class MembersAPIView(BaseAPIView):
     def partial_update(self, request, pk=None):
         serializer = MemberPartialSerializer(data=request.data)
         if serializer.is_valid():
-            response = self.dolibarr.get(model='members/{}'.format(pk), api_key=request.user.profile.dolibarr_token)
+            member = self.dolibarr.get(model='members/{}'.format(pk), api_key=request.user.profile.dolibarr_token)
 
             # Validate / modify data (serialize to match Dolibarr formats)
-            data = Member.validate_data(request.data, mode='update', base_options=response['array_options'])
+            data = Member.validate_data(request.data, mode='update', base_options=member['array_options'])
 
             try:
                 # Envoi d'un email lorsque l'option "Recevoir les actualités liées à l'Eusko" est modifiée
-                if (response['array_options']['options_recevoir_actus'] !=
+                if (member['array_options']['options_recevoir_actus'] !=
                    data['array_options']['options_recevoir_actus']):
                     Member.send_mail_newsletter(
                         login=str(request.user), profile=request.user.profile,
                         new_status=data['array_options']['options_recevoir_actus'],
-                        lang=response['array_options']['options_langue'])
+                        lang=member['array_options']['options_langue'])
 
                 # Envoi d'un email lorsque l'option "Montant du change automatique" est modifiée
-                if (response['array_options']['options_prelevement_change_montant'] !=
-                   data['array_options']['options_prelevement_change_montant']):
+                if (float(member['array_options']['options_prelevement_change_montant']) !=
+                   float(data['array_options']['options_prelevement_change_montant'])):
                     Member.send_mail_change_auto(
                         login=str(request.user), profile=request.user.profile,
                         mode=data['mode'], new_amount=data['array_options']['options_prelevement_change_montant'],
-                        comment=data['prelevement_change_comment'], email=response['email'],
-                        lang=response['array_options']['options_langue'])
+                        comment=data['prelevement_change_comment'], email=member['email'],
+                        lang=member['array_options']['options_langue'])
+
+                # Envoi d'un email lorsque l'option "IBAN" est modifiée.
+                if (member['array_options']['options_iban'] !=
+                   data['array_options']['options_iban']):
+                    sujet = _("Modification de l'IBAN pour le change automatique mensuel")
+                    texte = render_to_string('mails/modification_iban.txt',
+                                             {'dolibarr_member': member,
+                                             'nouvel_iban': data['array_options']['options_iban']}).strip('\n')
+                    sendmail_euskalmoneta(subject=sujet, body=texte)
 
             except KeyError:
                 pass
