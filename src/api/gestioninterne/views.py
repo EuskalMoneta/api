@@ -1226,14 +1226,115 @@ def _add_account_entry(csv_content, journal_id, date, description, lines):
     """
     for counter, line in enumerate(lines):
         csv_content.extend([
-                {'journal_id': journal_id if counter == 0 else '',
-                'date': arrow.get(date).format('YYYY-MM-DD') if counter == 0 else '',
-                'ref': description if counter == 0 else '',
-                'line_ids/account_id': line['account_id'],
-                'line_ids/name': description,
-                'line_ids/debit': line['debit'] if 'debit' in line else '',
-                'line_ids/credit': line['credit'] if 'credit' in line else ''}
+            {'journal_id': journal_id if counter == 0 else '',
+             'date': arrow.get(date).format('YYYY-MM-DD') if counter == 0 else '',
+             'ref': description if counter == 0 else '',
+             'line_ids/account_id': line['account_id'],
+             'line_ids/name': description,
+             'line_ids/debit': line['debit'] if 'debit' in line else '',
+             'line_ids/credit': line['credit'] if 'credit' in line else ''}
         ])
+
+def execute_change(cyclos, change):
+    try:
+        # Le code ci-dessous est un gros copier-coller venant de la fonction
+        # perform() de credits_comptes_prelevements_auto.py. Il faudrait
+        # factoriser tout ça mais je n'ai pas le temps de tout tester
+        # correctement maintenant donc je minimise les risques.
+        try:
+            adherent_cyclos_id = cyclos.get_member_id_from_login(member_login=change['member_login'])
+
+            # Determine whether or not our user is part of the appropriate group
+            group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                            str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires_avec_paiement_smartphone']),
+                                            str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
+
+            # Fetching info for our current user (we look for his groups)
+            user_data = cyclos.post(method='user/load', data=[adherent_cyclos_id])
+
+            if not user_data['result']['group']['id'] in group_constants_with_account:
+                error = "{} n'a pas de compte Eusko numérique...".format(change['member_login'])
+                return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+
+
+            bank_transfer_reference = datetime.now().strftime("%d/%m/%Y %H:%M:%S") + '-' + change['member_login']
+
+            # Payment in Euro
+            change_numerique_euro = {
+                'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_euro']),  # noqa
+                'amount': float(change['amount']),
+                'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+                'from': 'SYSTEM',
+                'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+                'customValues': [{
+                    'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
+                    'stringValue': bank_transfer_reference
+                }],
+                'description': change['description'],
+            }
+            res_change_numerique_euro = cyclos.post(method='payment/perform', data=change_numerique_euro)
+
+            # Payment in Eusko
+            change_numerique_eusko = {
+                'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),  # noqa
+                'amount': float(change['amount']),
+                'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+                'from': 'SYSTEM',
+                'to': adherent_cyclos_id,
+                'customValues': [{
+                    'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
+                    'stringValue': bank_transfer_reference
+                }],
+                'description': change['description'],
+            }
+            res_change_numerique_eusko = cyclos.post(method='payment/perform', data=change_numerique_eusko)
+        except Exception as e:
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        res = {'res_change_numerique_euro': res_change_numerique_euro,
+               'res_change_numerique_eusko': res_change_numerique_eusko}
+
+        change['status'] = 1
+        change['message'] = _("Change effectué")
+    except Exception as e:
+        change['status'] = 0
+        change['message'] = str(e)
+
+@api_view(['POST'])
+def execute_changes_par_virement(request):
+    """
+    Exécute la liste des change d'eusko numériques (virement) donnée en paramètre.
+    """
+    log.debug("execute_changes_par_virement()")
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.ChangeParVirementSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+    changes = serializer.validated_data
+
+    # Connexion à Dolibarr et Cyclos.
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # On récupère les données de l'adhérent.
+    try:
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(serializer.data['member_login']))[0]
+    except:
+        return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    for change in changes:
+        execute_change(cyclos, change)
+
+    return Response(changes)
+
 
 
 @api_view(['POST'])

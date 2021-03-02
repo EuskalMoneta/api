@@ -110,6 +110,12 @@ docker-compose logs -f api
 ```
 
 Une fois ces scripts passés: l'API démarre enfin Django, et le développement peut commencer.
+### commandes utiles
+
+
+`docker-compose exec api ./manage.py migrate`
+
+`docker-compose exec api pip install -r requirements.txt`
 
 ## Comment initier le circuit Euskal Moneta ?
 
