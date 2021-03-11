@@ -891,7 +891,7 @@ def creer_compte_vee(request):
         log.debug("num_adherent={}".format(num_adherent))
         # Créer l'adhérent Dolibarr.
         dolibarr_member_rowid = create_dolibarr_member(
-            dolibarr, num_adherent, '8', lastname, firstname, serializer.validated_data['email'],
+            dolibarr, num_adherent, '8', serializer.validated_data['civility_id'], lastname, firstname, serializer.validated_data['email'],
             serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
             serializer.validated_data['country_id'], serializer.validated_data['phone'],
             serializer.validated_data['birth'], compte_eusko=True)
@@ -959,7 +959,7 @@ def creer_compte(request):
             log.debug("num_adherent={}".format(num_adherent))
             # Créer l'adhérent Dolibarr.
             dolibarr_member_rowid = create_dolibarr_member(
-                dolibarr, num_adherent, '3', lastname, firstname, serializer.validated_data['email'],
+                dolibarr, num_adherent, '3', serializer.validated_data['civility_id'], lastname, firstname, serializer.validated_data['email'],
                 serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
                 serializer.validated_data['country_id'], serializer.validated_data['phone'],
                 serializer.validated_data['birth'], compte_eusko=True, iban=serializer.validated_data['iban'],
@@ -1051,7 +1051,7 @@ def adherer(request):
             log.debug("num_adherent={}".format(num_adherent))
             # Créer l'adhérent Dolibarr.
             dolibarr_member_rowid = create_dolibarr_member(
-                dolibarr, num_adherent, '3', lastname, firstname, serializer.validated_data['email'],
+                dolibarr, num_adherent, '3', serializer.validated_data['civility_id'], lastname, firstname, serializer.validated_data['email'],
                 serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
                 serializer.validated_data['country_id'], serializer.validated_data['phone'],
                 serializer.validated_data['birth'], compte_eusko=False, iban=serializer.validated_data['iban'],
@@ -1129,7 +1129,7 @@ def enregistrer_mandat_cotisation(request):
     return Response(status=status.HTTP_200_OK)
 
 
-def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, address, zip, town, country_id, phone,
+def create_dolibarr_member(dolibarr, login, type, civility_id, lastname, firstname, email, address, zip, town, country_id, phone,
                            birth, compte_eusko, iban=None, automatic_change_amount=None, subscription_amount=None,
                            subscription_periodicity=None, asso_id=None, asso_saisie_libre=None):
     """
@@ -1159,6 +1159,7 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
         'login': login,
         'typeid': type,
         'morphy': 'phy',
+        'civility_id': civility_id,
         'lastname': lastname,
         'firstname': firstname,
         'email': email,
@@ -1204,7 +1205,7 @@ def update_dolibarr_member(dolibarr, login, data):
     member = dolibarr.get(model='members', sqlfilters="login='{}'".format(login))[0]
     dolibarr_member_rowid = member['id']
     dolibarr_data = {}
-    for key in ('lastname', 'firstname', 'email', 'address', 'zip', 'town', 'country_id'):
+    for key in ('lastname', 'firstname', 'email', 'address', 'zip', 'town', 'country_id', 'civility_id'):
         if key in data:
             dolibarr_data[key] = data[key]
     if 'phone' in data:
