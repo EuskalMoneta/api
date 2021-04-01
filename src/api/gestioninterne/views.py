@@ -21,6 +21,76 @@ log = logging.getLogger()
 
 
 @api_view(['POST'])
+def resiliation_adherent(request):
+    """
+    Résiliation d'un adhérent dans cyclos et dolibarr
+    """
+
+    serializer = serializers.ResiliationSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    
+    #Connexion Cyclos
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token, mode='gi_bdc')
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Connexion Dolibarr
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        #récupérer l'user Cyclos
+        res = cyclos.post(method='user/search', data={
+            'keywords': request.data['member_login'],
+            'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']}
+                           )
+        if res['result']['totalCount'] == 1 and res['result']['pageItems'][0]['shortDisplay'] == request.data['member_login']:
+            #Check solde > 0
+            query_data = [res['result']['pageItems'][0]['shortDisplay'], None]
+            accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+            if(float(accounts_summaries_data['result'][0]['status']['balance']) < 0):
+                return Response({'error': 'Compte de l\'adhérent.e créditeur, résiliation impossible.'},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            # Annuler les QR codes
+
+        else:
+            return Response({'error': 'Unable to get adherent from cyclos'},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+    except IndexError:
+        return Response({'error': 'Unable to get adherent from cyclos'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    try:
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(serializer.data['member_login']))[0]
+    except:
+        return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    #tierDolibarr = ''
+    try:
+        tierDolibarr = dolibarr.get(model='thirdparties/{}'.format('622'))
+    except Exception as e:
+        log.critical("tierDolibarr: {}".format(tierDolibarr))
+        log.critical(e)
+        return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    #data = {
+    #    'keywords': login,
+    #    'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
+    #}
+    #res = cyclos.post(method='user/search', data=data, token=cyclos_token)
+    #if res['result']['totalCount'] == 1 and res['result']['pageItems'][0]['shortDisplay'] == login:
+
+
+
+    return Response([tierDolibarr, member, accounts_summaries_data['result'][0]['status']['balance'],accounts_summaries_data])
+
+
+@api_view(['POST'])
 def sortie_coffre(request):
     """
     sortie_coffre

@@ -71,3 +71,7 @@ class PaiementCotisationEuskoNumeriqueSerializer(serializers.Serializer):
     end_date = serializers.DateTimeField(format=None)
     amount = serializers.FloatField()
     label = serializers.CharField()
+
+class ResiliationSerializer(serializers.Serializer):
+    member_login = serializers.CharField()
+    description = serializers.CharField()
