@@ -130,6 +130,7 @@ class ExecutePrelevementSerializer(serializers.Serializer):
 
 
 class CreerCompteVeeSerializer(serializers.Serializer):
+    civility_id = serializers.CharField()
     lastname = serializers.CharField()
     firstname = serializers.CharField()
     email = serializers.EmailField()
@@ -159,6 +160,7 @@ class CreerCompteSerializer(CreerCompteVeeSerializer):
 
 
 class AdhererSerializer(serializers.Serializer):
+    civility_id = serializers.CharField()
     firstname = serializers.CharField()
     lastname = serializers.CharField()
     birth = serializers.DateField()
