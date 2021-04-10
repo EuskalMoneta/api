@@ -203,6 +203,13 @@ class Member:
         except KeyError:
             pass
 
+        try:
+            data['array_options'].update(
+                {'options_iban': data['options_iban']})
+            del data['options_iban']
+        except KeyError:
+            pass
+
         return data
 
     @staticmethod

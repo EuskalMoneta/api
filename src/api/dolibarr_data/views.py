@@ -133,21 +133,26 @@ def get_usergroups(request):
 
 
 @api_view(['GET'])
+@permission_classes((AllowAny, ))
 def associations(request):
     """
     List all associations, and if you want, you can filter them.
     """
-    dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-    results = dolibarr.get(model='associations')
+    if request.user.is_authenticated:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    else:
+        dolibarr = DolibarrAPI()
+        dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                       password=settings.APPS_ANONYMOUS_PASSWORD)
+    associations = dolibarr.get(model='associations')
+    associations.sort(key=lambda a: a['nom'])
     approved = request.GET.get('approved', '')
     if approved:
         # We want to filter out the associations that doesn't have the required sponsorships
-        filtered_results = [item
-                            for item in results
-                            if int(item['nb_parrains']) >= settings.MINIMUM_PARRAINAGES_3_POURCENTS]
-        return Response(filtered_results)
-    else:
-        return Response(results)
+        associations = [asso
+                        for asso in associations
+                        if int(asso['nb_parrains']) >= settings.MINIMUM_PARRAINAGES_3_POURCENTS]
+    return Response(associations)
 
 
 @api_view(['GET'])
@@ -181,7 +186,16 @@ def countries(request):
         dolibarr = DolibarrAPI()
         dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
                        password=settings.APPS_ANONYMOUS_PASSWORD)
-    return Response(dolibarr.get(model='setup/dictionary/countries', lang='fr_FR'))
+    # On récupère la liste de tous les pays indiqués comme actifs dans
+    # Dolibarr, on ne garde que l'identifiant et le nom de chaque pays,
+    # et on trie la liste par ordre alphabétique, à l'exception de la
+    # France qui est placée en premier.
+    countries = dolibarr.get(model='setup/dictionary/countries', lang='fr_FR', limit='0', sqlfilters='active=1')
+    france_id = next(c for c in countries if c['label'] == 'France')['id']
+    countries = [{'id': c['id'], 'label': c['label']} for c in countries if c['label'] != 'France']
+    countries.sort(key=lambda c: c['label'])
+    countries.insert(0, {'id': france_id, 'label': 'France'})
+    return Response(countries)
 
 
 @api_view(['GET'])

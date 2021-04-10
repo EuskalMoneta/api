@@ -16,9 +16,13 @@ def populate_predefined_questions(apps, schema_editor):
     PredefinedSecurityQuestion.objects.create(
         question="Quel est le nom de jeune fille de votre mère ?", language='fr')
     PredefinedSecurityQuestion.objects.create(
+        question="Dans quelle ville êtes-vous né-e ?", language='fr')
+    PredefinedSecurityQuestion.objects.create(
         question="Zer da zure lehen etxe animaliaren izena?", language='eu')
     PredefinedSecurityQuestion.objects.create(
         question="Zer da zure amaren ezkon-aitzineko deitura?", language='eu')
+    PredefinedSecurityQuestion.objects.create(
+        question="Zoin hiritan sortu zara?", language='eu')
 
 
 class Migration(migrations.Migration):

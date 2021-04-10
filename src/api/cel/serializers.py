@@ -19,6 +19,12 @@ class LostPasswordSerializer(serializers.Serializer):
 
     login = serializers.CharField()
     email = serializers.EmailField()
+    language = serializers.CharField(max_length=2)
+
+    def validate_language(self, value):
+        if value not in ('eu', 'fr'):
+            raise serializers.ValidationError("language must be 'eu' or 'fr'")
+        return value
 
 
 class HistorySerializer(serializers.Serializer):
@@ -124,6 +130,7 @@ class ExecutePrelevementSerializer(serializers.Serializer):
 
 
 class CreerCompteVeeSerializer(serializers.Serializer):
+    civility_id = serializers.CharField()
     lastname = serializers.CharField()
     firstname = serializers.CharField()
     email = serializers.EmailField()
@@ -145,3 +152,35 @@ class CreerCompteSerializer(CreerCompteVeeSerializer):
     iban = serializers.CharField()
     automatic_change_amount = serializers.IntegerField()
     sepa_document = serializers.CharField()
+    subscription_amount = serializers.IntegerField()
+    subscription_periodicity = serializers.IntegerField()
+    asso_id = serializers.IntegerField(allow_null=True)
+    asso_saisie_libre = serializers.CharField(allow_null=True)
+    login = serializers.CharField(required=False)
+
+
+class AdhererSerializer(serializers.Serializer):
+    civility_id = serializers.CharField()
+    firstname = serializers.CharField()
+    lastname = serializers.CharField()
+    birth = serializers.DateField()
+    email = serializers.EmailField()
+    address = serializers.CharField()
+    zip = serializers.CharField()
+    town = serializers.CharField()
+    country_id = serializers.IntegerField()
+    phone = serializers.CharField()
+    subscription_amount = serializers.IntegerField()
+    subscription_periodicity = serializers.IntegerField()
+    iban = serializers.CharField()
+    sepa_document = serializers.CharField()
+    asso_id = serializers.IntegerField(allow_null=True)
+    asso_saisie_libre = serializers.CharField(allow_null=True)
+    login = serializers.CharField(required=False)
+
+
+class EnregistrerMandatCotisationSerializer(serializers.Serializer):
+    login = serializers.CharField()
+    iban = serializers.CharField()
+    sepa_document = serializers.CharField()
+    subscription_periodicity = serializers.IntegerField()

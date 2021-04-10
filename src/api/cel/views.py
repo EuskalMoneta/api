@@ -90,11 +90,13 @@ def first_connection(request):
                            'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
                 jwt_token = jwt.encode(payload, settings.JWT_SECRET)
-                confirm_url = '{}/valide-premiere-connexion?token={}'.format(settings.CEL_PUBLIC_URL,
-                                                                             jwt_token.decode("utf-8"))
+                confirm_url = '{}/{}/valide-premiere-connexion?token={}'.format(
+                    settings.CEL_PUBLIC_URL,
+                    request.data['language'],
+                    jwt_token.decode("utf-8"))
 
-                # Activate user pre-selected language
-                activate(member['array_options']['options_langue'])
+                # On active la langue choisie par l'utilisateur.
+                activate(request.data['language'])
 
                 # Translate subject & body for this email
                 subject = _('Première connexion à votre compte en ligne Eusko')
@@ -193,11 +195,13 @@ def lost_password(request):
                            'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
                 jwt_token = jwt.encode(payload, settings.JWT_SECRET)
-                confirm_url = '{}/valide-passe-perdu?token={}'.format(settings.CEL_PUBLIC_URL,
-                                                                      jwt_token.decode("utf-8"))
+                confirm_url = '{}/{}/valide-passe-perdu?token={}'.format(
+                    settings.CEL_PUBLIC_URL,
+                    request.data['language'],
+                    jwt_token.decode("utf-8"))
 
-                # Activate user pre-selected language
-                activate(user_data['array_options']['options_langue'])
+                # On active la langue choisie par l'utilisateur.
+                activate(request.data['language'])
 
                 # Translate subject & body for this email
                 subject = _('Changement de mot de passe pour votre compte en ligne Eusko')
@@ -887,7 +891,8 @@ def creer_compte_vee(request):
         log.debug("num_adherent={}".format(num_adherent))
         # Créer l'adhérent Dolibarr.
         dolibarr_member_rowid = create_dolibarr_member(
-            dolibarr, num_adherent, '8', lastname, firstname, serializer.validated_data['email'],
+            dolibarr, num_adherent, '8',
+            serializer.validated_data['civility_id'], lastname, firstname, serializer.validated_data['email'],
             serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
             serializer.validated_data['country_id'], serializer.validated_data['phone'],
             serializer.validated_data['birth'], compte_eusko=True)
@@ -936,6 +941,7 @@ def creer_compte(request):
 
     lastname = serializer.validated_data['lastname']
     firstname = serializer.validated_data['firstname']
+    nouvel_adherent = 'login' not in serializer.validated_data
 
     try:
         # Connexion à Dolibarr et Cyclos avec l'utilisateur Anonyme.
@@ -946,18 +952,33 @@ def creer_compte(request):
         cyclos_token = cyclos.login(
             auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
                                                        settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
-        # Générer un nouveau numéro d'adhérent.
-        adherent = models.AdherentParticulier()
-        adherent.save()
-        num_adherent = 'E{:05d}'.format(adherent.id)
-        log.debug("num_adherent={}".format(num_adherent))
-        # Créer l'adhérent Dolibarr.
-        dolibarr_member_rowid = create_dolibarr_member(
-            dolibarr, num_adherent, '3', lastname, firstname, serializer.validated_data['email'],
-            serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
-            serializer.validated_data['country_id'], serializer.validated_data['phone'],
-            serializer.validated_data['birth'], compte_eusko=True, iban=serializer.validated_data['iban'],
-            automatic_change_amount=serializer.validated_data['automatic_change_amount'])
+        if nouvel_adherent:
+            # Générer un nouveau numéro d'adhérent.
+            adherent = models.AdherentParticulier()
+            adherent.save()
+            num_adherent = 'E{:05d}'.format(adherent.id)
+            log.debug("num_adherent={}".format(num_adherent))
+            # Créer l'adhérent Dolibarr.
+            dolibarr_member_rowid = create_dolibarr_member(
+                dolibarr, num_adherent, '3',
+                serializer.validated_data['civility_id'], lastname, firstname, serializer.validated_data['email'],
+                serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
+                serializer.validated_data['country_id'], serializer.validated_data['phone'],
+                serializer.validated_data['birth'], compte_eusko=True, iban=serializer.validated_data['iban'],
+                automatic_change_amount=serializer.validated_data['automatic_change_amount'],
+                subscription_amount=serializer.validated_data['subscription_amount'],
+                subscription_periodicity=serializer.validated_data['subscription_periodicity'],
+                asso_id=serializer.validated_data['asso_id'],
+                asso_saisie_libre=serializer.validated_data['asso_saisie_libre'])
+        else:
+            # Mettre à jour l'adhérent dans Dolibarr
+            num_adherent = serializer.validated_data['login']
+            data = serializer.validated_data
+            data['recevoir_actus'] = True
+            data['compte_eusko'] = True
+            data['prelevement_auto_cotisation'] = False
+            data['prelevement_auto_cotisation_eusko'] = True
+            dolibarr_member_rowid = update_dolibarr_member(dolibarr, num_adherent, data)
         # Joindre la pièce d'identité à la fiche Adhérent dans Dolibarr.
         header, base64_encoded_data = serializer.validated_data['id_document'].split(",", 1)
         mime_type = header[len('data:'):-len(';base64')]
@@ -984,6 +1005,12 @@ def creer_compte(request):
                            serializer.validated_data['password'], serializer.validated_data['pin_code'])
         # Enregistrer la question/réponse de sécurité.
         create_security_qa(num_adherent, serializer.validated_data['question'], serializer.validated_data['answer'])
+        # Envoi d'un mail de notification.
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(num_adherent))[0]
+        activate('fr')
+        texte = render_to_string('mails/ouverture_compte.txt',
+                                 {'dolibarr_member': dolibarr_member}).strip('\n')
+        sendmail_euskalmoneta(subject=texte, body=texte)
     except Exception as e:
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -991,13 +1018,129 @@ def creer_compte(request):
     return Response({'login': num_adherent}, status=status.HTTP_201_CREATED)
 
 
-def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, address, zip, town, country_id, phone,
-                           birth, compte_eusko, iban=None, automatic_change_amount=None):
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def adherer(request):
+    """
+    Enregistre une nouvelle adhésion.
+    """
+    log.debug("adherer()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.AdhererSerializer(data=request.data)
+    serializer.is_valid(raise_exception=False)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+
+    lastname = serializer.validated_data['lastname']
+    firstname = serializer.validated_data['firstname']
+    nouvel_adherent = 'login' not in serializer.validated_data
+
+    try:
+        # Connexion à Dolibarr et Cyclos avec l'utilisateur Anonyme.
+        dolibarr = DolibarrAPI()
+        dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                       password=settings.APPS_ANONYMOUS_PASSWORD)
+        cyclos = CyclosAPI(mode='login')
+        cyclos_token = cyclos.login(
+            auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                       settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
+        if nouvel_adherent:
+            # Générer un nouveau numéro d'adhérent.
+            adherent = models.AdherentParticulier()
+            adherent.save()
+            num_adherent = 'E{:05d}'.format(adherent.id)
+            log.debug("num_adherent={}".format(num_adherent))
+            # Créer l'adhérent Dolibarr.
+            dolibarr_member_rowid = create_dolibarr_member(
+                dolibarr, num_adherent, '3',
+                serializer.validated_data['civility_id'], lastname, firstname, serializer.validated_data['email'],
+                serializer.validated_data['address'], serializer.validated_data['zip'], serializer.validated_data['town'],
+                serializer.validated_data['country_id'], serializer.validated_data['phone'],
+                serializer.validated_data['birth'], compte_eusko=False, iban=serializer.validated_data['iban'],
+                subscription_amount=serializer.validated_data['subscription_amount'],
+                subscription_periodicity=serializer.validated_data['subscription_periodicity'],
+                asso_id=serializer.validated_data['asso_id'],
+                asso_saisie_libre=serializer.validated_data['asso_saisie_libre'])
+        else:
+            # Mettre à jour l'adhérent dans Dolibarr
+            num_adherent = serializer.validated_data['login']
+            data = serializer.validated_data
+            data['recevoir_actus'] = True
+            data['compte_eusko'] = False
+            data['prelevement_auto_cotisation'] = True
+            data['prelevement_auto_cotisation_eusko'] = False
+            dolibarr_member_rowid = update_dolibarr_member(dolibarr, num_adherent, data)
+        # Joindre le mandat SEPA à la fiche Adhérent dans Dolibarr.
+        add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
+                                             filename="{}-Mandat-SEPA.pdf".format(num_adherent),
+                                             filecontent=serializer.validated_data['sepa_document'])
+        # Créer l'utilisateur Cyclos.
+        create_cyclos_user(cyclos_token, 'adherents_sans_compte', '{} {}'.format(firstname, lastname), num_adherent)
+        # Envoi d'un mail de notification.
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(num_adherent))[0]
+        activate('fr')
+        texte = render_to_string('mails/adhesion.txt',
+                                 {'dolibarr_member': dolibarr_member}).strip('\n')
+        sendmail_euskalmoneta(subject=texte, body=texte)
+    except Exception as e:
+        log.exception(e)
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response({'login': num_adherent}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def enregistrer_mandat_cotisation(request):
+    """
+    Enregistre un mandat de prélèvement SEPA pour la cotisation.
+    """
+    log.debug("enregistrer_mandat_cotisation()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.EnregistrerMandatCotisationSerializer(data=request.data)
+    serializer.is_valid(raise_exception=False)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+
+    try:
+        # Connexion à Dolibarr avec l'utilisateur Anonyme.
+        dolibarr = DolibarrAPI()
+        dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                       password=settings.APPS_ANONYMOUS_PASSWORD)
+        # Mettre à jour l'adhérent dans Dolibarr
+        num_adherent = serializer.validated_data['login']
+        data = serializer.validated_data
+        data['prelevement_auto_cotisation'] = True
+        data['prelevement_auto_cotisation_eusko'] = False
+        dolibarr_member_rowid = update_dolibarr_member(dolibarr, num_adherent, data)
+        # Joindre le mandat SEPA à la fiche Adhérent dans Dolibarr.
+        add_attached_file_to_dolibarr_member(dolibarr, dolibarr_member_rowid,
+                                             filename="{}-Mandat-SEPA.pdf".format(num_adherent),
+                                             filecontent=serializer.validated_data['sepa_document'])
+        # Envoi d'un mail de notification.
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(num_adherent))[0]
+        activate('fr')
+        texte = render_to_string('mails/signature_mandat_cotisation.txt',
+                                 {'dolibarr_member': dolibarr_member}).strip('\n')
+        sendmail_euskalmoneta(subject=texte, body=texte)
+    except Exception as e:
+        log.exception(e)
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    return Response(status=status.HTTP_200_OK)
+
+
+def create_dolibarr_member(dolibarr, login, type, civility_id, lastname, firstname, email, address, zip, town, country_id, phone,
+                           birth, compte_eusko, iban=None, automatic_change_amount=None, subscription_amount=None,
+                           subscription_periodicity=None, asso_id=None, asso_saisie_libre=None):
     """
     Crée un adhérent dans Dolibarr.
     :param dolibarr: connexion à Dolibarr (instance de DolibarrAPI)
     :param login: numéro d'adhérent
     :param type:
+    :param civility_id:
     :param lastname:
     :param firstname:
     :param email:
@@ -1010,12 +1153,17 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
     :param compte_eusko: indique si l'adhérent ouvre un compte eusko ou pas
     :param iban:
     :param automatic_change_amount:
+    :param subscription_amount:
+    :param subscription_periodicity:
+    :param asso_id:
+    :param asso_saisie_libre:
     :return: rowid de l'adhérent créé
     """
     dolibarr_member_rowid = dolibarr.post(model='members', data={
         'login': login,
         'typeid': type,
         'morphy': 'phy',
+        'civility_id': civility_id,
         'lastname': lastname,
         'firstname': firstname,
         'email': email,
@@ -1027,14 +1175,20 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
         'birth': datetime(birth.year, birth.month, birth.day).timestamp(),
         'public': '0',
         'statut': '1',
+        'fk_asso': asso_id,
         'array_options': {
             'options_recevoir_actus': True,
             'options_accepte_cgu_eusko_numerique': compte_eusko,
             'options_documents_pour_ouverture_du_compte_valides': compte_eusko,
-            'options_accord_pour_ouverture_de_compte': 'oui' if compte_eusko else 'non',
+            'options_accord_pour_ouverture_de_compte': 'oui' if compte_eusko else None,
             'options_prelevement_change_montant': automatic_change_amount,
             'options_prelevement_change_periodicite': 1 if automatic_change_amount else None,
             'options_iban': iban,
+            'options_prelevement_auto_cotisation': True if subscription_amount and not compte_eusko else None,
+            'options_prelevement_auto_cotisation_eusko': True if subscription_amount and compte_eusko else None,
+            'options_prelevement_cotisation_montant': subscription_amount,
+            'options_prelevement_cotisation_periodicite': subscription_periodicity,
+            'options_asso_saisie_libre': asso_saisie_libre,
             'options_notifications_validation_mandat_prelevement': compte_eusko,
             'options_notifications_refus_ou_annulation_mandat_prelevement': compte_eusko,
             'options_notifications_prelevements': compte_eusko,
@@ -1042,6 +1196,65 @@ def create_dolibarr_member(dolibarr, login, type, lastname, firstname, email, ad
             'options_recevoir_bons_plans': compte_eusko,
         }
     })
+    return dolibarr_member_rowid
+
+
+def update_dolibarr_member(dolibarr, login, data):
+    """
+    Met à jour un adhérent dans Dolibarr.
+    :param dolibarr: connexion à Dolibarr (instance de DolibarrAPI)
+    :param login: numéro d'adhérent
+    :return: rowid de l'adhérent mis à jour
+    """
+    member = dolibarr.get(model='members', sqlfilters="login='{}'".format(login))[0]
+    dolibarr_member_rowid = member['id']
+    dolibarr_data = {}
+    for key in ('lastname', 'firstname', 'email', 'address', 'zip', 'town', 'country_id'):
+        if key in data:
+            dolibarr_data[key] = data[key]
+    if 'phone' in data:
+        dolibarr_data['phone_mobile'] = data['phone']
+    if 'birth' in data:
+        birth = data['birth']
+        dolibarr_data['birth'] = datetime(birth.year, birth.month, birth.day).timestamp()
+    if 'asso_id' in data:
+        dolibarr_data['fk_asso'] = data['asso_id']
+    # Dans le PUT il faut renvoyer tous les attributs supplémentaires
+    # sinon leurs valeurs seront perdues (c'est le fonctionnement de
+    # Dolibarr qui veut ça).
+    array_options = member['array_options']
+    if 'recevoir_actus' in data:
+        array_options['options_recevoir_actus'] = data['recevoir_actus']
+    if 'compte_eusko' in data:
+        compte_eusko = data['compte_eusko']
+        array_options['options_accepte_cgu_eusko_numerique'] = compte_eusko
+        array_options['options_documents_pour_ouverture_du_compte_valides'] = compte_eusko
+        array_options['options_accord_pour_ouverture_de_compte'] = 'oui' if compte_eusko else None
+        array_options['options_notifications_validation_mandat_prelevement'] = compte_eusko
+        array_options['options_notifications_refus_ou_annulation_mandat_prelevement'] = compte_eusko
+        array_options['options_notifications_prelevements'] = compte_eusko
+        array_options['options_notifications_virements'] = compte_eusko
+        array_options['options_recevoir_bons_plans'] = compte_eusko
+    if 'automatic_change_amount' in data:
+        automatic_change_amount = data['automatic_change_amount']
+        array_options['options_prelevement_change_montant'] = automatic_change_amount
+        # S'il y a change automatique, il est toujours mensuel.
+        array_options['options_prelevement_change_periodicite'] = 1 if automatic_change_amount else None
+    if 'iban' in data:
+        array_options['options_iban'] = data['iban']
+    if 'prelevement_auto_cotisation' in data:
+        array_options['options_prelevement_auto_cotisation'] = data['prelevement_auto_cotisation']
+    if 'prelevement_auto_cotisation_eusko' in data:
+        array_options['options_prelevement_auto_cotisation_eusko'] = data['prelevement_auto_cotisation_eusko']
+    if 'subscription_amount' in data:
+        array_options['options_prelevement_cotisation_montant'] = data['subscription_amount']
+    if 'subscription_periodicity' in data:
+        array_options['options_prelevement_cotisation_periodicite'] = data['subscription_periodicity']
+    if 'asso_saisie_libre' in data:
+        array_options['options_asso_saisie_libre'] = data['asso_saisie_libre']
+    dolibarr_data['array_options'] = array_options
+
+    dolibarr.put(model='members', id=dolibarr_member_rowid, data=dolibarr_data)
     return dolibarr_member_rowid
 
 
@@ -1077,14 +1290,31 @@ def create_cyclos_user(cyclos_token, group, name, login, password=None, pin_code
     :return: id de l'utilisateur créé
     """
     cyclos = CyclosAPI()
+    # On vérifie si un utilisateur avec ce login existe. Si c'est le cas, on le met à jour, sinon on en crée un nouveau.
     data = {
-        'group': str(settings.CYCLOS_CONSTANTS['groups'][group]),
-        'name': name,
-        'username': login,
-        'skipActivationEmail': True,
+        'keywords': login,
+        'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
     }
-    res = cyclos.post(method='user/register', data=data, token=cyclos_token)
-    cyclos_user_id = res['result']['user']['id']
+    res = cyclos.post(method='user/search', data=data, token=cyclos_token)
+    if res['result']['totalCount']==1 and res['result']['pageItems'][0]['shortDisplay'] == login:
+        cyclos_user_id = res['result']['pageItems'][0]['id']
+        res = cyclos.post(method='user/load', data=cyclos_user_id)
+        # Si l'utilisateur existant est dans un groupe différent de celui voulu, on le change de groupe.
+        if res['result']['group']['internalName'] != group:
+            data = {
+                'user': cyclos_user_id,
+                'group': str(settings.CYCLOS_CONSTANTS['groups'][group]),
+            }
+            cyclos.post(method='userGroup/changeGroup', data=data)
+    else:
+        data = {
+            'group': str(settings.CYCLOS_CONSTANTS['groups'][group]),
+            'name': name,
+            'username': login,
+            'skipActivationEmail': True,
+        }
+        res = cyclos.post(method='user/register', data=data, token=cyclos_token)
+        cyclos_user_id = res['result']['user']['id']
     # S'il s'agit d'un groupe dans lequel les utilisateurs ont un QR code, il faut générer celui-ci.
     if group in ('adherents_utilisateurs', 'adherents_prestataires', 'adherents_prestataires_avec_paiement_smartphone'):
         generate_qr_code_for_cyclos_user(cyclos_token, cyclos_user_id, login)
@@ -1170,16 +1400,16 @@ def generate_qr_code_for_cyclos_user(cyclos_token, cyclos_user_id, login):
 def create_security_qa(login, question, answer):
     """
     Crée une question/réponse de sécurité pour le numéro d'adhérent donné.
+    Si une question était déjà enregistrée pour cet adhérent, elle est mise à jour.
     :param login: numéro d'adhérent
     :param question:
     :param answer:
     :return:
     """
-    res = models.SecurityAnswer.objects.create(owner=login, question=question)
-    res.set_answer(raw_answer=answer)
-    res.save()
-    if not res:
-        raise Exception('Unable to save security answer.')
+    sa, created = models.SecurityAnswer.objects.get_or_create(owner=login)
+    sa.question=question
+    sa.set_answer(raw_answer=answer)
+    sa.save()
 
 
 def create_dolibarr_user_linked_to_member(dolibarr, login):

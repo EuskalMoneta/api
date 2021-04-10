@@ -167,21 +167,22 @@ class BDCAPIView(BaseAPIView):
         }
         self.cyclos.post(method='userStatus/changeStatus', data=deactivate_operator_bdc_data)
 
-        # Récupérer l'utilisateur bureau de change
-        bdc_user_cyclos_query = {
-            'groups': [str(settings.CYCLOS_CONSTANTS['groups']['bureaux_de_change'])],
-            'keywords': pk,  # par exemple B003
-        }
+        # Récupérer l'utilisateur Bureau de change lié à cet Opérateur BDC
         try:
-            bdc_cyclos_id = self.cyclos.post(
-                method='user/search', data=bdc_user_cyclos_query)['result']['pageItems'][0]['id']
+            bdc_operator_cyclos = self.cyclos.post(
+                method='user/load', data=[bdc_operator_cyclos_id])['result']
+            bdc_cyclos = [
+                cv['linkedEntityValue']['id']
+                for cv in bdc_operator_cyclos['customValues']
+                if cv['field']['name']=='BDC'
+            ][0]
         except (KeyError, IndexError):
-                    return Response({'error': 'Unable to get bdc_cyclos_id data!'},
+                    return Response({'error': 'Unable to get bdc_cyclos data!'},
                                     status=status.HTTP_400_BAD_REQUEST)
 
         # Désactiver le bureau de change
         deactivate_bdc_data = {
-            'user': bdc_cyclos_id,
+            'user': bdc_cyclos,
             'status': 'DISABLED',
         }
         self.cyclos.post(method='userStatus/changeStatus', data=deactivate_bdc_data)
