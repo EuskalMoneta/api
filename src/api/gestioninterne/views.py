@@ -44,18 +44,42 @@ def resiliation_adherent(request):
     try:
         #récupérer l'user Cyclos
         res = cyclos.post(method='user/search', data={
-            'keywords': request.data['member_login'],
+            'keywords': serializer.data['member_login'],
             'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']}
                            )
-        if res['result']['totalCount'] == 1 and res['result']['pageItems'][0]['shortDisplay'] == request.data['member_login']:
+        if res['result']['totalCount'] == 1 and res['result']['pageItems'][0]['shortDisplay'] == serializer.data['member_login']:
             #Check solde > 0
-            query_data = [res['result']['pageItems'][0]['shortDisplay'], None]
+            cyclos_user = res['result']['pageItems'][0]
+            query_data = [cyclos_user['shortDisplay'], None]
             accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+            # todo: changer d'opérateur de comparaison
             if(float(accounts_summaries_data['result'][0]['status']['balance']) < 0):
                 return Response({'error': 'Compte de l\'adhérent.e créditeur, résiliation impossible.'},
                                 status=status.HTTP_400_BAD_REQUEST)
-
             # Annuler les QR codes
+            #data = {
+            #    'type': 'qr_code',
+            #    'user': cyclos_user_id,
+            #    'value': serializer.data['member_login'],
+            #}
+
+            #token_type='NFC_TAG',
+
+            #data = {
+            #    'type': 'NFC_TAG',
+            #    'user': cyclos_user['id'],
+            #}
+            #resQr = cyclos.post(method='token/search', data=data)
+            #qr_code_id = resQr['result']
+            #resQr = cyclos.post(method='token/cancel', data=[qr_code_id])
+
+            #Supprimer l'utilisateur de cyclos
+            data = {
+                'user': cyclos_user['id'],
+                'status': 'REMOVED',
+            }
+            #todo: décommenter avant de commit
+            #cyclos.post(method='userStatus/changeStatus', data=data)
 
         else:
             return Response({'error': 'Unable to get adherent from cyclos'},
@@ -70,14 +94,88 @@ def resiliation_adherent(request):
     except:
         return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    #tierDolibarr = ''
+
+    dolibarr.post(model='agendaevents', data={
+      "type_id": "53",
+      "type_code": "AC_RESI",
+      "type": "Résiliation",
+      "code": "AC_RESI",
+      "label": "Résiliation " + serializer.data['member_login'],
+      "datec": datetime.now().timestamp(),
+      "datem": datetime.now().timestamp(),
+      "datep": datetime.now().timestamp(),
+      "datef": datetime.now().timestamp(),
+      "durationp": -1,
+      "fulldayevent": "0",
+
+      "userownerid": member['id'],
+      "location": member['id'],
+      "contactid": serializer.data['member_login'],
+      "elementid": serializer.data['member_login'],
+      "elementtype": "member",
+      "note": serializer.data['termination_reason']
+    })
+    #modification adhérent
+    data_modify_adherent = {
+        'statut': 0,
+        "array_options": {
+            "options_montant_minimal_cotisation_annuelle": None,
+            "options_langue": None,
+            "options_prelevement_change_periodicite": None,
+            "options_accord_pour_ouverture_de_compte": None,
+            "options_documents_pour_ouverture_du_compte_valides": None,
+            "options_prelevement_change_rum": None,
+            "options_accepte_cgu_eusko_numerique": None,
+            "options_notifications_prelevements": None,
+            "options_prelevement_change_montant": None,
+            "options_notifications_validation_mandat_prelevement": None,
+            "options_recevoir_actus": None,
+            "options_prelevement_cotisation_montant": None,
+            "options_iban": None,
+            "options_asso_saisie_libre": None,
+            "options_salaire_en_eusko": None,
+            "options_recevoir_bons_plans": None,
+            "options_token": None,
+            "options_montant_cotisation_annuelle": None,
+            "options_notifications_refus_ou_annulation_mandat_prelevement": None,
+            "options_prelevement_cotisation_rum": None,
+            "options_cotisation_offerte": None,
+            "options_notifications_virements": None,
+            "options_prelevement_cotisation_periodicite": None,
+            "options_prelevement_auto_cotisation_eusko": None,
+            "options_prelevement_auto_cotisation":None,
+            "options_bic": None
+        },
+        'fk_asso': '',
+        'fk_asso2': ''
+    }
     try:
-        tierDolibarr = dolibarr.get(model='thirdparties/{}'.format('622'))
+        res_modify_tier = dolibarr.put(model='members/{}'.format(member['id']), data=data_modify_adherent)
     except Exception as e:
-        log.critical("tierDolibarr: {}".format(tierDolibarr))
+        log.critical("data_modify_tier: {}".format(data_modify_adherent))
         log.critical(e)
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
+    #modification des tiers
+    try:
+        tierDolibarr = dolibarr.get(model='thirdparties', sqlfilters="code_client='{}'".format(serializer.data['member_login']))
+        for tier in tierDolibarr:
+
+            data_modify_tier = {
+                'client': 3 if serializer.data['cessation_of_activity'] == '1' else 2,
+                'status': 0 if serializer.data['cessation_of_activity'] == '1' else 1,
+                #todo: décommenter avant de commit
+                #'name': tier['name'] + ' (résilié)'
+            }
+            try:
+                res_modify_tier = dolibarr.put(model='thirdparties/{}'.format(tier['id']), data=data_modify_tier)
+            except Exception as e:
+                log.critical("data_modify_tier: {}".format(data_modify_tier))
+                log.critical(e)
+                return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        log.critical("Pas de tierDolibarr")
     #data = {
     #    'keywords': login,
     #    'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
@@ -87,7 +185,9 @@ def resiliation_adherent(request):
 
 
 
-    return Response([tierDolibarr, member, accounts_summaries_data['result'][0]['status']['balance'],accounts_summaries_data])
+    #return Response([tierDolibarr, member, accounts_summaries_data['result'][0]['status']['balance'],accounts_summaries_data])
+    #eturn Response([member['id'],tierDolibarr, accounts_summaries_data['result'][0]['status']['balance'],accounts_summaries_data])
+    return Response(member)
 
 
 @api_view(['POST'])
