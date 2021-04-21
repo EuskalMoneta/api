@@ -120,6 +120,7 @@ urlpatterns = [
 
     url(r'^creer-compte-vee/$', cel_views.creer_compte_vee),
     url(r'^creer-compte/$', cel_views.creer_compte),
+    url(r'^verifier-existance-compte/$', cel_views.verifier_existance_compte),
     url(r'^adherer/$', cel_views.adherer),
     url(r'^enregistrer-mandat-cotisation/$', cel_views.enregistrer_mandat_cotisation),
 ]

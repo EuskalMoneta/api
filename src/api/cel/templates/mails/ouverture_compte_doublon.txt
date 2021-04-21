@@ -1,0 +1,6 @@
+{% load staticfiles i18n %}
+
+Une ouverture de compte pour l'email {{ member.email }} a été enregistrée. Plusieurs doublons correspondaient à cet email :
+{% for member in dolibarr_members %}
+    {{ member.firstname }} {{ member.lastname }} ({{ member.login }})
+{% endfor %}

@@ -148,6 +148,16 @@ class CreerCompteVeeSerializer(serializers.Serializer):
     pin_code = serializers.CharField()
 
 
+class VerifierCompteSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    language = serializers.CharField(max_length=2)
+
+    def validate_language(self, value):
+        if value not in ('eu', 'fr'):
+            raise serializers.ValidationError("language must be 'eu' or 'fr'")
+        return value
+
+
 class CreerCompteSerializer(CreerCompteVeeSerializer):
     iban = serializers.CharField()
     automatic_change_amount = serializers.IntegerField()

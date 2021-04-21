@@ -927,6 +927,65 @@ def creer_compte_vee(request):
 
 @api_view(['POST'])
 @permission_classes((AllowAny, ))
+def verifier_existance_compte(request):
+    """
+    Vérifier si l'email existe déjà en base lors de l'inscription
+    """
+    log.debug("verifier_existance_compte()")
+    serializer = serializers.VerifierCompteSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+
+    dolibarr = DolibarrAPI()
+    dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                                    password=settings.APPS_ANONYMOUS_PASSWORD)
+
+    try:
+        response = dolibarr.get(model='members', sqlfilters="email='{}' and statut=1".format(serializer.validated_data['email']),
+                                api_key=dolibarr_token)
+
+        if len(response) == 1:
+            member = response[0]
+            if member['type'] == 'Particulier':
+                # We need to mail a token etc...
+                payload = {'login': member['login'],
+                           'aud': 'guest', 'iss': 'verifier-existance',
+                           'jti': str(uuid4()), 'iat': datetime.utcnow(),
+                           'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
+
+                jwt_token = jwt.encode(payload, settings.JWT_SECRET)
+                confirm_url = '{}/{}/ouverture-compte?token={}'.format(
+                    settings.CEL_PUBLIC_URL,
+                    request.data['language'],
+                    jwt_token.decode("utf-8"))
+
+                # On active la langue choisie par l'utilisateur.
+                activate(serializer.validated_data['language'])
+
+                # Translate subject & body for this email
+                subject = _('Votre inscription au compte en ligne Eusko')
+                body = render_to_string('mails/ouverture_compte_token.txt', {'token': confirm_url, 'user': member})
+
+                sendmail_euskalmoneta(subject=subject, body=body, to_email=request.data['email'])
+                return Response({'data': member}, status=status.HTTP_200_OK)
+            else:
+                return Response({'data': 'User found is not a Particulier'}, status=status.HTTP_204_NO_CONTENT)
+
+        else:
+            #Email pour prévenir des doublons
+            texte = render_to_string('mails/ouverture_compte_doublon.txt',
+                                     {'dolibarr_members': response}).strip('\n')
+            sendmail_euskalmoneta(subject=texte, body=texte)
+            Response({'warning': 'Multiple users for this email address'}, status=status.HTTP_204_NO_CONTENT)
+
+
+    except (DolibarrAPIException, KeyError, IndexError):
+        return Response({'data': 'No member found for this email'}, status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
 def creer_compte(request):
     """
     Crée un compte eusko.
