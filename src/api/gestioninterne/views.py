@@ -1244,7 +1244,7 @@ def execute_changes_par_virement(request):
     log.debug("execute_changes_par_virement()")
     log.debug("request.data={}".format(request.data))
     serializer = serializers.ChangeParVirementSerializer(data=request.data, many=True)
-    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+    serializer.is_valid(raise_exception=True)
 
     log.debug("serializer.validated_data={}".format(serializer.validated_data))
     log.debug("serializer.errors={}".format(serializer.errors))
@@ -1259,12 +1259,6 @@ def execute_changes_par_virement(request):
         cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
-
-    # On récupère les données de l'adhérent.
-    try:
-        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(serializer.data['member_login']))[0]
-    except:
-        return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
 
     for change in changes:
         try:
