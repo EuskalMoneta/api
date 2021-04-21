@@ -50,28 +50,47 @@ def resiliation_adherent(request):
         if res['result']['totalCount'] == 1 and res['result']['pageItems'][0]['shortDisplay'] == serializer.data['member_login']:
             #Check solde > 0
             cyclos_user = res['result']['pageItems'][0]
+            cyclos_user_id = cyclos_user['id']
+            
             query_data = [cyclos_user['shortDisplay'], None]
             accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
             # todo: changer d'opérateur de comparaison
             if(float(accounts_summaries_data['result'][0]['status']['balance']) < 0):
                 return Response({'error': 'Compte de l\'adhérent.e créditeur, résiliation impossible.'},
                                 status=status.HTTP_400_BAD_REQUEST)
+
             # Annuler les QR codes
             #data = {
             #    'type': 'qr_code',
             #    'user': cyclos_user_id,
             #    'value': serializer.data['member_login'],
             #}
+            # resQr = cyclos.post(method='token/search', data=data)
+            # qr_code_id = resQr['result']
+            # resQr = cyclos.post(method='token/cancel', data=[qr_code_id])
 
-            #token_type='NFC_TAG',
+            # Annuler les Points de vente NFC
+            #todo: rectifier constante cyclos si ce n'est pas le bon param
+            dataNFC = {
+                "operation": "getListData",
+                "params": [
+                    {
+                        "class": "org.cyclos.model.access.principaltypes.PrincipalTypeVO",
+                        "id": str(settings.CYCLOS_CONSTANTS['payment_types']['sortie_caisse_eusko_bdc'])},
+                    {
+                        "class": "org.cyclos.model.users.users.UserLocatorVO",
+                        "id": cyclos_user_id
+                    }
+                ]
+            }
+            resNFC = cyclos.post(method='accessClientService', data=dataNFC)
 
-            #data = {
-            #    'type': 'NFC_TAG',
-            #    'user': cyclos_user['id'],
-            #}
-            #resQr = cyclos.post(method='token/search', data=data)
-            #qr_code_id = resQr['result']
-            #resQr = cyclos.post(method='token/cancel', data=[qr_code_id])
+            for pointNFC in resNFC['result']['accessClients']:
+                dataNFC = {
+                    "operation": "remove",
+                    "params": [pointNFC['id']]
+                }
+                resDeleteNFC = cyclos.post(method='accessClientService', data=dataNFC)
 
             #Supprimer l'utilisateur de cyclos
             data = {
@@ -150,9 +169,9 @@ def resiliation_adherent(request):
         'fk_asso2': ''
     }
     try:
-        res_modify_tier = dolibarr.put(model='members/{}'.format(member['id']), data=data_modify_adherent)
+        dolibarr.put(model='members/{}'.format(member['id']), data=data_modify_adherent)
     except Exception as e:
-        log.critical("data_modify_tier: {}".format(data_modify_adherent))
+        log.critical("data_modify_adherent: {}".format(data_modify_adherent))
         log.critical(e)
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -168,14 +187,16 @@ def resiliation_adherent(request):
                 #'name': tier['name'] + ' (résilié)'
             }
             try:
-                res_modify_tier = dolibarr.put(model='thirdparties/{}'.format(tier['id']), data=data_modify_tier)
+                dolibarr.put(model='thirdparties/{}'.format(tier['id']), data=data_modify_tier)
             except Exception as e:
                 log.critical("data_modify_tier: {}".format(data_modify_tier))
                 log.critical(e)
                 return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
     except Exception as e:
-        log.critical("Pas de tierDolibarr")
+        log.debug("Pas de tierDolibarr")
+
+
     #data = {
     #    'keywords': login,
     #    'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
@@ -183,11 +204,9 @@ def resiliation_adherent(request):
     #res = cyclos.post(method='user/search', data=data, token=cyclos_token)
     #if res['result']['totalCount'] == 1 and res['result']['pageItems'][0]['shortDisplay'] == login:
 
-
-
     #return Response([tierDolibarr, member, accounts_summaries_data['result'][0]['status']['balance'],accounts_summaries_data])
     #eturn Response([member['id'],tierDolibarr, accounts_summaries_data['result'][0]['status']['balance'],accounts_summaries_data])
-    return Response(member)
+    return Response(cyclos_user)
 
 
 @api_view(['POST'])
