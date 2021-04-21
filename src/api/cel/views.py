@@ -1209,7 +1209,7 @@ def update_dolibarr_member(dolibarr, login, data):
     member = dolibarr.get(model='members', sqlfilters="login='{}'".format(login))[0]
     dolibarr_member_rowid = member['id']
     dolibarr_data = {}
-    for key in ('lastname', 'firstname', 'email', 'address', 'zip', 'town', 'country_id'):
+    for key in ('lastname', 'firstname', 'email', 'address', 'zip', 'town', 'country_id', 'civility_id'):
         if key in data:
             dolibarr_data[key] = data[key]
     if 'phone' in data:
