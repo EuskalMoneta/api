@@ -948,37 +948,32 @@ def verifier_existance_compte(request):
         if len(response) == 1:
             member = response[0]
             if member['type'] == 'Particulier':
-                # We need to mail a token etc...
-                payload = {'login': member['login'],
-                           'aud': 'guest', 'iss': 'verifier-existance',
-                           'jti': str(uuid4()), 'iat': datetime.utcnow(),
-                           'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
-                jwt_token = jwt.encode(payload, settings.JWT_SECRET)
+                #Création de l'url vers CEL
                 confirm_url = '{}/{}/ouverture-compte?token={}'.format(
                     settings.CEL_PUBLIC_URL,
                     request.data['language'],
-                    jwt_token.decode("utf-8"))
+                    member['array_options']['options_token'])
 
                 # On active la langue choisie par l'utilisateur.
                 activate(serializer.validated_data['language'])
 
-                # Translate subject & body for this email
-                subject = _('Votre inscription au compte en ligne Eusko')
+                subject = _('Votre ouverture de compte en ligne Eusko')
                 body = render_to_string('mails/ouverture_compte_token.txt', {'token': confirm_url, 'user': member})
+                sendmail_euskalmoneta(subject=subject, body=body, to_email=serializer.validated_data['email'])
 
-                sendmail_euskalmoneta(subject=subject, body=body, to_email=request.data['email'])
                 return Response({'data': member}, status=status.HTTP_200_OK)
             else:
                 return Response({'data': 'User found is not a Particulier'}, status=status.HTTP_204_NO_CONTENT)
 
         else:
             #Email pour prévenir des doublons
+            subject = _('Ouverture de compte avec risque de doublon ')+'('+serializer.validated_data['email']+')'
             texte = render_to_string('mails/ouverture_compte_doublon.txt',
                                      {'dolibarr_members': response}).strip('\n')
-            sendmail_euskalmoneta(subject=texte, body=texte)
-            Response({'warning': 'Multiple users for this email address'}, status=status.HTTP_204_NO_CONTENT)
+            sendmail_euskalmoneta(subject=subject, body=texte)
 
+            Response({'warning': 'Multiple users for this email address'}, status=status.HTTP_204_NO_CONTENT)
 
     except (DolibarrAPIException, KeyError, IndexError):
         return Response({'data': 'No member found for this email'}, status=status.HTTP_204_NO_CONTENT)
