@@ -25,7 +25,7 @@ from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from gestioninterne.views import _search_account_history
 from members.misc import Member
-from misc import EuskalMonetaAPIException, sendmail_euskalmoneta
+from misc import EuskalMonetaAPIException, sendmail_euskalmoneta, sendmailHTML_euskalmoneta
 
 log = logging.getLogger()
 
@@ -1065,6 +1065,10 @@ def creer_compte(request):
         texte = render_to_string('mails/ouverture_compte.txt',
                                  {'dolibarr_member': dolibarr_member}).strip('\n')
         sendmail_euskalmoneta(subject=texte, body=texte)
+
+        template = 'mails/send_mail_ouverture_compte.html'
+        sendmailHTML_euskalmoneta(subject="📋 Votre compte eusko - À lire attentivement // 📋 Zure eusko kontua - Artoski irakurtzekoa", to_email=serializer.validated_data['email'], body=template)
+
     except Exception as e:
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
