@@ -60,6 +60,7 @@ class ExportVersOdooSerializer(serializers.Serializer):
 
 class ChangeParVirementSerializer(serializers.Serializer):
     member_login = serializers.CharField()
+    member_name = serializers.CharField()
     amount = serializers.FloatField()
     description = serializers.CharField()
 
