@@ -6,7 +6,7 @@
 
 {% trans "Vous allez maintenant pouvoir continuer en cliquant sur le lien ci-dessous" %} :
 
-{{ token }}
+{{ url }}
 
 {% trans "Si vous n'êtes pas à l'origine de cette demande, vous pouvez simplement ignorer ce message" %}.
 {% trans "N'hésitez pas à nous contacter si vous avez des questions" %}.

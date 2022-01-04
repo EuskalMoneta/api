@@ -927,56 +927,61 @@ def creer_compte_vee(request):
 
 @api_view(['POST'])
 @permission_classes((AllowAny, ))
-def verifier_existance_compte(request):
+def verifier_existence_compte(request):
     """
     Vérifier si l'email existe déjà en base lors de l'inscription
     """
-    log.debug("verifier_existance_compte()")
+    log.debug("verifier_existence_compte()")
     serializer = serializers.VerifierCompteSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     log.debug("serializer.validated_data={}".format(serializer.validated_data))
     log.debug("serializer.errors={}".format(serializer.errors))
+
+    email = serializer.validated_data['email']
 
     dolibarr = DolibarrAPI()
     dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
                                     password=settings.APPS_ANONYMOUS_PASSWORD)
 
     try:
-        response = dolibarr.get(model='members', sqlfilters="email='{}' and statut=1".format(serializer.validated_data['email']),
+        response = dolibarr.get(model='members',
+                                typeid=3, #FIXME Particulier
+                                sqlfilters="email='{}' and statut=1".format(email),
                                 api_key=dolibarr_token)
+    except DolibarrAPIException:
+        return Response(status=status.HTTP_404_NOT_FOUND)
 
-        if len(response) == 1:
-            member = response[0]
-            if member['type'] == 'Particulier':
+    if len(response) == 1:
+        # S'il existe déjà un et un seul adhérent particulier avec
+        # cette adresse email, on lui envoie un mail avec le lien
+        # personnalisé pour qu'il ouvre son compte à partir de sa
+        # fiche Adhérent existante.
+        member = response[0]
 
-                #Création de l'url vers CEL
-                confirm_url = '{}/{}/ouverture-compte?token={}'.format(
-                    settings.CEL_PUBLIC_URL,
-                    request.data['language'],
-                    member['array_options']['options_token'])
+        url = '{}/{}/ouverture-compte?token={}'.format(
+            settings.CEL_PUBLIC_URL,
+            request.data['language'],
+            member['array_options']['options_token'])
 
-                # On active la langue choisie par l'utilisateur.
-                activate(serializer.validated_data['language'])
+        # On active la langue choisie par l'utilisateur.
+        activate(serializer.validated_data['language'])
 
-                subject = _('Votre ouverture de compte en ligne Eusko')
-                body = render_to_string('mails/ouverture_compte_token.txt', {'token': confirm_url, 'user': member})
-                sendmail_euskalmoneta(subject=subject, body=body, to_email=serializer.validated_data['email'])
+        subject = _('Votre ouverture de compte en ligne Eusko')
+        body = render_to_string('mails/ouverture_compte_token.txt', {'url': url, 'user': member})
+        sendmail_euskalmoneta(subject=subject, body=body, to_email=email)
 
-                return Response({'data': member}, status=status.HTTP_200_OK)
-            else:
-                return Response({'data': 'User found is not a Particulier'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'data': member}, status=status.HTTP_200_OK)
 
-        else:
-            #Email pour prévenir des doublons
-            subject = _('Ouverture de compte avec risque de doublon ')+'('+serializer.validated_data['email']+')'
-            texte = render_to_string('mails/ouverture_compte_doublon.txt',
-                                     {'dolibarr_members': response}).strip('\n')
-            sendmail_euskalmoneta(subject=subject, body=texte)
-
-            Response({'warning': 'Multiple users for this email address'}, status=status.HTTP_204_NO_CONTENT)
-
-    except (DolibarrAPIException, KeyError, IndexError):
-        return Response({'data': 'No member found for this email'}, status=status.HTTP_204_NO_CONTENT)
+    elif len(response) > 1:
+        # S'il existe déjà plus d'un adhérent particulier avec cette
+        # adresse email, on le laisse continuer (pour ne pas le bloquer)
+        # mais on envoie un mail de notification pour avertir du risque
+        # de doublon.
+        subject = _('Ouverture de compte avec risque de doublon ')+'('+email+')'
+        texte = render_to_string('mails/ouverture_compte_doublon.txt',
+                                 {'email': email, 'dolibarr_members': response}).strip('\n')
+        sendmail_euskalmoneta(subject=subject, body=texte)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
