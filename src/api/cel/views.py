@@ -918,6 +918,11 @@ def creer_compte_vee(request):
                            serializer.validated_data['password'], serializer.validated_data['pin_code'])
         # Enregistrer la question/réponse de sécurité.
         create_security_qa(num_adherent, serializer.validated_data['question'], serializer.validated_data['answer'])
+        # Envoyer un mail d'information à l'adhérent.e.
+        sendmailHTML_euskalmoneta(
+            subject='Vous avez ouvert un compte Vacances en eusko ! "Bakantzak euskoz" kontu bat ireki duzu!',
+            html_message=render_to_string('mails/infos_ouverture_compte_vee.html'),
+            to_email=serializer.validated_data['email'])
     except Exception as e:
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1147,6 +1152,11 @@ def adherer(request):
         texte = render_to_string('mails/adhesion.txt',
                                  {'dolibarr_member': dolibarr_member}).strip('\n')
         sendmail_euskalmoneta(subject=texte, body=texte)
+        # Envoyer un mail d'information à l'adhérent.e.
+        sendmailHTML_euskalmoneta(
+            subject="📋 Votre adhésion à l'Eusko - À lire attentivement // 📋 Zure Eusko kidetzea – Artoski irakurtzekoa",
+            html_message=render_to_string('mails/infos_adhesion_simple.html', {'num_adherent': num_adherent}),
+            to_email=serializer.validated_data['email'])
     except Exception as e:
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
