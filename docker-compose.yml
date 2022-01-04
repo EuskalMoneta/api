@@ -62,22 +62,6 @@ services:
     networks:
       - eusko_net
 
-  #metabase:
-  #  image: metabase/metabase:v0.38.3
-  #  ports:
-  #    - 8084:3000
-  #  restart: unless-stopped
-  #  environment:
-  #    - MB_DB_FILE=/metabase-data/metabase.db
-  #  volumes:
-  #    - ./data/metabase:/metabase-data
-  #  depends_on:
-  #    - dolibarr-db
-  #    - cyclos-db
-  #  networks:
-  #    - eusko_net
-
-
   cyclos-app:
     image: cyclos/cyclos:4.13.1
     ports:
