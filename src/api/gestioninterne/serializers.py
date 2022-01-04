@@ -75,4 +75,4 @@ class PaiementCotisationEuskoNumeriqueSerializer(serializers.Serializer):
 class ResiliationSerializer(serializers.Serializer):
     member_login = serializers.CharField()
     termination_reason = serializers.CharField()
-    cessation_of_activity = serializers.CharField()
+    cessation_of_activity = serializers.BooleanField(required=False)
