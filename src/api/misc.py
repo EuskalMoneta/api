@@ -26,16 +26,15 @@ def sendmail_euskalmoneta(subject, body, to_email=None, from_email=None):
         mail.EmailMessage(subject, body, from_email, [to_email], connection=connection).send()
 
 
-def sendmailHTML_euskalmoneta(subject, body, to_email=None, from_email=None):
+def sendmailHTML_euskalmoneta(subject, html_message, to_email=None, from_email=None):
     if to_email is None:
         to_email = settings.EMAIL_NOTIFICATION_GESTION
     if from_email is None:
         from_email = settings.EMAIL_HOST_USER
 
     log.debug("sendmail:\nFrom: {}\nTo: {}\nSubject: {}\n{}".format(
-        from_email, to_email, subject, body))
+        from_email, to_email, subject))
 
-    html_message = render_to_string(body, {'context': 'values'})
     plain_message = strip_tags(html_message)
     try:
         mail.send_mail(subject, plain_message, from_email, [to_email], html_message=html_message)
