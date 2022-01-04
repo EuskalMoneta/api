@@ -86,8 +86,9 @@ urlpatterns = [
     url(r'^validate-reconversions/$', gi_views.validate_reconversions),
     url(r'^calculate-3-percent/$', gi_views.calculate_3_percent),
     url(r'^export-vers-odoo/$', gi_views.export_vers_odoo),
-    url(r'^change-par-virement/$', gi_views.change_par_virement),
+    url(r'^change-par-virement/$', gi_views.execute_changes_par_virement),
     url(r'^paiement-cotisation-eusko-numerique/$', gi_views.paiement_cotisation_eusko_numerique),
+    url(r'^resilier-adherent/$', gi_views.resiliation_adherent),
 
     # Crédit des comptes Eusko par prélèvement automatique
     url(r'^credits-comptes-prelevement-auto/import/(?P<filename>[^/]+)$', credits_views.import_csv),
@@ -119,6 +120,7 @@ urlpatterns = [
 
     url(r'^creer-compte-vee/$', cel_views.creer_compte_vee),
     url(r'^creer-compte/$', cel_views.creer_compte),
+    url(r'^verifier-existence-compte/$', cel_views.verifier_existence_compte),
     url(r'^adherer/$', cel_views.adherer),
     url(r'^enregistrer-mandat-cotisation/$', cel_views.enregistrer_mandat_cotisation),
 ]

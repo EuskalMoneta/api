@@ -1226,23 +1226,29 @@ def _add_account_entry(csv_content, journal_id, date, description, lines):
     """
     for counter, line in enumerate(lines):
         csv_content.extend([
-                {'journal_id': journal_id if counter == 0 else '',
-                'date': arrow.get(date).format('YYYY-MM-DD') if counter == 0 else '',
-                'ref': description if counter == 0 else '',
-                'line_ids/account_id': line['account_id'],
-                'line_ids/name': description,
-                'line_ids/debit': line['debit'] if 'debit' in line else '',
-                'line_ids/credit': line['credit'] if 'credit' in line else ''}
+            {'journal_id': journal_id if counter == 0 else '',
+             'date': arrow.get(date).format('YYYY-MM-DD') if counter == 0 else '',
+             'ref': description if counter == 0 else '',
+             'line_ids/account_id': line['account_id'],
+             'line_ids/name': description,
+             'line_ids/debit': line['debit'] if 'debit' in line else '',
+             'line_ids/credit': line['credit'] if 'credit' in line else ''}
         ])
 
 
 @api_view(['POST'])
-def change_par_virement(request):
+def execute_changes_par_virement(request):
     """
-    Enregistrement d'un change d'eusko numériques par virement.
+    Exécute la liste des change d'eusko numériques (virement) donnée en paramètre.
     """
-    serializer = serializers.ChangeParVirementSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
+    log.debug("execute_changes_par_virement()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.ChangeParVirementSerializer(data=request.data, many=True)
+    serializer.is_valid(raise_exception=True)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+    changes = serializer.validated_data
 
     # Connexion à Dolibarr et Cyclos.
     try:
@@ -1254,66 +1260,71 @@ def change_par_virement(request):
     except CyclosAPIException:
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
-    # On récupère les données de l'adhérent.
-    try:
-        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(serializer.data['member_login']))[0]
-    except:
-        return Response({'error': 'Unable to retrieve member in Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    for change in changes:
+        try:
+            # On récupère les données de l'adhérent.
+            try:
+                member = dolibarr.get(model='members', sqlfilters="login='{}'".format(change['member_login']))[0]
+            except DolibarrAPIException:
+                raise Exception("Adhérent.e non trouvé.e dans Dolibarr")
 
-    # Le code ci-dessous est un gros copier-coller venant de la fonction
-    # perform() de credits_comptes_prelevements_auto.py. Il faudrait
-    # factoriser tout ça mais je n'ai pas le temps de tout tester
-    # correctement maintenant donc je minimise les risques.
-    try:
-        adherent_cyclos_id = cyclos.get_member_id_from_login(member_login=member['login'])
+            # Le code ci-dessous est un gros copier-coller venant de la fonction
+            # perform() de credits_comptes_prelevements_auto.py. Il faudrait
+            # factoriser tout ça mais je n'ai pas le temps de tout tester
+            # correctement maintenant donc je minimise les risques.
+            adherent_cyclos_id = cyclos.get_member_id_from_login(member_login=member['login'])
 
-        # Determine whether or not our user is part of the appropriate group
-        group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
-                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires_avec_paiement_smartphone']),
-                                        str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
+            # Determine whether or not our user is part of the appropriate group
+            group_constants_with_account = [str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires']),
+                                            str(settings.CYCLOS_CONSTANTS['groups']['adherents_prestataires_avec_paiement_smartphone']),
+                                            str(settings.CYCLOS_CONSTANTS['groups']['adherents_utilisateurs'])]
 
-        # Fetching info for our current user (we look for his groups)
-        user_data = cyclos.post(method='user/load', data=[adherent_cyclos_id])
+            # Fetching info for our current user (we look for his groups)
+            user_data = cyclos.post(method='user/load', data=[adherent_cyclos_id])
 
-        if not user_data['result']['group']['id'] in group_constants_with_account:
-            error = "{} n'a pas de compte Eusko numérique...".format(member['login'])
-            return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+            if not user_data['result']['group']['id'] in group_constants_with_account:
+                error = "{} n'a pas de compte Eusko numérique...".format(change['member_login'])
+                return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Payment in Euro
-        change_numerique_euro = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_euro']),  # noqa
-            'amount': float(serializer.data['amount']),
-            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
-            'from': 'SYSTEM',
-            'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
-            'customValues': [{
-                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
-                'stringValue': serializer.data['bank_transfer_reference']
-            }],
-            'description': serializer.data['description'],
-        }
-        res_change_numerique_euro = cyclos.post(method='payment/perform', data=change_numerique_euro)
+            bank_transfer_reference = datetime.now().isoformat() + '-' + change['member_login']
 
-        # Payment in Eusko
-        change_numerique_eusko = {
-            'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),  # noqa
-            'amount': float(serializer.data['amount']),
-            'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
-            'from': 'SYSTEM',
-            'to': adherent_cyclos_id,
-            'customValues': [{
-                'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
-                'stringValue': serializer.data['bank_transfer_reference']
-            }],
-            'description': serializer.data['description'],
-        }
-        res_change_numerique_eusko = cyclos.post(method='payment/perform', data=change_numerique_eusko)
-    except Exception as e:
-        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            # Payment in Euro
+            change_numerique_euro = {
+                'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_euro']),  # noqa
+                'amount': float(change['amount']),
+                'currency': str(settings.CYCLOS_CONSTANTS['currencies']['euro']),
+                'from': 'SYSTEM',
+                'to': str(settings.CYCLOS_CONSTANTS['users']['compte_dedie_eusko_numerique']),
+                'customValues': [{
+                    'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
+                    'stringValue': bank_transfer_reference
+                }],
+                'description': change['description'],
+            }
+            cyclos.post(method='payment/perform', data=change_numerique_euro)
 
-    res = {'res_change_numerique_euro': res_change_numerique_euro,
-           'res_change_numerique_eusko': res_change_numerique_eusko}
-    return Response(res)
+            # Payment in Eusko
+            change_numerique_eusko = {
+                'type': str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),  # noqa
+                'amount': float(change['amount']),
+                'currency': str(settings.CYCLOS_CONSTANTS['currencies']['eusko']),
+                'from': 'SYSTEM',
+                'to': adherent_cyclos_id,
+                'customValues': [{
+                    'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_transaction_banque']),  # noqa
+                    'stringValue': bank_transfer_reference
+                }],
+                'description': change['description'],
+            }
+            cyclos.post(method='payment/perform', data=change_numerique_eusko)
+
+            change['status'] = 1
+            change['message'] = "Change effectué"
+        except Exception as e:
+            change['status'] = 0
+            change['message'] = str(e)
+
+    return Response(changes)
 
 
 @api_view(['POST'])
@@ -1446,3 +1457,117 @@ def paiement_cotisation_eusko_numerique(request):
            'member': member}
 
     return Response(res, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+def resiliation_adherent(request):
+    """
+    Résiliation d'un adhérent dans cyclos et dolibarr
+    """
+    log.debug("resiliation_adherent()")
+
+    log.debug("request.data={}".format(request.data))
+    serializer = serializers.ResiliationSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+    member_login = serializer.validated_data['member_login']
+
+    # Connexion à Dolibarr et Cyclos.
+    try:
+        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
+    except DolibarrAPIException:
+        return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
+    try:
+        cyclos = CyclosAPI(token=request.user.profile.cyclos_token)
+    except CyclosAPIException:
+        return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
+
+    # Récupérer l'utilisateur Cyclos correspondant à l'adhérent.
+    try:
+        res = cyclos.post(method='user/search', data={
+            'keywords': member_login,
+            'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
+        })
+        cyclos_user = res['result']['pageItems'][0]
+        cyclos_user_id = cyclos_user['id']
+        log.debug("cyclos_user_id={}".format(cyclos_user_id))
+    except IndexError:
+        return Response({'error': "Impossible de récupérer l'adhérent.e dans Cyclos."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Vérifier le solde de son compte eusko, s'il en a un.
+    query_data = [cyclos_user['shortDisplay'], None]
+    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+    try:
+        solde = float(accounts_summaries_data['result'][0]['status']['balance'])
+    except IndexError:
+        # Si l'adhérent n'a pas de compte ou s'il a un compte qui n'a
+        # jamais été utilisé, getAccountsSummary renvoie une liste vide.
+        solde = 0
+    log.debug("solde={}".format(solde))
+    if solde > 0:
+        return Response({'error': "Compte de l'adhérent.e créditeur, résiliation impossible."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # Supprimer l'utilisateur Cyclos.
+    cyclos.post(method='userStatus/changeStatus', data={
+        'user': cyclos_user_id,
+        'status': 'REMOVED',
+    })
+
+    # Récupérer l'adhérent dans Dolibarr.
+    try:
+        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(member_login))[0]
+    except:
+        return Response({'error': "Impossible de récupérer l'adhérent.e dans Dolibarr."},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # On crée un événement dans l'agenda, avec la raison de la résiliation.
+    # FIXME A cause d'une limitation de l'API de Dolibarr dans cette version, on ne peut pas lier l'événement créé à la
+    # fiche de l'adhérent. Pour ne pas perdre cette information, on enregistre l'id de l'adhérent dans le champ "Lieu".
+    dolibarr.post(model='agendaevents', data={
+        "type_code": "AC_RESI",
+        "label": "Résiliation {}".format(member_login),
+        "location": member['id'],
+        "userownerid": 0,
+        "datep": datetime.now().timestamp(),
+        "datef": datetime.now().timestamp(),
+        "percentage": "-1",
+        "transparency": "1",
+        "note": serializer.validated_data['termination_reason']
+    })
+
+    # On modifie la fiche Adhérent :
+    # - on vide tous les champs personnalisés
+    # - on vide les champs "Association 3 % (1er choix)" et "Association 3 % (2è choix)"
+    # - on la met dans l'état Résilié
+    array_options = member['array_options']
+    for k in array_options:
+        array_options[k] = None
+    data_modify_adherent = {
+        'array_options': array_options,
+        'fk_asso': '',
+        'fk_asso2': '',
+        'statut': 0,
+    }
+    dolibarr.put(model='members/{}'.format(member['id']), data=data_modify_adherent)
+
+    # Si une fiche Tiers existe, on la modifie :
+    # - on ajoute " (résilié)" dans le nom
+    # - si c'est une cessation d'activité, on la passe à l'état Clos
+    # - si ce n'est pas une cessation d'activité, on passe le champ "Prospect / Prestataire agréé" à Prospect
+    try:
+        tiers_dolibarr = dolibarr.get(model='thirdparties', sqlfilters="code_client='{}'".format(member_login))[0]
+        data_modify_tiers = {
+            'name': tiers_dolibarr['name'] + ' (résilié)'
+        }
+        if serializer.validated_data['cessation_of_activity']:
+            data_modify_tiers['status'] = 0
+        else:
+            data_modify_tiers['client'] = 2
+        dolibarr.put(model='thirdparties/{}'.format(tiers_dolibarr['id']), data=data_modify_tiers)
+    except IndexError:
+        log.debug("Pas de fiche Tiers")
+
+    return Response(status.HTTP_200_OK)

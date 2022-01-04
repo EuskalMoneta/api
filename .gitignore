@@ -3,7 +3,7 @@ __pycache__/
 *.db
 .~lock*
 .cache/
-
+.idea/
 data/
 log/
 old/
@@ -28,3 +28,5 @@ node_modules/
 
 ## Optional npm cache directory
 .npm/
+.idea/
+venv/

@@ -1,0 +1,787 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"><html xmlns="http://www.w3.org/1999/xhtml" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office"><head><meta http-equiv="X-UA-Compatible" content="IE=edge" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta http-equiv="Content-Type" content="text/html; charset=utf-8" /><meta name="x-apple-disable-message-reformatting" /><meta name="apple-mobile-web-app-capable" content="yes" /><meta name="apple-mobile-web-app-status-bar-style" content="black" /><meta name="format-detection" content="telephone=no" /><title></title><style type="text/css">
+/* Resets */
+.ReadMsgBody { width: 100%; background-color: #ebebeb;}
+.ExternalClass {width: 100%; background-color: #ebebeb;}
+.ExternalClass, .ExternalClass p, .ExternalClass span, .ExternalClass font, .ExternalClass td, .ExternalClass div {line-height:100%;}
+a[x-apple-data-detectors]{
+color:inherit !important;
+text-decoration:none !important;
+font-size:inherit !important;
+font-family:inherit !important;
+font-weight:inherit !important;
+line-height:inherit !important;
+}
+body {-webkit-text-size-adjust:none; -ms-text-size-adjust:none;}
+body {margin:0; padding:0;}
+.yshortcuts a {border-bottom: none !important;}
+.rnb-del-min-width{ min-width: 0 !important; }
+/* Add new outlook css start */
+.templateContainer{
+max-width:590px !important;
+width:auto !important;
+}
+/* Add new outlook css end */
+/* Image width by default for 3 columns */
+img[class="rnb-col-3-img"] {
+max-width:170px;
+}
+/* Image width by default for 2 columns */
+img[class="rnb-col-2-img"] {
+max-width:264px;
+}
+/* Image width by default for 2 columns aside small size */
+img[class="rnb-col-2-img-side-xs"] {
+max-width:180px;
+}
+/* Image width by default for 2 columns aside big size */
+img[class="rnb-col-2-img-side-xl"] {
+max-width:350px;
+}
+/* Image width by default for 1 column */
+img[class="rnb-col-1-img"] {
+max-width:550px;
+}
+/* Image width by default for header */
+img[class="rnb-header-img"] {
+max-width:590px;
+}
+/* Ckeditor line-height spacing */
+.rnb-force-col p, ul, ol{margin:0px!important;}
+.rnb-del-min-width p, ul, ol{margin:0px!important;}
+/* tmpl-2 preview */
+.rnb-tmpl-width{ width:100%!important;}
+/* tmpl-11 preview */
+.rnb-social-width{padding-right:15px!important;}
+/* tmpl-11 preview */
+.rnb-social-align{float:right!important;}
+/* Ul Li outlook extra spacing fix */
+li{mso-margin-top-alt: 0; mso-margin-bottom-alt: 0;}
+/* Outlook fix */
+table {mso-table-lspace:0pt; mso-table-rspace:0pt;}
+/* Outlook fix */
+table, tr, td {border-collapse: collapse;}
+/* Outlook fix */
+p,a,li,blockquote {mso-line-height-rule:exactly;}
+/* Outlook fix */
+.msib-right-img { mso-padding-alt: 0 !important;}
+/* Fix text line height on preview */
+.content-spacing div {display: list-item; list-style-type: none;}
+@media only screen and (min-width:590px){
+/* mac fix width */
+.templateContainer{width:590px !important;}
+}
+@media screen and (max-width: 360px){
+/* yahoo app fix width "tmpl-2 tmpl-10 tmpl-13" in android devices */
+.rnb-yahoo-width{ width:360px !important;}
+}
+@media screen and (max-width: 380px){
+/* fix width and font size "tmpl-4 tmpl-6" in mobile preview */
+.element-img-text{ font-size:24px !important;}
+.element-img-text2{ width:230px !important;}
+.content-img-text-tmpl-6{ font-size:24px !important;}
+.content-img-text2-tmpl-6{ width:220px !important;}
+}
+@media screen and (max-width: 480px) {
+td[class="rnb-container-padding"] {
+padding-left: 10px !important;
+padding-right: 10px !important;
+}
+/* force container nav to (horizontal) blocks */
+td.rnb-force-nav {
+display: inherit;
+}
+/* fix text alignment "tmpl-11" in mobile preview */
+.rnb-social-text-left {
+width: 100%;
+text-align: center;
+margin-bottom: 15px;
+}
+.rnb-social-text-right {
+width: 100%;
+text-align: center;
+}
+}
+@media only screen and (max-width: 600px) {
+/* center the address &amp; social icons */
+.rnb-text-center {text-align:center !important;}
+/* force container columns to (horizontal) blocks */
+th.rnb-force-col {
+display: block;
+padding-right: 0 !important;
+padding-left: 0 !important;
+width:100%;
+}
+table.rnb-container {
+width: 100% !important;
+}
+table.rnb-btn-col-content {
+width: 100% !important;
+}
+table.rnb-col-3 {
+/* unset table align="left/right" */
+float: none !important;
+width: 100% !important;
+/* change left/right padding and margins to top/bottom ones */
+margin-bottom: 10px;
+padding-bottom: 10px;
+/*border-bottom: 1px solid #eee;*/
+}
+table.rnb-last-col-3 {
+/* unset table align="left/right" */
+float: none !important;
+width: 100% !important;
+}
+table.rnb-col-2 {
+/* unset table align="left/right" */
+float: none !important;
+width: 100% !important;
+/* change left/right padding and margins to top/bottom ones */
+margin-bottom: 10px;
+padding-bottom: 10px;
+/*border-bottom: 1px solid #eee;*/
+}
+table.rnb-col-2-noborder-onright {
+/* unset table align="left/right" */
+float: none !important;
+width: 100% !important;
+/* change left/right padding and margins to top/bottom ones */
+margin-bottom: 10px;
+padding-bottom: 10px;
+}
+table.rnb-col-2-noborder-onleft {
+/* unset table align="left/right" */
+float: none !important;
+width: 100% !important;
+/* change left/right padding and margins to top/bottom ones */
+margin-top: 10px;
+padding-top: 10px;
+}
+table.rnb-last-col-2 {
+/* unset table align="left/right" */
+float: none !important;
+width: 100% !important;
+}
+table.rnb-col-1 {
+/* unset table align="left/right" */
+float: none !important;
+width: 100% !important;
+}
+img.rnb-col-3-img {
+/**max-width:none !important;**/
+width:100% !important;
+}
+img.rnb-col-2-img {
+/**max-width:none !important;**/
+width:100% !important;
+}
+img.rnb-col-2-img-side-xs {
+/**max-width:none !important;**/
+width:100% !important;
+}
+img.rnb-col-2-img-side-xl {
+/**max-width:none !important;**/
+width:100% !important;
+}
+img.rnb-col-1-img {
+/**max-width:none !important;**/
+width:100% !important;
+}
+img.rnb-header-img {
+/**max-width:none !important;**/
+width:100% !important;
+margin:0 auto;
+}
+img.rnb-logo-img {
+/**max-width:none !important;**/
+width:100% !important;
+}
+td.rnb-mbl-float-none {
+float:inherit !important;
+}
+.img-block-center{text-align:center !important;}
+.logo-img-center
+{
+float:inherit !important;
+}
+/* tmpl-11 preview */
+.rnb-social-align{margin:0 auto !important; float:inherit !important;}
+/* tmpl-11 preview */
+.rnb-social-center{display:inline-block;}
+/* tmpl-11 preview */
+.social-text-spacing{margin-bottom:0px !important; padding-bottom:0px !important;}
+/* tmpl-11 preview */
+.social-text-spacing2{padding-top:15px !important;}
+ /* UL bullet fixed in outlook */
+ul {mso-special-format:bullet;}
+}</style><!--[if gte mso 11]><style type="text/css">table{border-spacing: 0; }table td {border-collapse: separate;}</style><![endif]--><!--[if !mso]><!--><style type="text/css">table{border-spacing: 0;} table td {border-collapse: collapse;}</style> <!--<![endif]--><!--[if gte mso 15]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]--><!--[if gte mso 9]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]--></head><body>
+<table class="main-template" style="background-color: rgb(235, 237, 237);" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ebeded" align="center">
+<tbody><tr>
+<td valign="top" align="center">
+<!--[if gte mso 9]>
+                        <table align="center" border="0" cellspacing="0" cellpadding="0" width="590" style="width:590px;">
+                        <tr>
+                        <td align="center" valign="top" width="590" style="width:590px;">
+                        <![endif]-->
+<table class="templateContainer" style="max-width:590px!important; width: 590px;" width="590" cellspacing="0" cellpadding="0" border="0">
+<tbody>
+<tr>
+<td valign="top" align="center">
+<div style="background-color: rgb(255, 255, 255);">
+<!--[if mso]>
+                <table align="center" border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%;">
+                <tr>
+                <![endif]-->
+<!--[if mso]>
+                <td valign="top" width="590" style="width:590px;">
+                <![endif]-->
+<table class="rnb-del-min-width" style="min-width:100%; -webkit-backface-visibility: hidden; line-height: 10px;" name="Layout_42" id="Layout_42" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td class="rnb-del-min-width" style="min-width: 590px; padding-bottom: 2px;" valign="top" align="center">
+<a href="#" name="Layout_42"></a>
+<table class="rnb-container" style="background-color: rgb(255, 255, 255);" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" align="center">
+<tbody><tr>
+<td valign="top" align="center">
+<table cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td>
+<div style="display:inherit; border-radius:0px; width:590;;max-width:1180px !important;border-top:0px None #000;border-right:0px None #000;border-bottom:0px None #000;border-left:0px None #000;border-collapse: separate;border-radius: 0px;">
+<div><img ng-if="col.img.source != 'url'" class="rnb-header-img" alt="" style="display:block; float:left; border-radius: 0px; " src="https://img.mailinblue.com/1831035/images/rnb/original/5f2c0fbb8ed9e1bc11670d8f.jpg" width="590" vspace="0" hspace="0" border="0"></div><div style="clear:both;"></div>
+</div></td>
+</tr>
+</tbody></table>
+</td>
+</tr>
+</tbody></table>
+</td>
+</tr></tbody></table>
+<!--[if mso]>
+                </td>
+                <![endif]-->
+<!--[if mso]>
+                </tr>
+                </table>
+                <![endif]-->
+</div></td>
+</tr><tr>
+<td valign="top" align="center">
+<div style="background-color: rgb(255, 255, 255); border-radius: 0px;">
+<!--[if mso]>
+                <table align="center" border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%;">
+                <tr>
+                <![endif]-->
+<!--[if mso]>
+                <td valign="top" width="590" style="width:590px;">
+                <![endif]-->
+<table class="rnb-del-min-width" style="min-width:100%;" name="Layout_32" id="Layout_32" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td class="rnb-del-min-width" valign="top" align="center">
+<a href="#" name="Layout_32"></a>
+<table class="rnb-container" style="max-width: 100%; min-width: 100%; table-layout: fixed; background-color: rgb(255, 255, 255); border-radius: 0px; border-collapse: separate; padding-left: 20px; padding-right: 20px;" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff">
+<tbody><tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+<tr>
+<td class="rnb-container-padding" valign="top" align="left">
+<table class="rnb-columns-container" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<th class="rnb-force-col" style="text-align: left; font-weight: normal; padding-right: 20px;" width="265" valign="top">
+<table valign="top" class="rnb-col-2" width="265" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
+<div><div><span style="color:#696969;">Agur, </span>
+<div>&nbsp;</div>
+<div><span style="color:#696969;"><strong>"Bakantzak euskoz" kontu bat ireki duzu</strong>, eta eskerrak ematen dizkizugu Euskal Herriarentzat eta trantsizio ekologikoarentzat garrantzitsua den dinamika horretan parte hartzeagatik!<br>
+<strong>Eta orain, zer?</strong></span></div>
+<span style="color:#696969;"> </span></div>
+</div>
+</td>
+</tr>
+</tbody></table>
+</th><th class="rnb-force-col" style="text-align: left; font-weight: normal; padding-right: 0px;" width="265" valign="top">
+<table valign="top" class="rnb-last-col-2" width="265" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
+<div><div>
+<div><span style="color:#304689;">Bonjour,</span></div>
+<div>&nbsp;</div>
+<div><span style="color:#304689;"><strong>Vous avez ouvert un compte "Vacances en eusko"</strong>, et nous vous remercions pour votre participation à cette dynamique importante pour le Pays Basque et pour la Transition écologique ! </span></div>
+<div><strong><span style="color:#304689;">Et maintenant ?</span></strong></div>
+</div>
+</div>
+</td>
+</tr>
+</tbody></table>
+</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+</tbody></table>
+</td>
+</tr>
+</tbody></table><!--[if mso]>
+                </td>
+                <![endif]-->
+<!--[if mso]>
+                </tr>
+                </table>
+                <![endif]-->
+</div></td>
+</tr><tr>
+<td valign="top" align="center">
+<div style="background-color: rgb(255, 255, 255); border-radius: 0px;">
+<!--[if mso]>
+                <table align="center" border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%;">
+                <tr>
+                <![endif]-->
+<!--[if mso]>
+                <td valign="top" width="590" style="width:590px;">
+                <![endif]-->
+<table class="rnb-del-min-width" style="min-width:100%;" name="Layout_85" id="Layout_85" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td class="rnb-del-min-width" valign="top" align="center">
+<a href="#" name="Layout_85"></a>
+<table class="rnb-container" style="max-width: 100%; min-width: 100%; table-layout: fixed; background-color: rgb(255, 255, 255); border-radius: 0px; border-collapse: separate; padding-left: 20px; padding-right: 20px;" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff">
+<tbody><tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+<tr>
+<td class="rnb-container-padding" valign="top" align="left">
+<table class="rnb-columns-container" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<th class="rnb-force-col" style="text-align: left; font-weight: normal; padding-right: 20px;" width="265" valign="top">
+<table valign="top" class="rnb-col-2" width="265" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:24px; font-family:Arial,Helvetica,sans-serif; color:#3c4858; text-align:left;">
+<span style="color:#3c4858; "><div style="line-height:16px;"><span style="font-size:16px;"><span style="color:#696969;"><strong>1. Kargatu zure Eusko kontua</strong></span></span></div>
+</span></td>
+</tr><tr>
+<td class="col_td_gap" style="font-size:1px; line-height:0px; mso-hide: all;" height="11">&nbsp;</td>
+</tr><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
+<div><div><span style="color:#696969;">Horretarako, <a href="https://moncompte.euskalmoneta.org/eu/login" style="text-decoration: underline; color: rgb(199, 194, 187);" target="_blank">hasi saioa zure Eusko kontuan</a>, egin klik "<strong>Aldatu</strong>" botoian pantailaren behealdean, eta jarraitu zure kontua kreditu-txartelarekin berehala kargatzeko jarraibideei.</span></div>
+</div>
+</td>
+</tr>
+</tbody></table>
+</th><th class="rnb-force-col" style="text-align: left; font-weight: normal; padding-right: 0px;" width="265" valign="top">
+<table valign="top" class="rnb-last-col-2" width="265" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:24px; font-family:Arial,Helvetica,sans-serif; color:#3c4858; text-align:left;">
+<span style="color:#3c4858; "><div style="line-height:16px;"><span style="color:#304689;"><span style="font-size:16px;"><strong>1. Chargez votre compte Eusko</strong></span></span></div>
+</span></td>
+</tr><tr>
+<td class="col_td_gap" style="font-size:1px; line-height:0px; mso-hide: all;" height="11">&nbsp;</td>
+</tr><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
+<div><div>
+<div><span style="color:#304689;">Pour cela, <a href="https://moncompte.euskalmoneta.org" style="text-decoration: underline; color: rgb(25, 151, 210);" target="_blank">connectez-vous à votre compte eusko</a>, cliquez sur "<strong>Change</strong>", en bas de l'écran, et suivez les instructions pour charger votre compte instantanément avec votre carte bancaire.</span></div>
+</div>
+</div>
+</td>
+</tr>
+</tbody></table>
+</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+</tbody></table>
+</td>
+</tr>
+</tbody></table><!--[if mso]>
+                </td>
+                <![endif]-->
+<!--[if mso]>
+                </tr>
+                </table>
+                <![endif]-->
+</div></td>
+</tr><tr>
+<td valign="top" align="center">
+<div style="background-color: rgb(255, 255, 255); border-radius: 0px;">
+<!--[if mso]>
+                <table align="center" border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%;">
+                <tr>
+                <![endif]-->
+<!--[if mso]>
+                <td valign="top" width="590" style="width:590px;">
+                <![endif]-->
+<table class="rnb-del-min-width" style="min-width:100%;" name="Layout_98" id="Layout_98" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td class="rnb-del-min-width" valign="top" align="center">
+<a href="#" name="Layout_98"></a>
+<table class="rnb-container" style="max-width: 100%; min-width: 100%; table-layout: fixed; background-color: rgb(255, 255, 255); border-radius: 0px; border-collapse: separate; padding-left: 20px; padding-right: 20px;" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff">
+<tbody><tr>
+ <td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+<tr>
+<td class="rnb-container-padding" valign="top" align="left">
+<table class="rnb-columns-container" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<th class="rnb-force-col" style="text-align: left; font-weight: normal; padding-right: 20px;" width="265" valign="top">
+<table valign="top" class="rnb-col-2" width="265" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:24px; font-family:Arial,Helvetica,sans-serif; color:#3c4858; text-align:left;">
+<span style="color:#3c4858; "><div style="line-height:16px;"><span style="color:#696969;"><span style="font-size:16px;"><strong>2. Deskargatu euskopay aplikazioa</strong></span></span><br>
+&nbsp;</div>
+</span></td>
+</tr><tr>
+<td class="col_td_gap" style="font-size:1px; line-height:0px; mso-hide: all;" height="11">&nbsp;</td>
+</tr><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
+<div><div><span style="color:#696969;">Euskoren ordainketa-aplikazioa da (urririk), eta, honi esker, smartphonez ordain dezakezu, saltzailearen QR kodea eskaneatuz (<a href="http://www.euskalmoneta.org/euskopay/?lang=eu&amp;utm_source=ouverture&amp;utm_medium=mail&amp;utm_campaign=vee" style="text-decoration: underline; color: rgb(199, 194, 187);" target="_blank">xehetasun gehiago</a>).</span>
+<div><span style="color:#696969;"><a href="https://apps.apple.com/fr/app/euskopay/id1518033621" style="text-decoration: underline; color: rgb(199, 194, 187);" target="_blank">App Store</a>-n edo <a href="https://play.google.com/store/apps/details?id=org.euskalmoneta.euskopay" target="_blank" style="text-decoration: underline; color: rgb(199, 194, 187);">Google Play</a>-n deskarga daiteke.</span></div>
+</div>
+</div>
+</td>
+</tr>
+</tbody></table>
+</th><th class="rnb-force-col" style="text-align: left; font-weight: normal; padding-right: 0px;" width="265" valign="top">
+<table valign="top" class="rnb-last-col-2" width="265" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:24px; font-family:Arial,Helvetica,sans-serif; color:#3c4858; text-align:left;">
+<span style="color:#3c4858; "><div style="line-height:16px;"><span style="color:#304689;"><span style="font-size:16px;"><strong>2. Téléchargez l'application euskopay</strong></span></span></div>
+</span></td>
+</tr><tr>
+<td class="col_td_gap" style="font-size:1px; line-height:0px; mso-hide: all;" height="11">&nbsp;</td>
+</tr><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
+ <div><div><span style="color:#304689;">C'est l'application de paiement de l'Eusko, qui vous permet de payer par smartphone en scannant la carte QR code du commerçant (<a href="http://www.euskalmoneta.org/euskopay?utm_source=ouverture&amp;utm_medium=mail&amp;utm_campaign=vee" target="_blank" style="text-decoration: underline; color: rgb(25, 151, 210);">plus d'infos</a>).</span></div>
+<div><span style="color:#304689;">A télécharger sur l'<a href="https://apps.apple.com/fr/app/euskopay/id1518033621" style="text-decoration: underline; color: rgb(25, 151, 210);" target="_blank">App Store</a> ou sur <a href="https://play.google.com/store/apps/details?id=org.euskalmoneta.euskopay" style="text-decoration: underline; color: rgb(25, 151, 210);" target="_blank">Google Play</a>.</span></div>
+</div>
+</td>
+</tr>
+</tbody></table>
+</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+</tbody></table>
+</td>
+</tr>
+</tbody></table><!--[if mso]>
+                </td>
+                <![endif]-->
+<!--[if mso]>
+                </tr>
+                </table>
+                <![endif]-->
+</div></td>
+</tr><tr>
+<td valign="top" align="center">
+<div style="background-color: rgb(255, 255, 255); border-radius: 0px;">
+<!--[if mso]>
+                <table align="center" border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%;">
+                <tr>
+                <![endif]-->
+<!--[if mso]>
+                <td valign="top" width="590" style="width:590px;">
+                <![endif]-->
+<table class="rnb-del-min-width" style="min-width:100%;" name="Layout_97" id="Layout_97" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td class="rnb-del-min-width" valign="top" align="center">
+<a href="#" name="Layout_97"></a>
+<table class="rnb-container" style="max-width: 100%; min-width: 100%; table-layout: fixed; background-color: rgb(255, 255, 255); border-radius: 0px; border-collapse: separate; padding-left: 20px; padding-right: 20px;" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff">
+<tbody><tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+<tr>
+<td class="rnb-container-padding" valign="top" align="left">
+<table class="rnb-columns-container" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<th class="rnb-force-col" style="text-align: left; font-weight: normal; padding-right: 20px;" width="265" valign="top">
+<table valign="top" class="rnb-col-2" width="265" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:24px; font-family:Arial,Helvetica,sans-serif; color:#3c4858; text-align:left;">
+<span style="color:#3c4858; "><div style="line-height:16px;"><span style="color:#696969;"><span style="font-size:16px;"><strong>3. Gozatu bakantzak euskoz!</strong></span></span></div>
+</span></td>
+</tr><tr>
+<td class="col_td_gap" style="font-size:1px; line-height:0px; mso-hide: all;" height="11">&nbsp;</td>
+</tr><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
+<div><div><span style="color:#696969;">Gure <a href="https://annuaire.euskalmoneta.org/eu/" style="text-decoration: underline; color: rgb(199, 194, 187);" target="_blank">lineako aurkitegian</a>, egin klik goiko menuan dagoen "Euskopayekin" atalean, eta, hala, euskoak onartzen dituzten saltegiak, laborariak eta turismoko profesionalak ezagutuko dituzu. </span>
+<div>
+<div><span style="color:#696969;">Gainera, <a href="http://bakantzakeuskoz.org/wp-content/uploads/2020/07/BAKANTZAKEUSKOZ-GIDA-WEB.pdf" style="text-decoration: underline; color: rgb(199, 194, 187);" target="_blank">7 ibilbideko liburuxka</a> batek egun bat edo asteburu bat %100 euskotan pasatzeko proposamenak biltzen ditu!</span></div>
+</div>
+<span style="color:#696969;"> </span></div>
+</div>
+</td>
+</tr>
+</tbody></table>
+</th><th class="rnb-force-col" style="text-align: left; font-weight: normal; padding-right: 0px;" width="265" valign="top">
+<table valign="top" class="rnb-last-col-2" width="265" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:24px; font-family:Arial,Helvetica,sans-serif; color:#3c4858; text-align:left;">
+<span style="color:#3c4858; "><div style="line-height:16px;"><span style="color:#304689;"><span style="font-size:16px;"><strong>3. Passez vos vacances en eusko !</strong></span></span></div>
+</span></td>
+</tr><tr>
+<td class="col_td_gap" style="font-size:1px; line-height:0px; mso-hide: all;" height="11">&nbsp;</td>
+</tr><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
+<div><div>
+<div><span style="color:#304689;">Sur notre <a href="https://annuaire.euskalmoneta.org/" style="text-decoration: underline; color: rgb(25, 151, 210);" target="_blank">annuaire en ligne</a>, dans le menu du haut cliquez sur "Avec l’euskopay" pour connaître tous les commerces, paysans et professionnels du tourisme où dépenser vos eusko.</span></div>
+<div><span style="color:#304689;">De plus, un <a href="http://vacanceseneusko.org/wp-content/uploads/2020/07/GUIDE-VACANCESENEUSKO-WEB-Fr.pdf" style="text-decoration: underline; color: rgb(25, 151, 210);" target="_blank">livret de 7 circuits</a> regroupe des propositions pour passer une journée ou un week-end 100% en eusko ! </span></div>
+</div>
+</div>
+</td>
+</tr>
+</tbody></table>
+</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+ </tbody></table>
+</td>
+</tr>
+</tbody></table><!--[if mso]>
+                </td>
+                <![endif]-->
+<!--[if mso]>
+                </tr>
+                </table>
+                <![endif]-->
+</div></td>
+</tr><tr>
+<td valign="top" align="center">
+<div style="background-color: rgb(255, 255, 255); border-radius: 0px;">
+<!--[if mso]>
+                <table align="center" border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%;">
+                <tr>
+                <![endif]-->
+<!--[if mso]>
+                <td valign="top" width="590" style="width:590px;">
+                <![endif]-->
+<table class="rnb-del-min-width" style="min-width:100%;" name="Layout_99" id="Layout_99" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td class="rnb-del-min-width" valign="top" align="center">
+<a href="#" name="Layout_99"></a>
+<table class="rnb-container" style="max-width: 100%; min-width: 100%; table-layout: fixed; background-color: rgb(255, 255, 255); border-radius: 0px; border-collapse: separate; padding-left: 20px; padding-right: 20px;" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff">
+<tbody><tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+<tr>
+<td class="rnb-container-padding" valign="top" align="left">
+<table class="rnb-columns-container" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<th class="rnb-force-col" style="text-align: left; font-weight: normal; padding-right: 20px;" width="265" valign="top">
+<table valign="top" class="rnb-col-2" width="265" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
+<div><div>
+<div><span style="color:#696969;">Zailtasunak izanez gero, deitu gure taldeari: 05 33 47 54 11</span><br>
+&nbsp;</div>
+<div><span style="color:#696969;">Euskoren bidez, zinez opa dizuegu jende zintzoa kausitzea eta opor onak pasatzea!</span></div>
+<div>&nbsp;</div>
+<div>&nbsp;</div>
+<div><em><span style="color:#696969;">Euskoren taldea</span></em></div>
+<div>&nbsp;</div>
+<div style="text-align: center;"><span style="font-size:16px;"><strong><a href="http://bakantzakeuskoz.org/" style="text-decoration: underline; color: rgb(199, 194, 187);" target="_blank">www.bakantzakeuskoz.org</a></strong></span></div>
+<div style="text-align: center;">&nbsp;</div>
+</div>
+</div>
+</td>
+</tr>
+</tbody></table>
+</th><th class="rnb-force-col" style="text-align: left; font-weight: normal; padding-right: 0px;" width="265" valign="top">
+<table valign="top" class="rnb-last-col-2" width="265" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif, sans-serif; color:#3c4858; line-height: 21px;">
+<div><div>
+<div><span style="color:#304689;">En cas de difficultés, n'hésitez pas à appeler notre équipe au 05 33 47 54 11</span>
+<div>&nbsp;</div>
+<div><span style="color:#304689;">Nous vous souhaitons de belles rencontres avec l'Eusko, et de bonnes vacances !</span><br>
+&nbsp;</div>
+<div><em><span style="color:#304689;">L'équipe de l'Eusko</span></em></div>
+<div>&nbsp;</div>
+<div style="text-align: center;"><a href="http://vacanceseneusko.org/" style="text-decoration: underline; color: rgb(25, 151, 210);" target="_blank"><span style="font-size:16px;"><strong>www.vacanceseneusko.org</strong></span></a></div>
+<div style="text-align: center;">&nbsp;</div>
+</div>
+</div>
+</div>
+</td>
+</tr>
+</tbody></table>
+</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+</tbody></table>
+</td>
+</tr>
+</tbody></table><!--[if mso]>
+                </td>
+                <![endif]-->
+<!--[if mso]>
+                </tr>
+                </table>
+                <![endif]-->
+</div></td>
+</tr><tr>
+<td valign="top" align="center">
+<div style="background-color: rgb(255, 255, 255);">
+<!--[if mso]>
+                <table align="center" border="0" cellspacing="0" cellpadding="0" width="100%" style="width:100%;">
+                <tr>
+                <![endif]-->
+<!--[if mso]>
+                <td valign="top" width="590" style="width:590px;">
+                <![endif]-->
+<table class="rnb-del-min-width" style="min-width:100%; -webkit-backface-visibility: hidden; line-height: 10px;" name="Layout_84" id="Layout_84" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td class="rnb-del-min-width" style="min-width: 590px;" valign="top" align="center">
+<a href="#" name="Layout_84"></a>
+<table class="rnb-container" style="background-color: rgb(255, 255, 255);" width="100%" cellspacing="0" cellpadding="0" border="0" bgcolor="#ffffff" align="center">
+<tbody><tr>
+<td valign="top" align="center">
+<table cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td>
+<div style="display:inherit; border-radius:0px; width:590;;max-width:1180px !important;border-top:0px None #000;border-right:0px None #000;border-bottom:0px None #000;border-left:0px None #000;border-collapse: separate;border-radius: 0px;">
+<div><img ng-if="col.img.source != 'url'" class="rnb-header-img" alt="" style="display:block; float:left; border-radius: 0px; " src="https://img.mailinblue.com/1831035/images/rnb/original/5f0725b6d475ab5f8079db38.jpg" width="590" vspace="0" hspace="0" border="0"></div><div style="clear:both;"></div>
+</div></td>
+</tr>
+</tbody></table>
+</td>
+</tr>
+</tbody></table>
+</td>
+</tr></tbody></table>
+<!--[if mso]>
+                </td>
+                <![endif]-->
+<!--[if mso]>
+                </tr>
+                </table>
+                <![endif]-->
+</div></td>
+</tr><tr>
+<td valign="top" align="center">
+<div style="background-color: rgb(48, 70, 137);">
+<table class="rnb-del-min-width rnb-tmpl-width" style="min-width:590px;" name="Layout_" id="Layout_" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<td class="rnb-del-min-width" style="min-width: 590px; background-color: rgb(48, 70, 137);" valign="top" bgcolor="#304689" align="center">
+<a href="#" name="Layout_"></a>
+<table class="rnb-container" width="590" cellspacing="0" cellpadding="0" border="0" align="center">
+<tbody><tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+<tr>
+<td class="rnb-container-padding" style="font-size: 14px; font-family: Arial,Helvetica,sans-serif; color: #888888;" valign="top" align="left">
+<table class="rnb-columns-container" width="100%" cellspacing="0" cellpadding="0" border="0">
+<tbody><tr>
+<th class="rnb-force-col" style="padding-right:20px; padding-left:20px; mso-padding-alt: 0 0 0 20px; font-weight: normal;" valign="top">
+<table valign="top" class="rnb-col-2 rnb-social-text-left" style="border-bottom:0;" width="264" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td valign="top">
+<table class="rnb-btn-col-content" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="font-size:14px; font-family:Arial,Helvetica,sans-serif; color:#888888; line-height: 16px" class="rnb-text-center" valign="middle" align="left">
+<div><div><span style="font-size:18px;"><span style="color:#FFFFFF;"><strong>Euskal Moneta</strong></span></span>
+<div style="line-height:16px;"><span style="font-size:12px;"><span style="color:#FFFFFF;">Cordeliers karrika, 20<br>
+64100 Baiona<br>
+05 33 47 54 11</span></span></div>
+<div style="line-height:16px;"><br>
+<span style="color:#FFFFFF;">info@euskalmoneta.org<br>
+www.euskalmoneta.org</span></div>
+</div>
+</div>
+</td></tr>
+</tbody></table>
+</td>
+</tr>
+</tbody></table>
+</th><th ng-if="item.text.align=='left'" class="rnb-force-col rnb-social-width" style="mso-padding-alt: 0 20px 0 0; padding-right: 15px;" valign="top">
+<table valign="top" class="rnb-last-col-2" width="246" cellspacing="0" cellpadding="0" border="0" align="right">
+<tbody><tr>
+<td valign="top">
+<table class="rnb-social-align" style="float: right;" cellspacing="0" cellpadding="0" border="0" align="right">
+<tbody><tr>
+<td class="rnb-text-center" ng-init="width=setSocialIconsBlockWidth(item)" width="165" valign="middle" align="right">
+<div class="rnb-social-center">
+<table style="float:left; display: inline-block" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="padding:0px 5px 5px 0px; mso-padding-alt: 0px 2px 5px 0px;" align="left">
+<span style="color:#ffffff; font-weight:normal;">
+<a target="_blank" href="https://www.facebook.com/euskoa/"><img alt="Facebook" style="vertical-align:top;" target="_blank" src="https://img.mailinblue.com/new_images/rnb/theme4/rnb_ico_fb.png" vspace="0" hspace="0" border="0"></a></span>
+</td></tr></tbody></table>
+</div><div class="rnb-social-center">
+<table style="float:left; display: inline-block" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="padding:0px 5px 5px 0px; mso-padding-alt: 0px 2px 5px 0px;" align="left">
+<span style="color:#ffffff; font-weight:normal;">
+<a target="_blank" href="https://twitter.com/EuskalMoneta"><img alt="Twitter" style="vertical-align:top;" target="_blank" src="https://img.mailinblue.com/new_images/rnb/theme4/rnb_ico_tw.png" vspace="0" hspace="0" border="0"></a></span>
+</td></tr></tbody></table>
+</div><div class="rnb-social-center">
+<table style="float:left; display: inline-block" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="padding:0px 5px 5px 0px; mso-padding-alt: 0px 2px 5px 0px;" align="left">
+<span style="color:#ffffff; font-weight:normal;">
+<a target="_blank" href="https://www.instagram.com/eusko_moneta"><img alt="Instagram" style="vertical-align:top;" target="_blank" src="https://img.mailinblue.com/new_images/rnb/theme4/rnb_ico_ig.png" vspace="0" hspace="0" border="0"></a></span>
+</td></tr></tbody></table>
+</div><div class="rnb-social-center">
+<table style="float:left; display: inline-block" cellspacing="0" cellpadding="0" border="0" align="left">
+<tbody><tr>
+<td style="padding:0px 5px 5px 0px; mso-padding-alt: 0px 2px 5px 0px;" align="left">
+<span style="color:#ffffff; font-weight:normal;">
+ <a target="_blank" href="https://www.youtube.com/channel/UCoEKCHilIqkkWzPkHDmO1Mg/videos"><img alt="YouTube" style="vertical-align:top;" target="_blank" src="https://img.mailinblue.com/new_images/rnb/theme4/rnb_ico_yt.png" vspace="0" hspace="0" border="0"></a></span>
+</td></tr></tbody></table>
+</div></td>
+</tr>
+</tbody></table>
+</td>
+</tr>
+</tbody></table>
+</th></tr>
+</tbody></table></td>
+</tr>
+<tr>
+<td style="font-size:1px; line-height:0px; mso-hide: all;" height="20">&nbsp;</td>
+</tr>
+</tbody></table>
+</td>
+</tr></tbody></table>
+</div></td>
+</tr>
+</tbody></table>
+<!--[if gte mso 9]>
+                        </td>
+                        </tr>
+                        </table>
+                        <![endif]-->
+</td>
+</tr>
+</tbody></table>
+<script defer src="https://static.cloudflareinsights.com/beacon.min.js/v652eace1692a40cfa3763df669d7439c1639079717194" integrity="sha512-Gi7xpJR8tSkrpF7aordPZQlW2DLtzUlZcumS8dMQjwDHEnw9I7ZLyiOj/6tZStRBGtGgN6ceN6cMH8z7etPGlw==" data-cf-beacon='{"rayId":"6c8719a749aa3b4f","token":"7765cec285be473faa0475a7035adb54","version":"2021.12.0","si":100}' crossorigin="anonymous"></script>
+</body></html>
+<script>
+function addEventHandler(elem,eventType,handler) {
+ if (elem.addEventListener)
+     elem.addEventListener (eventType,handler,false);
+ else if (elem.attachEvent)
+     elem.attachEvent ('on'+eventType,handler); 
+}
+
+function cancelDefaultAction(e) {
+ var evt = e ? e:window.event;
+ if (evt.preventDefault) evt.preventDefault();
+ evt.returnValue = false;
+ return false;
+}
+var sEventType = 'click';
+var links = document.getElementsByTagName('a');
+var linksCnt = links.length;
+if (linksCnt > 0) {
+    for (var i = 0; i < linksCnt; i++) {
+        addEventHandler(links[i],sEventType,cancelDefaultAction);
+    }
+}
+</script>

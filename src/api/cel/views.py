@@ -25,7 +25,7 @@ from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from gestioninterne.views import _search_account_history
 from members.misc import Member
-from misc import EuskalMonetaAPIException, sendmail_euskalmoneta
+from misc import EuskalMonetaAPIException, sendmail_euskalmoneta, sendmailHTML_euskalmoneta
 
 log = logging.getLogger()
 
@@ -918,11 +918,75 @@ def creer_compte_vee(request):
                            serializer.validated_data['password'], serializer.validated_data['pin_code'])
         # Enregistrer la question/réponse de sécurité.
         create_security_qa(num_adherent, serializer.validated_data['question'], serializer.validated_data['answer'])
+        # Envoyer un mail d'information à l'adhérent.e.
+        sendmailHTML_euskalmoneta(
+            subject='Vous avez ouvert un compte Vacances en eusko ! "Bakantzak euskoz" kontu bat ireki duzu!',
+            html_message=render_to_string('mails/infos_ouverture_compte_vee.html'),
+            to_email=serializer.validated_data['email'])
     except Exception as e:
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     return Response({'login': num_adherent}, status=status.HTTP_201_CREATED)
+
+
+@api_view(['POST'])
+@permission_classes((AllowAny, ))
+def verifier_existence_compte(request):
+    """
+    Vérifier si l'email existe déjà en base lors de l'inscription
+    """
+    log.debug("verifier_existence_compte()")
+    serializer = serializers.VerifierCompteSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    log.debug("serializer.validated_data={}".format(serializer.validated_data))
+    log.debug("serializer.errors={}".format(serializer.errors))
+
+    email = serializer.validated_data['email']
+
+    dolibarr = DolibarrAPI()
+    dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                                    password=settings.APPS_ANONYMOUS_PASSWORD)
+
+    try:
+        response = dolibarr.get(model='members',
+                                typeid=3, #FIXME Particulier
+                                sqlfilters="email='{}' and statut=1".format(email),
+                                api_key=dolibarr_token)
+    except DolibarrAPIException:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if len(response) == 1:
+        # S'il existe déjà un et un seul adhérent particulier avec
+        # cette adresse email, on lui envoie un mail avec le lien
+        # personnalisé pour qu'il ouvre son compte à partir de sa
+        # fiche Adhérent existante.
+        member = response[0]
+
+        url = '{}/{}/ouverture-compte?token={}'.format(
+            settings.CEL_PUBLIC_URL,
+            request.data['language'],
+            member['array_options']['options_token'])
+
+        # On active la langue choisie par l'utilisateur.
+        activate(serializer.validated_data['language'])
+
+        subject = _('Votre ouverture de compte en ligne Eusko')
+        body = render_to_string('mails/ouverture_compte_token.txt', {'url': url, 'user': member})
+        sendmail_euskalmoneta(subject=subject, body=body, to_email=email)
+
+        return Response({'data': member}, status=status.HTTP_200_OK)
+
+    elif len(response) > 1:
+        # S'il existe déjà plus d'un adhérent particulier avec cette
+        # adresse email, on le laisse continuer (pour ne pas le bloquer)
+        # mais on envoie un mail de notification pour avertir du risque
+        # de doublon.
+        subject = _('Ouverture de compte avec risque de doublon ')+'('+email+')'
+        texte = render_to_string('mails/ouverture_compte_doublon.txt',
+                                 {'email': email, 'dolibarr_members': response}).strip('\n')
+        sendmail_euskalmoneta(subject=subject, body=texte)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 @api_view(['POST'])
@@ -1011,6 +1075,11 @@ def creer_compte(request):
         texte = render_to_string('mails/ouverture_compte.txt',
                                  {'dolibarr_member': dolibarr_member}).strip('\n')
         sendmail_euskalmoneta(subject=texte, body=texte)
+        # Envoyer un mail d'information à l'adhérent.e.
+        sendmailHTML_euskalmoneta(
+            subject="📋 Votre compte eusko - À lire attentivement // 📋 Zure eusko kontua - Artoski irakurtzekoa",
+            html_message=render_to_string('mails/infos_ouverture_compte.html', {'num_adherent': num_adherent}),
+            to_email=serializer.validated_data['email'])
     except Exception as e:
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1083,6 +1152,11 @@ def adherer(request):
         texte = render_to_string('mails/adhesion.txt',
                                  {'dolibarr_member': dolibarr_member}).strip('\n')
         sendmail_euskalmoneta(subject=texte, body=texte)
+        # Envoyer un mail d'information à l'adhérent.e.
+        sendmailHTML_euskalmoneta(
+            subject="📋 Votre adhésion à l'Eusko - À lire attentivement // 📋 Zure Eusko kidetzea – Artoski irakurtzekoa",
+            html_message=render_to_string('mails/infos_adhesion_simple.html', {'num_adherent': num_adherent}),
+            to_email=serializer.validated_data['email'])
     except Exception as e:
         log.exception(e)
         return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1209,7 +1283,7 @@ def update_dolibarr_member(dolibarr, login, data):
     member = dolibarr.get(model='members', sqlfilters="login='{}'".format(login))[0]
     dolibarr_member_rowid = member['id']
     dolibarr_data = {}
-    for key in ('lastname', 'firstname', 'email', 'address', 'zip', 'town', 'country_id'):
+    for key in ('lastname', 'firstname', 'email', 'address', 'zip', 'town', 'country_id', 'civility_id'):
         if key in data:
             dolibarr_data[key] = data[key]
     if 'phone' in data:

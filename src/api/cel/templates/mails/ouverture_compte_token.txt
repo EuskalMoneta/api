@@ -1,0 +1,15 @@
+{% load staticfiles i18n %}
+
+{% include "./bonjour.txt" %}
+
+{% trans "Nous avons reçu une demande d'ouverture de compte en ligne Eusko" %}.
+
+{% trans "Vous allez maintenant pouvoir continuer en cliquant sur le lien ci-dessous" %} :
+
+{{ url }}
+
+{% trans "Si vous n'êtes pas à l'origine de cette demande, vous pouvez simplement ignorer ce message" %}.
+{% trans "N'hésitez pas à nous contacter si vous avez des questions" %}.
+
+{% trans "Bien cordialement" %},
+{% trans "L'équipe d'Euskal Moneta" %}

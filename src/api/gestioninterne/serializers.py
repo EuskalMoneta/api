@@ -60,7 +60,7 @@ class ExportVersOdooSerializer(serializers.Serializer):
 
 class ChangeParVirementSerializer(serializers.Serializer):
     member_login = serializers.CharField()
-    bank_transfer_reference = serializers.CharField()
+    member_name = serializers.CharField()
     amount = serializers.FloatField()
     description = serializers.CharField()
 
@@ -71,3 +71,8 @@ class PaiementCotisationEuskoNumeriqueSerializer(serializers.Serializer):
     end_date = serializers.DateTimeField(format=None)
     amount = serializers.FloatField()
     label = serializers.CharField()
+
+class ResiliationSerializer(serializers.Serializer):
+    member_login = serializers.CharField()
+    termination_reason = serializers.CharField()
+    cessation_of_activity = serializers.BooleanField(required=False)
