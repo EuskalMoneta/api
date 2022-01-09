@@ -1567,7 +1567,7 @@ def resiliation_adherent(request):
         else:
             data_modify_tiers['client'] = 2
         dolibarr.put(model='thirdparties/{}'.format(tiers_dolibarr['id']), data=data_modify_tiers)
-     except DolibarrAPIException:
+    except DolibarrAPIException:
         log.debug("Pas de fiche Tiers")
 
     return Response(status.HTTP_200_OK)
