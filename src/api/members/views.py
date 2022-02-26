@@ -152,8 +152,10 @@ class MembersAPIView(BaseAPIView):
                         lang=member['array_options']['options_langue'])
 
                 # Envoi d'un email lorsque l'option "Montant du change automatique" est modifiée
-                if (float(member['array_options']['options_prelevement_change_montant']) !=
-                   float(data['array_options']['options_prelevement_change_montant'])):
+                if (member['array_options']['options_prelevement_change_montant'] is not None
+                        and data['array_options']['options_prelevement_change_montant'] is not None
+                        and float(member['array_options']['options_prelevement_change_montant']) !=
+                        float(data['array_options']['options_prelevement_change_montant'])):
                     Member.send_mail_change_auto(
                         login=str(request.user), profile=request.user.profile,
                         mode=data['mode'], new_amount=data['array_options']['options_prelevement_change_montant'],
