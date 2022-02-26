@@ -1493,28 +1493,28 @@ def resiliation_adherent(request):
         cyclos_user_id = cyclos_user['id']
         log.debug("cyclos_user_id={}".format(cyclos_user_id))
     except IndexError:
-        return Response({'error': "Impossible de récupérer l'adhérent.e dans Cyclos."},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        log.debug("Impossible de récupérer l'adhérent.e dans Cyclos.")
+        cyclos_user = None
 
-    # Vérifier le solde de son compte eusko, s'il en a un.
-    query_data = [cyclos_user['shortDisplay'], None]
-    accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
-    try:
-        solde = float(accounts_summaries_data['result'][0]['status']['balance'])
-    except IndexError:
-        # Si l'adhérent n'a pas de compte ou s'il a un compte qui n'a
-        # jamais été utilisé, getAccountsSummary renvoie une liste vide.
-        solde = 0
-    log.debug("solde={}".format(solde))
-    if solde > 0:
-        return Response({'error': "Compte de l'adhérent.e créditeur, résiliation impossible."},
-                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    # Supprimer l'utilisateur Cyclos.
-    cyclos.post(method='userStatus/changeStatus', data={
-        'user': cyclos_user_id,
-        'status': 'REMOVED',
-    })
+    if cyclos_user:
+        # Vérifier le solde de son compte eusko, s'il en a un.
+        query_data = [cyclos_user['shortDisplay'], None]
+        accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+        try:
+            solde = float(accounts_summaries_data['result'][0]['status']['balance'])
+        except IndexError:
+            # Si l'adhérent n'a pas de compte ou s'il a un compte qui n'a
+            # jamais été utilisé, getAccountsSummary renvoie une liste vide.
+            solde = 0
+        log.debug("solde={}".format(solde))
+        if solde > 0:
+            return Response({'error': "Compte de l'adhérent.e créditeur, résiliation impossible."},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Supprimer l'utilisateur Cyclos.
+        cyclos.post(method='userStatus/changeStatus', data={
+            'user': cyclos_user_id,
+            'status': 'REMOVED',
+        })
 
     # Récupérer l'adhérent dans Dolibarr.
     try:
