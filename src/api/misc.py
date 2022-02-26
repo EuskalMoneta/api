@@ -32,7 +32,7 @@ def sendmailHTML_euskalmoneta(subject, html_message, to_email=None, from_email=N
     if from_email is None:
         from_email = settings.EMAIL_HOST_USER
 
-    log.debug("sendmail:\nFrom: {}\nTo: {}\nSubject: {}\n{}".format(
+    log.debug("sendmail:\nFrom: {}\nTo: {}\nSubject: {}".format(
         from_email, to_email, subject))
 
     plain_message = strip_tags(html_message)
