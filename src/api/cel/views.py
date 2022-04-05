@@ -943,6 +943,7 @@ def verifier_existence_compte(request):
     log.debug("serializer.errors={}".format(serializer.errors))
 
     email = serializer.validated_data['email']
+    type = serializer.validated_data['type']
 
     dolibarr = DolibarrAPI()
     dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
@@ -963,17 +964,31 @@ def verifier_existence_compte(request):
         # fiche Adhérent existante.
         member = response[0]
 
-        url = '{}/{}/ouverture-compte?token={}'.format(
-            settings.CEL_PUBLIC_URL,
-            request.data['language'],
-            member['array_options']['options_token'])
+        if type == "compte":
+            url = '{}/{}/ouverture-compte?token={}'.format(
+                settings.CEL_PUBLIC_URL,
+                request.data['language'],
+                member['array_options']['options_token'])
 
-        # On active la langue choisie par l'utilisateur.
-        activate(serializer.validated_data['language'])
+            # On active la langue choisie par l'utilisateur.
+            activate(serializer.validated_data['language'])
 
-        subject = _('Votre ouverture de compte en ligne Eusko')
-        body = render_to_string('mails/ouverture_compte_token.txt', {'url': url, 'user': member})
-        sendmail_euskalmoneta(subject=subject, body=body, to_email=email)
+            subject = _('Votre ouverture de compte en ligne Eusko')
+            body = render_to_string('mails/ouverture_compte_token.txt', {'url': url, 'user': member})
+            sendmail_euskalmoneta(subject=subject, body=body, to_email=email)
+
+        elif type == "adhesion":
+            url = '{}/{}/adhesion?token={}'.format(
+                settings.CEL_PUBLIC_URL,
+                request.data['language'],
+                member['array_options']['options_token'])
+
+            # On active la langue choisie par l'utilisateur.
+            activate(serializer.validated_data['language'])
+
+            subject = _('Votre adhesion en ligne Eusko')
+            body = render_to_string('mails/adhesion_token.txt', {'url': url, 'user': member})
+            sendmail_euskalmoneta(subject=subject, body=body, to_email=email)
 
         return Response({'data': member}, status=status.HTTP_200_OK)
 
