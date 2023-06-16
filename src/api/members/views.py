@@ -14,11 +14,12 @@ from rest_framework.response import Response
 from base_api import BaseAPIView
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
+from odoo_api import OdooAPI
 from members.serializers import MemberSerializer, MembersSubscriptionsSerializer, MemberPartialSerializer
 from members.misc import Member, Subscription
 from misc import sendmail_euskalmoneta
 from pagination import CustomPagination
-
+import json
 log = logging.getLogger()
 
 
@@ -81,12 +82,19 @@ class MembersAPIView(BaseAPIView):
 
         if login and valid_login:
             # We want to search in members by login (N° Adhérent)
-            try:
-                response = self.dolibarr.get(model='members', sqlfilters="login='{}'".format(login), api_key=dolibarr_token)
-            except DolibarrAPIException:
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response(response)
+#            try:
+#                response = self.dolibarr.get(model='members', sqlfilters="login='{}'".format(login), api_key=dolibarr_token)
+#            except DolibarrAPIException:
+#                return Response(status=status.HTTP_204_NO_CONTENT)
+#            return Response(response)
+            odoo = OdooAPI()
+            test = {}
+            response = odoo.get(model='res.partner',domain=[[('ref', '=', login)]], fields={'fields': ['ref','town','zip','lastname','firstname']})
+            test["ref"] = response[0]['ref']
+            test["lastname"] = response[0]['lastname']
+            test["firstname"] = response[0]['firstname']
 
+            return Response(test.json())
         elif login and not valid_login:
             return Response({'error': 'You need to provide a *VALID* ?login parameter! (Format: E12345)'},
                             status=status.HTTP_400_BAD_REQUEST)

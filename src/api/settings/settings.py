@@ -209,6 +209,9 @@ GI_PUBLIC_URL = os.environ.get('GI_PUBLIC_URL')
 CEL_PUBLIC_URL = os.environ.get('CEL_PUBLIC_URL')
 
 # APIs URLs
+
+ODOO_URL = 'http://172.18.0.1'
+ODOO_DB = '5thtry'
 DOLIBARR_URL = 'http://dolibarr-app/api/index.php'
 CYCLOS_URL = 'http://cyclos-app:8080/eusko/web-rpc'
 

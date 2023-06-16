@@ -9,20 +9,15 @@ from rest_framework.exceptions import AuthenticationFailed
 
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
-
+from odoo_api import OdooAPI, DolibarrAPIException
 
 log = logging.getLogger(__name__)
 
 
 def authenticate(username, password):
     user = None
-
-    username = get_username_from_username_or_email(username)
-    if not username:
-        raise AuthenticationFailed()
-
     try:
-        dolibarr = DolibarrAPI()
+        dolibarr = OdooAPI()
         dolibarr_token = dolibarr.login(login=username, password=password, reset=True)
     except (DolibarrAPIException):
         raise AuthenticationFailed()
@@ -34,14 +29,6 @@ def authenticate(username, password):
     except CyclosAPIException:
         raise AuthenticationFailed()
 
-    try:
-        user_results = dolibarr.get(model='users', sqlfilters="login='{}'".format(username), api_key=dolibarr_token)
-        dolibarr_user = [item
-                         for item in user_results
-                         if item['login'] == username][0]
-    except (DolibarrAPIException, KeyError, IndexError):
-        raise AuthenticationFailed()
-
     user, created = User.objects.get_or_create(username=username)
 
     user_profile = user.profile
@@ -50,20 +37,6 @@ def authenticate(username, password):
 
     # if there is a member linked to this user, load it in order to retrieve its company name
     user_profile.companyname = ''
-    if dolibarr_user['fk_member']:
-        try:
-            member = dolibarr.get(model='members', id=dolibarr_user['fk_member'], api_key=dolibarr_token)
-            if member['company']:
-                user_profile.companyname = member['company']
-        except DolibarrAPIException:
-            pass
-
-    try:
-        user_profile.firstname = dolibarr_user['firstname']
-        user_profile.lastname = dolibarr_user['lastname']
-    except KeyError:
-        raise AuthenticationFailed()
-
     user_profile.save()
 
     return user
