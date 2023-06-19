@@ -34,7 +34,7 @@ class OdooAPI(object):
         if self.uid:
             return self.uid
 
-    def get(self, model,domain=None,fields=None):
+    def get(self, model,domain=None,fields=False):
         common = xmlrpclib.ServerProxy('{}/xmlrpc/2/common'.format(settings.ODOO_URL))
         uid = common.authenticate(settings.ODOO_DB, 'admin', 'admin', {})
         models = xmlrpclib.ServerProxy('{}/xmlrpc/2/object'.format(settings.ODOO_URL))

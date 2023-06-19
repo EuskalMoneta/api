@@ -87,26 +87,72 @@ class MembersAPIView(BaseAPIView):
 #            except DolibarrAPIException:
 #                return Response(status=status.HTTP_204_NO_CONTENT)
 #            return Response(response)
-            odoo = OdooAPI()
-            test = {}
-            response = odoo.get(model='res.partner',domain=[[('ref', '=', login)]], fields={'fields': ['ref','town','zip','lastname','firstname']})
-            test["ref"] = response[0]['ref']
-            test["lastname"] = response[0]['lastname']
-            test["firstname"] = response[0]['firstname']
 
-            return Response(test.json())
+            odoo = OdooAPI()
+            response = odoo.get(model='res.partner',domain=[[('is_main_profile', '=', True),('ref', '=', login)]])
+            element = []
+            for i in range (len(response)):
+                element.append({
+                        "login": response[i]['ref'],
+                        "address": response[i]['street'],
+                        "zip": response[i]['zip'],
+                        "id" : response[i]['id'],
+                        "town": response[i]['city'],
+                        "statut": "1",
+                        "typeid": response[i]['member_type_id'][0] if response[i]['member_type_id'] else 'null',
+                        "type": response[i]['member_type_id'][1] if response[i]['member_type_id'] else 'null',
+                        "datefin": response[i]['membership_stop'],
+                        "array_options": {
+                            "options_accepte_cgu_eusko_numerique": response[i]['accept_cgu_numerical_eusko'],
+                            "options_documents_pour_ouverture_du_compte_valides": response[i]['numeric_wallet_document_valid'],
+                            "options_accord_pour_ouverture_de_compte": 'oui' if response[i]['refuse_numeric_wallet_creation'] else 'non',
+                        },
+                        "societe": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
+                        "company": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
+                        "lastname": response[i]['lastname'],
+                        "firstname": response[i]['firstname'],
+                        "civility_id": response[i]['title'][1] if response[i]['title'] else 'null',
+                    })
+            return Response(element)
+
         elif login and not valid_login:
             return Response({'error': 'You need to provide a *VALID* ?login parameter! (Format: E12345)'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         elif name and len(name) >= 3:
             # We want to search in members by name (firstname, lastname or societe)
-            try:
-                sqlfilters = "(firstname like '%25{name}%25' or lastname like '%25{name}%25' or societe like '%25{name}%25') and statut=1".format(name=name)
-                response = self.dolibarr.get(model='members', sqlfilters=sqlfilters, api_key=dolibarr_token)
-            except DolibarrAPIException:
-                return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response(response)
+            odoo = OdooAPI()
+            response = odoo.get(model='res.partner', domain=[[('is_main_profile', '=', True),
+                                                              '|',('firstname', 'ilike', name),('lastname', 'ilike', name),
+                                                              ]])
+            element = []
+            for i in range(len(response)):
+                element.append({
+                    "login": response[i]['ref'],
+                    "address": response[i]['street'],
+                    "zip": response[i]['zip'],
+                    "id": response[i]['id'],
+                    "town": response[i]['city'],
+                    "statut": "1",
+                    "typeid": response[i]['member_type_id'][0] if response[i]['member_type_id'] else 'null',
+                    "type": response[i]['member_type_id'][1] if response[i]['member_type_id'] else 'null',
+                    "datefin": response[i]['membership_stop'],
+                    "array_options": {
+                        "options_accepte_cgu_eusko_numerique": response[i]['accept_cgu_numerical_eusko'],
+                        "options_documents_pour_ouverture_du_compte_valides": response[i][
+                            'numeric_wallet_document_valid'],
+                        "options_accord_pour_ouverture_de_compte": 'oui' if response[i][
+                            'refuse_numeric_wallet_creation'] else 'non',
+                    },
+                    "societe": response[i]['commercial_company_name'] if response[i][
+                        'commercial_company_name'] else 'null',
+                    "company": response[i]['commercial_company_name'] if response[i][
+                        'commercial_company_name'] else 'null',
+                    "lastname": response[i]['lastname'],
+                    "firstname": response[i]['firstname'],
+                    "civility_id": response[i]['title'][1] if response[i]['title'] else 'null',
+                })
+            return Response(element)
 
         elif name and len(name) < 3:
             return Response({'error': 'You need to provide a ?name parameter longer than 2 characters!'},
@@ -145,7 +191,11 @@ class MembersAPIView(BaseAPIView):
     def partial_update(self, request, pk=None):
         serializer = MemberPartialSerializer(data=request.data)
         if serializer.is_valid():
-            member = self.dolibarr.get(model='members/{}'.format(pk), api_key=request.user.profile.dolibarr_token)
+            odoo = OdooAPI()
+            member = odoo.get(model='res.partner',domain=[[('is_main_profile', '=', True),('id', '=', pk)]])
+
+            # Validate / modify data (serialize to match Dolibarr formats)
+            data = Member.validate_data(request.data, mode='update', base_options=member['array_options'])
 
             # Validate / modify data (serialize to match Dolibarr formats)
             data = Member.validate_data(request.data, mode='update', base_options=member['array_options'])
