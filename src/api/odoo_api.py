@@ -39,4 +39,5 @@ class OdooAPI(object):
         uid = common.authenticate(settings.ODOO_DB, 'admin', 'admin', {})
         models = xmlrpclib.ServerProxy('{}/xmlrpc/2/object'.format(settings.ODOO_URL))
         res = models.execute_kw(settings.ODOO_DB, uid, 'admin', model, 'search_read', domain, fields)
+
         return res
