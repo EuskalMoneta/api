@@ -36,23 +36,29 @@ class BaseAPIView(viewsets.ViewSet):
         response = self.odoo.get(model='res.partner',domain=[[('is_main_profile', '=', True),('id', '=', pk)]])
         element = []
         for i in range (len(response)):
+            if response[i]['is_company']:
+                morphy = 'mor'
+            else :
+                morphy ='phy'
+
             element.append(
                 {
                     "login": response[i]['ref'],
                     "societe": 'null',
-                    "company": 'null',
+                    "company": response[i]['name'],
                     "address": response[i]['street'],
                     "zip": response[i]['zip'],
-                    "town": response[i]['town'],
+                    "town": response[i]['city'],
                     "email": response[i]['email'],
                     "phone": response[i]['phone'],
-                    "morphy": if response[i]['is_company']: 'mor' else 'phy',
+                    "morphy": morphy,
                     "public": "0",
                     "statut": "1",
+                    "id":response[i]['id'],
                     "note_public": 'null',
                     "note_private": 'null',
-                    "typeid": "3",
-                    "type": "Particulier",
+                    "typeid": response[i]['member_type_id'][0] if response[i]['member_type_id'] else 'null',
+                    "type": response[i]['member_type_id'][1] if response[i]['member_type_id'] else 'null',
                     "datefin": 1609369200,
                     "first_subscription_date": 1372502436,
                     "first_subscription_amount": "10.00000000",
@@ -62,23 +68,19 @@ class BaseAPIView(viewsets.ViewSet):
                     "last_subscription_amount": "5.00000000",
                     "entity": "1",
                     "array_options": {
-                        "options_recevoir_actus": "1",
-                        "options_cotisation_offerte": 'null',
-                        "options_notifications_validation_mandat_prelevement": "1",
-                        "options_notifications_refus_ou_annulation_mandat_prelevement": "1",
-                        "options_notifications_prelevements": "1",
-                        "options_notifications_virements": "1",
-                        "options_recevoir_bons_plans": "1",
+                        "options_accepte_cgu_eusko_numerique": response[i]['accept_cgu_numerical_eusko'],
+                        "options_documents_pour_ouverture_du_compte_valides": response[i]['numeric_wallet_document_valid'],
+                        "options_accord_pour_ouverture_de_compte": 'oui' if response[i]['refuse_numeric_wallet_creation'] else 'non',
                     },
-                    "country": "France",
+                    "country": response[i]['country_id'][1] if response[i]['country_id'] else 'null',
                     "country_id": "1",
                     "country_code": "FR",
                     "region_code": 'null',
                     "note": 'null',
-                    "name": 'null',
-                    "lastname": "Aureau",
-                    "firstname": "Ana-Mari",
-                    "civility_id": "MME",
+                    "name": response[i]['name'],
+                    "lastname": response[i]['lastname'],
+                    "firstname": response[i]['firstname'],
+                    "civility_id": response[i]['title'][1] if response[i]['title'] else 'null',
                 })
         return Response(element[0])
 
