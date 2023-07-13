@@ -126,6 +126,10 @@ class MembersAPIView(BaseAPIView):
             response = self.odoo.get(model='res.partner', domain=[[('is_main_profile', '=', True),
                                                               '|',('firstname', 'ilike', name),('lastname', 'ilike', name),
                                                               ]])
+            response1 = self.odoo.get(model='res.users', domain=[[('email', '=','B001@euskalmoneta.org')
+                                                                   ]])
+            response5 = self.odoo.get(model='res.groups', domain=[[('id', '=',1)
+                                                                   ]])
             element = []
             for i in range(len(response)):
                 element.append({
@@ -153,7 +157,7 @@ class MembersAPIView(BaseAPIView):
                     "firstname": response[i]['firstname'],
                     "civility_id": response[i]['title'][1] if response[i]['title'] else 'null',
                 })
-            return Response(element)
+            return Response(response1)
 
         elif name and len(name) < 3:
             return Response({'error': 'You need to provide a ?name parameter longer than 2 characters!'},

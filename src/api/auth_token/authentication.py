@@ -43,35 +43,7 @@ def authenticate(username, password):
 
 
 def get_username_from_username_or_email(username_or_email):
-    username = ''
+    username = username_or_email
 
-    try:
-        # validate (or not) the fact that our "username_or_email" variable is an email
-        validate_email(username_or_email)
-
-        # we detected that our "username_or_email" variable is an email,
-        # we try to find the user that has this email (there must be exactly one)
-        try:
-            dolibarr = DolibarrAPI()
-            dolibarr_anonymous_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
-                                                      password=settings.APPS_ANONYMOUS_PASSWORD,
-                                                      reset=True)
-            user_results = dolibarr.get(model='users',
-                                        sqlfilters="email='{}'".format(username_or_email),
-                                        api_key=dolibarr_anonymous_token)
-            matching_users = [item
-                              for item in user_results
-                              if item['email'] == username_or_email]
-            if matching_users and len(matching_users) == 1:
-                username = matching_users[0]['login']
-
-        except (DolibarrAPIException, KeyError, IndexError):
-            pass
-
-    except forms.ValidationError:
-        # we detected that our "username_or_email" variable is NOT an email so it's a username
-        username = username_or_email
-
-    log.debug('get_username_from_username_or_email({}) -> {}'.format(username_or_email, username))
 
     return username

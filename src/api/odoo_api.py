@@ -29,15 +29,13 @@ class OdooAPI(object):
         """ Login function for Dolibarr API users.
         """
         common = xmlrpclib.ServerProxy('{}/xmlrpc/2/common'.format(settings.ODOO_URL))
-        self.uid = common.authenticate(settings.ODOO_DB,login, password,{})
-        self.password = password
-        if self.uid:
-            return self.uid
+        settings.UID = common.authenticate(settings.ODOO_DB,login, password,{})
+        settings.PASS = password
+        return settings.UID
 
     def get(self, model,domain=None,fields=False):
-        common = xmlrpclib.ServerProxy('{}/xmlrpc/2/common'.format(settings.ODOO_URL))
-        uid = common.authenticate(settings.ODOO_DB, 'admin', 'admin', {})
+        """common = xmlrpclib.ServerProxy('{}/xmlrpc/2/common'.format(settings.ODOO_URL))
+        uid = common.authenticate(settings.ODOO_DB, self.login, self.password, {})"""
         models = xmlrpclib.ServerProxy('{}/xmlrpc/2/object'.format(settings.ODOO_URL))
-        res = models.execute_kw(settings.ODOO_DB, uid, 'admin', model, 'search_read', domain, fields)
-
+        res = models.execute_kw(settings.ODOO_DB,settings.UID ,settings.PASS, model, 'search_read', domain, fields)
         return res
