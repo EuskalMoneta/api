@@ -23,6 +23,34 @@ class Member:
             return False
 
     @staticmethod
+    def create_data_tab(response):
+        element = []
+        for i in range(len(response)):
+            element.append({
+                "login": response[i]['ref'],
+                "address": response[i]['street'],
+                "zip": response[i]['zip'],
+                "id": response[i]['id'],
+                "town": response[i]['city'],
+                "statut": "1",
+                "typeid": response[i]['member_type_id'][0] if response[i]['member_type_id'] else 'null',
+                "type": response[i]['member_type_id'][1] if response[i]['member_type_id'] else 'null',
+                "datefin": response[i]['membership_stop'],
+                "array_options": {
+                    "options_accepte_cgu_eusko_numerique": response[i]['accept_cgu_numerical_eusko'],
+                    "options_documents_pour_ouverture_du_compte_valides": response[i]['numeric_wallet_document_valid'],
+                    "options_accord_pour_ouverture_de_compte": 'oui' if response[i][
+                        'refuse_numeric_wallet_creation'] else 'non',
+                },
+                "societe": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
+                "company": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
+                "lastname": response[i]['lastname'],
+                "firstname": response[i]['firstname'],
+                "civility_id": response[i]['title'][1] if response[i]['title'] else 'null',
+            })
+        return element
+
+    @staticmethod
     def validate_data(data, mode='create', base_options=None):
         """
         1. Dolibarr.llx_adherent.fk_adherent_type : typeid in the Dolibarr API = "3" (particulier)

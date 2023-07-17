@@ -82,82 +82,28 @@ class MembersAPIView(BaseAPIView):
             dolibarr_token = request.user.profile.dolibarr_token
 
         if login and valid_login:
-            # We want to search in members by login (N° Adhérent)
-#            try:
-#                response = self.dolibarr.get(model='members', sqlfilters="login='{}'".format(login), api_key=dolibarr_token)
-#            except DolibarrAPIException:
-#                return Response(status=status.HTTP_204_NO_CONTENT)
-#            return Response(response)
-
-
-            response = self.odoo.get(model='res.partner',domain=[[('is_main_profile', '=', True),('ref', '=', login)]])
-            element = []
-            for i in range (len(response)):
-                element.append({
-                        "login": response[i]['ref'],
-                        "address": response[i]['street'],
-                        "zip": response[i]['zip'],
-                        "id" : response[i]['id'],
-                        "town": response[i]['city'],
-                        "statut": "1",
-                        "typeid": response[i]['member_type_id'][0] if response[i]['member_type_id'] else 'null',
-                        "type": response[i]['member_type_id'][1] if response[i]['member_type_id'] else 'null',
-                        "datefin": response[i]['membership_stop'],
-                        "array_options": {
-                            "options_accepte_cgu_eusko_numerique": response[i]['accept_cgu_numerical_eusko'],
-                            "options_documents_pour_ouverture_du_compte_valides": response[i]['numeric_wallet_document_valid'],
-                            "options_accord_pour_ouverture_de_compte": 'oui' if response[i]['refuse_numeric_wallet_creation'] else 'non',
-                        },
-                        "societe": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
-                        "company": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
-                        "lastname": response[i]['lastname'],
-                        "firstname": response[i]['firstname'],
-                        "civility_id": response[i]['title'][1] if response[i]['title'] else 'null',
-                    })
-            return Response(element)
-
+            # We want to search in members by login (N° Adhérent
+            try:
+                response = self.odoo.get(model='res.partner',
+                                         domain=[[('is_main_profile', '=', True),
+                                                  ('ref', '=', login),('customer','=',True)]])
+            except DolibarrAPIException:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(Member.create_data_tab(response))
         elif login and not valid_login:
             return Response({'error': 'You need to provide a *VALID* ?login parameter! (Format: E12345)'},
                             status=status.HTTP_400_BAD_REQUEST)
 
         elif name and len(name) >= 3:
             # We want to search in members by name (firstname, lastname or societe)
-
-            response = self.odoo.get(model='res.partner', domain=[[('is_main_profile', '=', True),
-                                                              '|',('firstname', 'ilike', name),('lastname', 'ilike', name),
-                                                              ]])
-            response1 = self.odoo.get(model='res.users', domain=[[('email', '=','B001@euskalmoneta.org')
-                                                                   ]])
-            response5 = self.odoo.get(model='res.groups', domain=[[('id', '=',1)
-                                                                   ]])
-            element = []
-            for i in range(len(response)):
-                element.append({
-                    "login": response[i]['ref'],
-                    "address": response[i]['street'],
-                    "zip": response[i]['zip'],
-                    "id": response[i]['id'],
-                    "town": response[i]['city'],
-                    "statut": "1",
-                    "typeid": response[i]['member_type_id'][0] if response[i]['member_type_id'] else 'null',
-                    "type": response[i]['member_type_id'][1] if response[i]['member_type_id'] else 'null',
-                    "datefin": response[i]['membership_stop'],
-                    "array_options": {
-                        "options_accepte_cgu_eusko_numerique": response[i]['accept_cgu_numerical_eusko'],
-                        "options_documents_pour_ouverture_du_compte_valides": response[i][
-                            'numeric_wallet_document_valid'],
-                        "options_accord_pour_ouverture_de_compte": 'oui' if response[i][
-                            'refuse_numeric_wallet_creation'] else 'non',
-                    },
-                    "societe": response[i]['commercial_company_name'] if response[i][
-                        'commercial_company_name'] else 'null',
-                    "company": response[i]['commercial_company_name'] if response[i][
-                        'commercial_company_name'] else 'null',
-                    "lastname": response[i]['lastname'],
-                    "firstname": response[i]['firstname'],
-                    "civility_id": response[i]['title'][1] if response[i]['title'] else 'null',
-                })
-            return Response(response1)
+            try:
+                response = self.odoo.get(model='res.partner', domain=[[('is_main_profile', '=', True),
+                                                                  '|',('firstname', 'ilike', name),
+                                                                       ('lastname', 'ilike', name),('customer','=',True)
+                                                                  ]])
+            except DolibarrAPIException:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response(Member.create_data_tab(response))
 
         elif name and len(name) < 3:
             return Response({'error': 'You need to provide a ?name parameter longer than 2 characters!'},
@@ -166,28 +112,24 @@ class MembersAPIView(BaseAPIView):
         elif email:
             try:
                 validate_email(email)
-                user_results = self.dolibarr.get(model='members', sqlfilters="email='{}' and statut=1".format(email), api_key=dolibarr_token)
-                user_data = [item
-                             for item in user_results
-                             if item['email'] == email][0]
-                return Response(user_data)
+                user_results = self.odoo.get(model='res.partner',domain=[[('is_main_profile', '=', True),
+                                                                          ('email', '=', email),('customer','=',True)]])
             except forms.ValidationError:
                 return Response({'error': 'You need to provide a *VALID* ?email parameter! (Format: E12345)'},
                                 status=status.HTTP_400_BAD_REQUEST)
+            return Response(Member.create_data_tab(user_results))
         elif token:
             try:
-
-                response = self.odoo.get(model='res.partner', domain=[[('is_main_profile', '=', True)]])
+                response = self.odoo.get(model='res.partner',domain=[[('is_main_profile', '=', True),
+                                                                      ('token', '=', token),('customer','=',True)]])
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
-            return Response(response)
-
+            return Response(Member.create_data_tab(response))
         else:
-
-            objects = self.odoo.get(model='res.partner', domain=[[('is_main_profile', '=', True)]])
+            objects = self.dolibarr.get(model='members', sqlfilters="statut=1", api_key=dolibarr_token)
             paginator = CustomPagination()
             result_page = paginator.paginate_queryset(objects, request)
-
+            #TODO
             serializer = MemberSerializer(result_page, many=True)
             return paginator.get_paginated_response(serializer.data)
 
@@ -458,3 +400,4 @@ class MembersSubscriptionsAPIView(BaseAPIView):
 
     def destroy(self, request, pk):
         pass
+

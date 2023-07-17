@@ -3,9 +3,6 @@ import urllib
 from xmlrpc import client as xmlrpclib
 from django.conf import settings
 from rest_framework.exceptions import APIException
-
-
-
 import xmlrpc.client
 
 log = logging.getLogger()
@@ -26,16 +23,15 @@ class OdooAPI(object):
 
 
     def login(self, login=None, password=None, reset=None):
-        """ Login function for Dolibarr API users.
-        """
+
         common = xmlrpclib.ServerProxy('{}/xmlrpc/2/common'.format(settings.ODOO_URL))
-        settings.UID = common.authenticate(settings.ODOO_DB,login, password,{})
-        settings.PASS = password
-        return settings.UID
+        UID = common.authenticate(settings.ODOO_DB,login, password,{})
+        return UID
 
     def get(self, model,domain=None,fields=False):
-        """common = xmlrpclib.ServerProxy('{}/xmlrpc/2/common'.format(settings.ODOO_URL))
-        uid = common.authenticate(settings.ODOO_DB, self.login, self.password, {})"""
+        common = xmlrpclib.ServerProxy('{}/xmlrpc/2/common'.format(settings.ODOO_URL))
+        uid = common.authenticate(settings.ODOO_DB, 'B001@euskalmoneta.org', 'B001', {})
         models = xmlrpclib.ServerProxy('{}/xmlrpc/2/object'.format(settings.ODOO_URL))
-        res = models.execute_kw(settings.ODOO_DB,settings.UID ,settings.PASS, model, 'search_read', domain, fields)
+        res = models.execute_kw(settings.ODOO_DB,uid,'B001', model, 'search_read', domain, fields)
         return res
+
