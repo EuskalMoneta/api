@@ -21,17 +21,15 @@ class OdooAPI(object):
         except AttributeError:
             self.url = settings.ODOO_URL
 
-
     def login(self, login=None, password=None, reset=None):
 
         common = xmlrpclib.ServerProxy('{}/xmlrpc/2/common'.format(settings.ODOO_URL))
-        UID = common.authenticate(settings.ODOO_DB,login, password,{})
-        return UID
+        settings.UID = common.authenticate(settings.ODOO_DB, login+'@euskalmoneta.org', password, {})
+        settings.PASS = password
+        return settings.UID
 
     def get(self, model,domain=None,fields=False):
-        common = xmlrpclib.ServerProxy('{}/xmlrpc/2/common'.format(settings.ODOO_URL))
-        uid = common.authenticate(settings.ODOO_DB, 'B001@euskalmoneta.org', 'B001', {})
         models = xmlrpclib.ServerProxy('{}/xmlrpc/2/object'.format(settings.ODOO_URL))
-        res = models.execute_kw(settings.ODOO_DB,uid,'B001', model, 'search_read', domain, fields)
+        res = models.execute_kw(settings.ODOO_DB, settings.UID, settings.PASS, model, 'search_read', domain, fields)
         return res
 
