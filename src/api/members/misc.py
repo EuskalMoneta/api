@@ -24,14 +24,24 @@ class Member:
 
     @staticmethod
     def create_data_tab(response):
+
         element = []
         for i in range(len(response)):
+            if response[i]['is_company']:
+                morphy = 'mor'
+            else :
+                morphy ='phy'
+
             element.append({
                 "login": response[i]['ref'],
+                "societe": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
+                "company": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
                 "address": response[i]['street'],
                 "zip": response[i]['zip'],
-                "id": response[i]['id'],
                 "town": response[i]['city'],
+                "id": response[i]['id'],
+                "email": response[i]['email'],
+                "morphy": morphy,
                 "statut": "1",
                 "typeid": response[i]['member_type_id'][0] if response[i]['member_type_id'] else 'null',
                 "type": response[i]['member_type_id'][1] if response[i]['member_type_id'] else 'null',
@@ -42,8 +52,6 @@ class Member:
                     "options_accord_pour_ouverture_de_compte": 'oui' if response[i][
                         'refuse_numeric_wallet_creation'] else 'non',
                 },
-                "societe": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
-                "company": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
                 "lastname": response[i]['lastname'],
                 "firstname": response[i]['firstname'],
                 "civility_id": response[i]['title'][1] if response[i]['title'] else 'null',
