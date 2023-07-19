@@ -86,7 +86,9 @@ class MembersAPIView(BaseAPIView):
             try:
                 response = self.odoo.get(model='res.partner',
                                          domain=[[('is_main_profile', '=', True),
-                                                  ('ref', '=', login),('customer','=',True)]])
+                                                  ('ref', '=', login),
+                                                  ('customer','=',True),
+                                                  ]])
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
             return Response(Member.create_data_tab(response))
@@ -243,7 +245,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
             return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
-            member = self.dolibarr.get(model='members', id=member_id, api_key=dolibarr_token)
+            member = self.odoo.get(model='res.partner', domain=[[('is_main_profile', '=', True), ('id', '=', member_id)]])
         except DolibarrAPIException as e:
             log.critical("member_id: {}".format(member_id))
             log.critical(e)

@@ -2,7 +2,8 @@ import copy
 import datetime
 import logging
 import time
-
+from dateutil.parser import parse
+from datetime import datetime
 import arrow
 from django.conf import settings
 from django.template.loader import render_to_string
@@ -29,9 +30,18 @@ class Member:
         for i in range(len(response)):
             if response[i]['is_company']:
                 morphy = 'mor'
-            else :
-                morphy ='phy'
-
+            else:
+                morphy = 'phy'
+            if response[i]['membership_stop']:
+                date_string = response[i]['membership_stop']
+                format_sortie = "%s"
+                # Conversion de la date en objet datetime
+                date_objet = parse(date_string)
+                # Conversion de la date en format cible
+                timestamp = int(date_objet.timestamp())
+                date_cible = str(timestamp)
+            else:
+                date_cible = ''
             element.append({
                 "login": response[i]['ref'],
                 "societe": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
@@ -42,10 +52,10 @@ class Member:
                 "id": response[i]['id'],
                 "email": response[i]['email'],
                 "morphy": morphy,
-                "statut": "1",
+                "statut": response[i]['membership_state'],
                 "typeid": response[i]['member_type_id'][0] if response[i]['member_type_id'] else 'null',
                 "type": response[i]['member_type_id'][1] if response[i]['member_type_id'] else 'null',
-                "datefin": response[i]['membership_stop'],
+                "datefin": date_cible,
                 "array_options": {
                     "options_accepte_cgu_eusko_numerique": response[i]['accept_cgu_numerical_eusko'],
                     "options_documents_pour_ouverture_du_compte_valides": response[i]['numeric_wallet_document_valid'],
