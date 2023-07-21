@@ -17,8 +17,8 @@ log = logging.getLogger(__name__)
 def authenticate(username, password):
     user = None
     try:
-        dolibarr = OdooAPI()
-        dolibarr_token = dolibarr.login(login=username, password=password, reset=True)
+        odoo = OdooAPI()
+        dolibarr_token = odoo.login(login=username, password=password)
     except (DolibarrAPIException):
         raise AuthenticationFailed()
 

@@ -8,7 +8,7 @@ import arrow
 from django.conf import settings
 from django.template.loader import render_to_string
 from django.utils.translation import activate, gettext as _
-
+from odoo_api import OdooAPI
 from misc import sendmail_euskalmoneta
 
 log = logging.getLogger()
@@ -28,6 +28,7 @@ class Member:
 
         element = []
         for i in range(len(response)):
+            date_cible=''
             if response[i]['is_company']:
                 morphy = 'mor'
             else:
@@ -41,7 +42,20 @@ class Member:
                 timestamp = int(date_objet.timestamp())
                 date_cible = str(timestamp)
             else:
-                date_cible = ''
+                odoo = OdooAPI()
+                r = odoo.get(
+                    model='membership.membership_line',
+                    domain=[[('partner', '=', response[i]['id'])]],
+                    fields={'fields': ['date_to'], 'offset': 0, 'limit': 1, 'order': 'date_to desc'},
+                )
+                if r:
+                    date_string = r[0]['date_to']
+                    format_sortie = "%s"
+                    # Conversion de la date en objet datetime
+                    date_objet = parse(date_string)
+                    # Conversion de la date en format cible
+                    timestamp = int(date_objet.timestamp())
+                    date_cible = str(timestamp)
             element.append({
                 "login": response[i]['ref'],
                 "societe": response[i]['commercial_company_name'] if response[i]['commercial_company_name'] else 'null',
@@ -61,6 +75,7 @@ class Member:
                     "options_documents_pour_ouverture_du_compte_valides": response[i]['numeric_wallet_document_valid'],
                     "options_accord_pour_ouverture_de_compte": 'oui' if response[i][
                         'refuse_numeric_wallet_creation'] else 'non',
+                    "options_recevoir_actus": response[i]['receive_actus'] if response[i]['receive_actus'] else 'null',
                 },
                 "lastname": response[i]['lastname'],
                 "firstname": response[i]['firstname'],
