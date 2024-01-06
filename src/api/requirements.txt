@@ -1,7 +1,7 @@
 arrow==0.16.*
-django==1.11.*
+django==2.2.*
 django-cors-middleware
-djangorestframework==3.9.*
+djangorestframework==3.10.*
 djangorestframework-csv
 django-filter==2.3.*
 django-simple-history==2.11.*
