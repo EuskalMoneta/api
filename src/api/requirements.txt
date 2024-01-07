@@ -1,4 +1,5 @@
 arrow==0.16.*
+asgiref
 django==2.2.*
 django-cors-middleware
 djangorestframework==3.10.*
