@@ -52,7 +52,10 @@ def deposit_banks(request):
     # user/search for group = 'Banques de dépot'
     banks_data = cyclos.post(method='user/search',
                              data={'groups': [settings.CYCLOS_CONSTANTS['groups']['banques_de_depot']]})
-    res = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
-           for item in banks_data['result']['pageItems']]
+    banks_ids = [ item['id'] for item in banks_data['result']['pageItems'] ]
+    res = []
+    for bank_id in banks_ids:
+        cyclos_user = cyclos.post(method='user/load', data=[bank_id])['result']
+        res.append({'label': cyclos_user['name'], 'value': cyclos_user['id'], 'shortLabel': cyclos_user['username']})
 
     return Response(res)
