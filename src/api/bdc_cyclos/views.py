@@ -129,13 +129,16 @@ def deposit_banks_summaries(request):
     # user/search for group = 'Banques de dépot'
     banks_data = cyclos.post(method='user/search',
                              data={'groups': [settings.CYCLOS_CONSTANTS['groups']['banques_de_depot']]})
-    bank_names = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
-                  for item in banks_data['result']['pageItems']]
+    banks_ids = [ item['id'] for item in banks_data['result']['pageItems'] ]
+    bank_names = []
+    for bank_id in banks_ids:
+        cyclos_user = cyclos.post(method='user/load', data=[bank_id])['result']
+        bank_names.append({'label': cyclos_user['name'], 'value': cyclos_user['id'], 'shortLabel': cyclos_user['username']})
 
     res = {}
     for bank in bank_names:
         bank_user_query = {
-            'keywords': bank['shortLabel'],  # shortLabel = shortDisplay from Cyclos
+            'keywords': bank['shortLabel'],  # shortLabel = username from Cyclos
         }
         try:
             bank_user_data = cyclos.post(method='user/search', data=bank_user_query)['result']['pageItems'][0]

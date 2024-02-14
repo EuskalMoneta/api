@@ -1,9 +1,10 @@
 arrow==0.16.*
+asgiref
 django==2.2.*
 django-cors-middleware
 djangorestframework==3.10.*
 djangorestframework-csv
-django-filter==2.3.*
+django-filter==2.4.*
 django-simple-history==2.11.*
 django-wkhtmltopdf
 drf-pdf
@@ -13,6 +14,6 @@ pytest
 pytest-django
 python-slugify
 PyJWT
-PyYAML==5.3.*
+PyYAML==5.4.*
 raven
 requests

@@ -124,8 +124,11 @@ class BDCAPIView(BaseAPIView):
 
         data = self.cyclos.post(method='user/search', data=query_data,
                                 token=request.user.profile.cyclos_token)
-        objects = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
-                   for item in data['result']['pageItems']]
+        ids = [ item['id'] for item in data['result']['pageItems'] ]
+        objects = []
+        for id in ids:
+            cyclos_user = self.cyclos.post(method='user/load', data=[id])['result']
+            objects.append({'label': cyclos_user['name'], 'value': cyclos_user['id'], 'shortLabel': cyclos_user['username']})
 
         paginator = CustomPagination()
         result_page = paginator.paginate_queryset(objects, request)

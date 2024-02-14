@@ -98,9 +98,11 @@ def entree_coffre(request):
 
     for payment in request.data['selected_payments']:
         try:
-            bdc = {'id': payment['relatedAccount']['owner']['id'],
-                   'login': str(payment['relatedAccount']['owner']['shortDisplay']).replace('_BDC', ''),
-                   'name': str(payment['relatedAccount']['owner']['display']).replace(' (BDC)', '')}
+            bdc_id = payment['relatedAccount']['owner']['id']
+            cyclos_user = cyclos.post(method='user/load', data=[bdc_id])['result']
+            bdc = {'id': cyclos_user['id'],
+                   'login': str(cyclos_user['username']).replace('_BDC', ''),
+                   'name': str(cyclos_user['name']).replace(' (BDC)', '')}
         except KeyError:
             return Response({'error': 'Unable to get bdc info from one of your selected_payments!'},
                             status=status.HTTP_400_BAD_REQUEST)
@@ -303,7 +305,7 @@ def payments_available_for_banques(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     bank_user_query = {
-        'keywords': request.query_params['bank_name'],  # bank_name = shortDisplay from Cyclos
+        'keywords': request.query_params['bank_name'],  # bank_name = username from Cyclos
     }
     try:
         bank_user_data = cyclos.post(method='user/search', data=bank_user_query)['result']['pageItems'][0]
@@ -369,7 +371,7 @@ def validate_banques_virement(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     bank_user_query = {
-        'keywords': request.data['bank_name'],  # bank_name = shortDisplay from Cyclos
+        'keywords': request.data['bank_name'],  # bank_name = username from Cyclos
     }
     try:
         bank_user_data = cyclos.post(method='user/search', data=bank_user_query)['result']['pageItems'][0]
@@ -753,13 +755,15 @@ def calculate_3_percent(request):
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_bdc_versement_des_euro']),
         ]
     )
-    changes.extend([
-        {'amount' : abs(float(payment['amount'])),
-         'member_id' : value['linkedEntityValue']['user']['shortDisplay']}
-        for payment in payments
-        for value in payment['customValues']
-        if value['field']['internalName'] == 'adherent'
-    ])
+    for payment in payments:
+        for value in payment['customValues']:
+            if value['field']['internalName'] == 'adherent':
+                cyclos_user_id = value['linkedEntityValue']['user']['id']
+                cyclos_user = cyclos.post(method='user/load', data=[cyclos_user_id])['result']
+                changes.append(
+                    {'amount' : abs(float(payment['amount'])),
+                     'member_id' : cyclos_user['username']}
+                )
     # 3) On récupère tous les débits du Compte de débit eusko numérique
     # pour la période puis on filtre le résultat pour ne garder que les
     # paiements de type "change numérique en ligne".
@@ -773,11 +777,13 @@ def calculate_3_percent(request):
             str(settings.CYCLOS_CONSTANTS['payment_types']['change_numerique_en_ligne_versement_des_eusko']),
         ]
     )
-    changes.extend([
-        {'amount' : abs(float(payment['amount'])),
-         'member_id' : payment['relatedAccount']['owner']['shortDisplay']}
-        for payment in payments
-    ])
+    for payment in payments:
+        cyclos_user_id = payment['relatedAccount']['owner']['id']
+        cyclos_user = cyclos.post(method='user/load', data=[cyclos_user_id])['result']
+        changes.append(
+            {'amount' : abs(float(payment['amount'])),
+             'member_id' : cyclos_user['username']}
+        )
 
     # On récupère la liste de toutes les associations
     # et on construit un dictionnaire qui va donner la correspondance :
@@ -1490,15 +1496,14 @@ def resiliation_adherent(request):
             'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
         })
         cyclos_user = res['result']['pageItems'][0]
-        cyclos_user_id = cyclos_user['id']
-        log.debug("cyclos_user_id={}".format(cyclos_user_id))
+        log.debug("cyclos_user={}".format(cyclos_user))
     except IndexError:
         log.debug("Impossible de récupérer l'adhérent.e dans Cyclos.")
         cyclos_user = None
 
     if cyclos_user:
         # Vérifier le solde de son compte eusko, s'il en a un.
-        query_data = [cyclos_user['shortDisplay'], None]
+        query_data = [cyclos_user['id'], None]
         accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
         try:
             solde = float(accounts_summaries_data['result'][0]['status']['balance'])
@@ -1512,7 +1517,7 @@ def resiliation_adherent(request):
                             status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         # Supprimer l'utilisateur Cyclos.
         cyclos.post(method='userStatus/changeStatus', data={
-            'user': cyclos_user_id,
+            'user': cyclos_user['id'],
             'status': 'REMOVED',
         })
 

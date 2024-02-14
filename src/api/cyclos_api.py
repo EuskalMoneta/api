@@ -135,10 +135,9 @@ class CyclosAPI(object):
         }
         try:
             member_login_search = self.post(method='user/search', data=query_data)
-            member_login_data = [user
-                                 for user in member_login_search['result']['pageItems']
-                                 if user['shortDisplay'] == member_login]
-            member_cyclos_id = member_login_data[0]['id']
+            if member_login_search['result']['totalCount'] > 1:
+                raise CyclosAPIException(detail='More than one member found!')
+            member_cyclos_id = member_login_search['result']['pageItems'][0]['id']
         except CyclosAPIException:
             raise CyclosAPIException(detail='Unable to connect to Cyclos!')
         except (KeyError, IndexError):
