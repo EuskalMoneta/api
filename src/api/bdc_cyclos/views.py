@@ -38,10 +38,9 @@ def accounts_summaries(request, login_bdc=None):
     for filter_key in filter_keys:
         data = [item
                 for item in accounts_summaries_data['result']
-                if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types'][filter_key])][0]
+                if item['type']['internalName'] == filter_key][0]
 
         res[filter_key] = {}
-        res[filter_key]['id'] = data['id']
         res[filter_key]['balance'] = float(data['status']['balance'])
         res[filter_key]['currency'] = data['currency']['symbol']
         res[filter_key]['type'] = {'name': data['type']['name'], 'id': filter_key}
