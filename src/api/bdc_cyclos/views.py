@@ -317,7 +317,7 @@ def change_euro_eusko(request):
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
-                'enumeratedValues': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
+                'enumeratedValue': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
             },
         ],
         # "Change - E12345 - Nom de l'adhérent - Mode de paiement"
@@ -545,7 +545,7 @@ def bank_deposit(request):
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
-                'enumeratedValues': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
+                'enumeratedValue': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_bordereau']),
