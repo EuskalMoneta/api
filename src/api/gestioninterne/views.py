@@ -1513,8 +1513,7 @@ def resiliation_adherent(request):
             solde = 0
         log.debug("solde={}".format(solde))
         if solde > 0:
-            return Response({'error': "Compte de l'adhérent.e créditeur, résiliation impossible."},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'error': "Compte de l'adhérent.e créditeur, résiliation impossible."})
         # Supprimer l'utilisateur Cyclos.
         cyclos.post(method='userStatus/changeStatus', data={
             'user': cyclos_user['id'],
