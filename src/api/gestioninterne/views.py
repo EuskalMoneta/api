@@ -1503,7 +1503,7 @@ def resiliation_adherent(request):
 
     if cyclos_user:
         # Vérifier si l'utilisateur a un compte eusko.
-        user_data = cyclos.post(method='user/load', data=[cyclos_user['id']]
+        user_data = cyclos.post(method='user/load', data=[cyclos_user['id']])
         has_account = (user_data['result']['group']['internalName'] != 'adherents_sans_compte')
         if has_account:
             # Vérifier le solde de son compte eusko, s'il en a un..
