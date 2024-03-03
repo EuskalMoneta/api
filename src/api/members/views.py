@@ -341,7 +341,7 @@ class MembersSubscriptionsAPIView(BaseAPIView):
                     {'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['adherent']),
                      'linkedEntityValue': member_cyclos_id},
                     {'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
-                     'enumeratedValues': data['cyclos_id_payment_mode']}],
+                     'enumeratedValue': data['cyclos_id_payment_mode']}],
                  'description': 'Cotisation - {} - {} - {}'.format(
                     current_member['login'], member_name, payment_label),
                  })

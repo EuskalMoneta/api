@@ -1502,19 +1502,22 @@ def resiliation_adherent(request):
         cyclos_user = None
 
     if cyclos_user:
-        # Vérifier le solde de son compte eusko, s'il en a un.
-        query_data = [cyclos_user['id'], None]
-        accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
-        try:
-            solde = float(accounts_summaries_data['result'][0]['status']['balance'])
-        except IndexError:
-            # Si l'adhérent n'a pas de compte ou s'il a un compte qui n'a
-            # jamais été utilisé, getAccountsSummary renvoie une liste vide.
-            solde = 0
-        log.debug("solde={}".format(solde))
-        if solde > 0:
-            return Response({'error': "Compte de l'adhérent.e créditeur, résiliation impossible."},
-                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        # Vérifier si l'utilisateur a un compte eusko.
+        user_data = cyclos.post(method='user/load', data=[cyclos_user['id']])
+        has_account = (user_data['result']['group']['internalName'] != 'adherents_sans_compte')
+        if has_account:
+            # Vérifier le solde de son compte eusko, s'il en a un..
+            query_data = [cyclos_user['id'], None]
+            accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=query_data)
+            try:
+                solde = float(accounts_summaries_data['result'][0]['status']['balance'])
+            except IndexError:
+                # Si l'adhérent n'a pas de compte ou s'il a un compte qui n'a
+                # jamais été utilisé, getAccountsSummary renvoie une liste vide.
+                solde = 0
+            log.debug("solde={}".format(solde))
+            if solde > 0:
+                return Response({'error': "Compte de l'adhérent.e créditeur, résiliation impossible."})
         # Supprimer l'utilisateur Cyclos.
         cyclos.post(method='userStatus/changeStatus', data={
             'user': cyclos_user['id'],
