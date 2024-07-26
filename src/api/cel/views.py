@@ -89,11 +89,11 @@ def first_connection(request):
                            'jti': str(uuid4()), 'iat': datetime.utcnow(),
                            'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
-                jwt_token = jwt.encode(payload, settings.JWT_SECRET)
+                jwt_token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
                 confirm_url = '{}/{}/valide-premiere-connexion?token={}'.format(
                     settings.CEL_PUBLIC_URL,
                     request.data['language'],
-                    jwt_token.decode("utf-8"))
+                    jwt_token)
 
                 # On active la langue choisie par l'utilisateur.
                 activate(request.data['language'])
@@ -126,7 +126,7 @@ def validate_first_connection(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
-        token_data = jwt.decode(request.data['token'], settings.JWT_SECRET,
+        token_data = jwt.decode(request.data['token'], key=settings.JWT_SECRET, algorithms=["HS256",],
                                 issuer='first-connection', audience='guest')
     except jwt.InvalidTokenError:
         return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -194,11 +194,11 @@ def lost_password(request):
                            'jti': str(uuid4()), 'iat': datetime.utcnow(),
                            'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
-                jwt_token = jwt.encode(payload, settings.JWT_SECRET)
+                jwt_token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
                 confirm_url = '{}/{}/valide-passe-perdu?token={}'.format(
                     settings.CEL_PUBLIC_URL,
                     request.data['language'],
-                    jwt_token.decode("utf-8"))
+                    jwt_token)
 
                 # On active la langue choisie par l'utilisateur.
                 activate(request.data['language'])
@@ -230,7 +230,7 @@ def validate_lost_password(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
-        token_data = jwt.decode(request.data['token'], settings.JWT_SECRET,
+        token_data = jwt.decode(request.data['token'], key=settings.JWT_SECRET, algorithms=["HS256",],
                                 issuer='lost-password', audience='guest')
     except jwt.InvalidTokenError:
         return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
