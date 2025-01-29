@@ -38,10 +38,9 @@ def accounts_summaries(request, login_bdc=None):
     for filter_key in filter_keys:
         data = [item
                 for item in accounts_summaries_data['result']
-                if item['type']['id'] == str(settings.CYCLOS_CONSTANTS['account_types'][filter_key])][0]
+                if item['type']['internalName'] == filter_key][0]
 
         res[filter_key] = {}
-        res[filter_key]['id'] = data['id']
         res[filter_key]['balance'] = float(data['status']['balance'])
         res[filter_key]['currency'] = data['currency']['symbol']
         res[filter_key]['type'] = {'name': data['type']['name'], 'id': filter_key}
@@ -129,13 +128,16 @@ def deposit_banks_summaries(request):
     # user/search for group = 'Banques de dépot'
     banks_data = cyclos.post(method='user/search',
                              data={'groups': [settings.CYCLOS_CONSTANTS['groups']['banques_de_depot']]})
-    bank_names = [{'label': item['display'], 'value': item['id'], 'shortLabel': item['shortDisplay']}
-                  for item in banks_data['result']['pageItems']]
+    banks_ids = [ item['id'] for item in banks_data['result']['pageItems'] ]
+    bank_names = []
+    for bank_id in banks_ids:
+        cyclos_user = cyclos.post(method='user/load', data=[bank_id])['result']
+        bank_names.append({'label': cyclos_user['name'], 'value': cyclos_user['id'], 'shortLabel': cyclos_user['username']})
 
     res = {}
     for bank in bank_names:
         bank_user_query = {
-            'keywords': bank['shortLabel'],  # shortLabel = shortDisplay from Cyclos
+            'keywords': bank['shortLabel'],  # shortLabel = username from Cyclos
         }
         try:
             bank_user_data = cyclos.post(method='user/search', data=bank_user_query)['result']['pageItems'][0]
@@ -314,7 +316,7 @@ def change_euro_eusko(request):
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
-                'enumeratedValues': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
+                'enumeratedValue': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
             },
         ],
         # "Change - E12345 - Nom de l'adhérent - Mode de paiement"
@@ -542,7 +544,7 @@ def bank_deposit(request):
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['mode_de_paiement']),
-                'enumeratedValues': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
+                'enumeratedValue': request.data['payment_mode']  # ID du mode de paiement (chèque ou espèces)
             },
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['numero_de_bordereau']),

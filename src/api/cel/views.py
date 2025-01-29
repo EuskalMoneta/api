@@ -89,11 +89,11 @@ def first_connection(request):
                            'jti': str(uuid4()), 'iat': datetime.utcnow(),
                            'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
-                jwt_token = jwt.encode(payload, settings.JWT_SECRET)
+                jwt_token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
                 confirm_url = '{}/{}/valide-premiere-connexion?token={}'.format(
                     settings.CEL_PUBLIC_URL,
                     request.data['language'],
-                    jwt_token.decode("utf-8"))
+                    jwt_token)
 
                 # On active la langue choisie par l'utilisateur.
                 activate(request.data['language'])
@@ -126,7 +126,7 @@ def validate_first_connection(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
-        token_data = jwt.decode(request.data['token'], settings.JWT_SECRET,
+        token_data = jwt.decode(request.data['token'], key=settings.JWT_SECRET, algorithms=["HS256",],
                                 issuer='first-connection', audience='guest')
     except jwt.InvalidTokenError:
         return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -194,11 +194,11 @@ def lost_password(request):
                            'jti': str(uuid4()), 'iat': datetime.utcnow(),
                            'nbf': datetime.utcnow(), 'exp': datetime.utcnow() + timedelta(hours=1)}
 
-                jwt_token = jwt.encode(payload, settings.JWT_SECRET)
+                jwt_token = jwt.encode(payload, settings.JWT_SECRET, algorithm="HS256")
                 confirm_url = '{}/{}/valide-passe-perdu?token={}'.format(
                     settings.CEL_PUBLIC_URL,
                     request.data['language'],
-                    jwt_token.decode("utf-8"))
+                    jwt_token)
 
                 # On active la langue choisie par l'utilisateur.
                 activate(request.data['language'])
@@ -230,7 +230,7 @@ def validate_lost_password(request):
     serializer.is_valid(raise_exception=True)  # log.critical(serializer.errors)
 
     try:
-        token_data = jwt.decode(request.data['token'], settings.JWT_SECRET,
+        token_data = jwt.decode(request.data['token'], key=settings.JWT_SECRET, algorithms=["HS256",],
                                 issuer='lost-password', audience='guest')
     except jwt.InvalidTokenError:
         return Response({'error': 'Unable to read token!'}, status=status.HTTP_400_BAD_REQUEST)
@@ -438,8 +438,9 @@ def export_rie_adherent(request):
 
     for account in (accounts_summaries_data['result']):
         if account['number'] == request.query_params['account']:
+            account_owner = cyclos.post(method='user/load', data=account['owner']['id'])['result']
             # add loop to context to display rie 6 times
-            context = {'account': account, 'loop': range(0, 3)}
+            context = {'account_number': account['number'], 'account_owner': account_owner, 'loop': range(0, 3)}
             response = wkhtmltopdf_views.PDFTemplateResponse(
                 request=request, context=context, template="summary/rie.html")
             pdf_content = response.rendered_content
@@ -457,8 +458,8 @@ def execute_virement(dolibarr, cyclos, virement):
         # On récupère le destinataire du virement à partir de son numéro de compte.
         try:
             data = cyclos.post(method='user/search', data={'keywords': virement['account']})
-            destinataire_cyclos = data['result']['pageItems'][0]
-            virement['name'] = destinataire_cyclos['display']
+            destinataire_cyclos = cyclos.post(method='user/load', data=data['result']['pageItems'][0]['id'])['result']
+            virement['name'] = destinataire_cyclos['name']
         except IndexError:
             virement['name'] = None
             raise Exception(_("Ce numéro de compte n'existe pas"))
@@ -482,7 +483,7 @@ def execute_virement(dolibarr, cyclos, virement):
         # On récupère dans Dolibarr les informations sur le destinataire du virement, pour savoir s'il souhaite
         # recevoir une notification lorsqu'il reçoit un virement. Si c'est le cas, on lui envoie un email.
         destinataire_dolibarr = dolibarr.get(model='members',
-                                             sqlfilters="login='{}'".format(destinataire_cyclos['shortDisplay']))[0]
+                                             sqlfilters="login='{}'".format(destinataire_cyclos['username']))[0]
         if destinataire_dolibarr['array_options']['options_notifications_virements']:
             # Activate user pre-selected language
             activate(destinataire_dolibarr['array_options']['options_langue'])
@@ -1385,7 +1386,7 @@ def create_cyclos_user(cyclos_token, group, name, login, password=None, pin_code
         'userStatus': ['ACTIVE', 'BLOCKED', 'DISABLED']
     }
     res = cyclos.post(method='user/search', data=data, token=cyclos_token)
-    if res['result']['totalCount']==1 and res['result']['pageItems'][0]['shortDisplay'] == login:
+    if res['result']['totalCount']==1:
         cyclos_user_id = res['result']['pageItems'][0]['id']
         res = cyclos.post(method='user/load', data=cyclos_user_id)
         # Si l'utilisateur existant est dans un groupe différent de celui voulu, on le change de groupe.

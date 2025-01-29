@@ -1,18 +1,19 @@
-arrow
-django==1.11.*
+arrow==0.16.*
+asgiref
+django==2.2.*
 django-cors-middleware
-djangorestframework==3.9.*
+djangorestframework==3.10.*
 djangorestframework-csv
-django-filter  # Filtering support
-django-simple-history
+django-filter==2.4.*
+django-simple-history==2.11.*
 django-wkhtmltopdf
 drf-pdf
 markdown       # Markdown support for the browsable API.
-psycopg2
+psycopg2==2.8.6
 pytest
 pytest-django
 python-slugify
 PyJWT
-PyYAML
+PyYAML==5.4.*
 raven
 requests

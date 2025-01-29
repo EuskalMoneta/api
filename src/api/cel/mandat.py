@@ -80,18 +80,19 @@ class MandatViewSet(viewsets.ModelViewSet):
         if data['result']['totalCount'] == 0:
             return Response({'error': _("Ce numéro de compte n'existe pas")},
                             status=status.HTTP_422_UNPROCESSABLE_ENTITY)
-        debiteur = data['result']['pageItems'][0]
+        debiteur_id = data['result']['pageItems'][0]['id']
+        debiteur = cyclos.post(method='user/load', data=debiteur_id)['result']
 
         # Enregistrement du mandat en base de données.
         mandat = serializer.save(
-            nom_debiteur=debiteur['display'],
+            nom_debiteur=debiteur['name'],
             numero_compte_crediteur=numero_compte_crediteur,
             nom_crediteur=cyclos.user_profile['result']['display']
         )
 
         # Notification par email au débiteur.
         debiteur_dolibarr = dolibarr.get(model='members',
-                                         sqlfilters="login='{}'".format(debiteur['shortDisplay']))[0]
+                                         sqlfilters="login='{}'".format(debiteur['username']))[0]
         # Activation de la langue choisie par l'adhérent et traduction du sujet et du corps de l'email.
         activate(debiteur_dolibarr['array_options']['options_langue'])
         subject = _("Compte Eusko : demande d'autorisation de prélèvements")
@@ -195,9 +196,10 @@ def notifier_crediteur(request, mandat, template):
         return Response({'error': 'Unable to connect to Cyclos!'}, status=status.HTTP_400_BAD_REQUEST)
     data = cyclos.post(method='user/search',
                        data={'keywords': mandat.numero_compte_crediteur})
-    crediteur = data['result']['pageItems'][0]
+    crediteur_id = data['result']['pageItems'][0]['id']
+    crediteur = cyclos.post(method='user/load', data=crediteur_id)['result']
     crediteur_dolibarr = dolibarr.get(model='members',
-                                      sqlfilters="login='{}'".format(crediteur['shortDisplay']))[0]
+                                      sqlfilters="login='{}'".format(crediteur['username']))[0]
     # Activation de la langue choisie par l'adhérent et traduction du sujet et du corps de l'email.
     activate(crediteur_dolibarr['array_options']['options_langue'])
     subject = _("Compte Eusko : demande d'autorisation de prélèvements")
