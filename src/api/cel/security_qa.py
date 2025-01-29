@@ -85,7 +85,8 @@ class SecurityQAViewSet(viewsets.ViewSet):
             if not token:
                 raise jwt.InvalidTokenError
 
-            token_data = jwt.decode(token, settings.JWT_SECRET,
+            token_data = jwt.decode(token, key=settings.JWT_SECRET,
+                                    algorithms=["HS256",],
                                     issuer='lost-password', audience='guest')
             login = token_data['login']
         except jwt.InvalidTokenError:
