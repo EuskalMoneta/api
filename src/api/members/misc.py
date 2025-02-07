@@ -103,7 +103,7 @@ class Member:
                                  'profile_companyname': str(profile.companyname),
                                  'new_amount': new_amount, 'comment': comment, 'email': email})
 
-        sendmail_euskalmoneta(subject=subject, body=body)
+        sendmail_euskalmoneta(subject=subject, body=body, to_email='gestion@euskalmoneta.org')
 
     @staticmethod
     def validate_options(data, source=None):
