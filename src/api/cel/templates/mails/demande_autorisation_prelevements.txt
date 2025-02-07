@@ -1,4 +1,5 @@
 {% load staticfiles i18n %}
+{% load suffixe_k %}
 
 {% include "./bonjour.txt" %}
 
@@ -9,3 +10,20 @@ Veuillez vous connecter à votre compte pour accepter ou refuser cette demande.
 
 {% trans "Bien cordialement" %},
 {% trans "L'équipe d'Euskal Moneta" %}
+
+
+{% trans "==================================================" %},
+{% include "./egunon.txt" %}
+
+{% blocktrans with crediteurk=crediteur|suffixe_k %}
+
+ {{ crediteurk }} zure Eusko kontutik diru kentze automatikoaren baimen eskaera bat egin berri du.
+{% endblocktrans %}
+
+{% trans "Otoi, sartu zure kontuan eskaera hori onartzeko edo ukatzeko." %}.
+
+{% trans "Adeitasunez" %},
+{% trans "Euskal Monetaren taldea" %}
+
+
+

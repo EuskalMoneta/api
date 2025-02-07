@@ -8,3 +8,14 @@
 
 {% trans "Bien cordialement" %},
 {% trans "L'équipe d'Euskal Moneta" %}
+
+
+{% trans "==================================================" %},
+{% include "./egunon.txt" %}
+
+{% trans "Zure PIN kodea aldatu da euskopay edo euskokart erabiltzeko." %}.
+{% trans "Aldaketa hori zuk egin ez baduzu, gurekin harremanetan jar zaitez." %}.
+
+{% trans "Adeitasunez" %},
+{% trans "Euskal Monetaren taldea" %}
+

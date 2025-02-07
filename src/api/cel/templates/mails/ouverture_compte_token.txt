@@ -13,3 +13,22 @@
 
 {% trans "Bien cordialement" %},
 {% trans "L'équipe d'Euskal Moneta" %}
+
+
+{% trans "==================================================" %},
+{% include "./egunon.txt" %}
+
+{% trans "Lineako eusko kontu irekitze eskaera bat eskuratu dugu" %}.
+
+{% trans "Orain segi dezakezu azpiko loturan klik eginez" %}.
+
+{{ url }}
+
+{% trans "Ez bazara eskaera honen egilea, mezu hau kontuan ez hartu" %}.
+{% trans "Galderak baldin badituzu, gurekin harremanetan jartzeko ez duda" %}.
+
+{% trans "Adeitasunez" %},
+{% trans "Euskal Monetaren taldea" %}
+
+
+

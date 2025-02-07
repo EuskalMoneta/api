@@ -1,4 +1,5 @@
 {% load staticfiles i18n %}
+{% load suffixe_k %}
 
 {% include "./bonjour.txt" %}
 
@@ -15,3 +16,25 @@
 
 {% trans "Bien cordialement" %},
 {% trans "L'équipe d'Euskal Moneta" %}
+
+
+{% trans "==================================================" %},
+{% include "./egunon.txt" %}
+
+
+{% trans "Zure lineako Eusko kontura sartzeko lehen konexio eskaera bat eskuratu dugu" %}.
+
+{% trans "Orain zure konexio pasahitza hauta dezakezu azpiko loturan klik eginez" %} :
+
+{{ token }}
+
+{% trans "Segurtasun galdera bat ere zehaztu behar duzu, zure nortasuna egiaztatzeko erabiliko dena, zure pasahitza galduko bazenu" %}.
+
+{% trans "Ez bazara eskaera honen egilea, mezu hau kontuan ez hartu" %}.
+{% trans "Galderak baldin badituzu, gurekin harremanetan jartzeko ez duda" %}.
+
+{% trans "Adeitasunez" %},
+{% trans "Euskal Monetaren taldea" %}
+
+
+
