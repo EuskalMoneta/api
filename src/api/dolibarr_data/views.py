@@ -138,12 +138,9 @@ def associations(request):
     """
     List all associations, and if you want, you can filter them.
     """
-    if request.user.is_authenticated:
-        dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-    else:
-        dolibarr = DolibarrAPI()
-        dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
-                       password=settings.APPS_ANONYMOUS_PASSWORD)
+    dolibarr = DolibarrAPI()
+    dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                   password=settings.APPS_ANONYMOUS_PASSWORD)
     associations = dolibarr.get(model='associations')
     associations.sort(key=lambda a: a['nom'])
     approved = request.GET.get('approved', '')

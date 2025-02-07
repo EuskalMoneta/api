@@ -1,4 +1,5 @@
 {% load staticfiles i18n %}
+{% load suffixe_k %}
 
 {% include "./bonjour.txt" %}
 
@@ -10,3 +11,18 @@ Vous venez de recevoir un virement de {{ montant }} eusko de la part de {{ emett
 
 {% trans "Bien cordialement" %},
 {% trans "L'équipe d'Euskal Moneta" %}
+
+{% trans "==================================================" %},
+{% include "./egunon.txt" %}
+
+{% blocktrans with emetteur_en=emetteur|suffixe_en %}
+
+{{ emetteur_en }} partez {{ montant }} euskoko transferentzia bat jaso berri duzu.
+{% endblocktrans %}
+
+{% trans "Biramendu  bat jasotzen duzunean ez baduzu mezurik jaso nahi, jakinarazpen horiek desaktibatu ditzakezu zure Eusko kontutik “Profil” atalean > Jakinarazpenak." %}.
+
+{% trans "Adeitasunez" %},
+{% trans "Euskal Monetaren taldea" %}
+
+

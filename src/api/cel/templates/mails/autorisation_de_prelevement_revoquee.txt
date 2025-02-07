@@ -8,3 +8,19 @@
 
 {% trans "Bien cordialement" %},
 {% trans "L'équipe d'Euskal Moneta" %}
+{% load suffixe_k %}
+
+
+{% trans "==================================================" %},
+{% include "./egunon.txt" %}
+
+{% blocktrans with debiteur_k=debiteur|suffixe_k %}
+
+{{ debiteur }} ezeztatu du zure diru kentze baimena bere eusko kontutik.
+{% endblocktrans %}
+
+
+{% trans "Adeitasunez" %},
+{% trans "Euskal Monetaren taldea" %}
+
+

@@ -1012,7 +1012,7 @@ def export_vers_odoo(request):
                             { 'account_id': COMPTE_EUSKO_BILLETS_EN_CIRCULATION, 'credit': payment['amount'] }])
 
     # Opérations concernant les banques de dépôt.
-    for banque in ('CAMPG', 'LBPO',) :
+    for banque in ('CCOP',) :
         # On commence par récupérer l'identifiant du compte de la banque.
         bank_user_data = cyclos.post(method='user/search', data={'keywords': banque})['result']['pageItems'][0]
         bank_account_query = [bank_user_data['id'], None]

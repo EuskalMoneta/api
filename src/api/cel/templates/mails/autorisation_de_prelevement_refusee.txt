@@ -1,4 +1,5 @@
 {% load staticfiles i18n %}
+{% load suffixe_k %}
 
 {% include "./bonjour.txt" %}
 
@@ -7,4 +8,15 @@
 {% endblocktrans %}
 
 {% trans "Bien cordialement" %},
-{% trans "L'équipe d'Euskal Moneta" %}
+
+{% trans "==================================================" %},
+{% include "./egunon.txt" %}
+{% blocktrans with emetteur_k=emetteur|suffixe_k %}
+{{ emetteur_k }} uko egin dio zure baimen eskaerari diru kentzeak bere eusko kontutik egiteko.
+
+{% endblocktrans %}
+
+{% trans "Adeitasunez" %},
+{% trans "Euskal Monetaren taldea" %}
+
+

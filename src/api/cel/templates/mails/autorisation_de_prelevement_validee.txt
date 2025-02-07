@@ -1,5 +1,5 @@
 {% load staticfiles i18n %}
-
+{% load suffixe_k %}
 {% include "./bonjour.txt" %}
 
 {% blocktrans %}
@@ -8,3 +8,16 @@
 
 {% trans "Bien cordialement" %},
 {% trans "L'équipe d'Euskal Moneta" %}
+
+{% trans "==================================================" %},
+{% include "./egunon.txt" %}
+
+{% blocktrans with debiteurk=debiteur|suffixe_k %}
+
+{{ debiteurk }} onartu du zure diru kentze automatikoaren baimen eskaera bere kontutik
+{% endblocktrans %}
+
+{% trans "Adeitasunez" %},
+{% trans "Euskal Monetaren taldea" %}
+
+
