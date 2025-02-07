@@ -23,6 +23,7 @@ class CyclosAPI(object):
 
     def __init__(self, **kwargs):
         self.__dict__.update(kwargs)
+        self.session = requests.Session()
         try:
             self.url
         except AttributeError:
@@ -83,7 +84,7 @@ class CyclosAPI(object):
 
     def login(self, auth_string):
         """Login function to get Cyclos token."""
-        r = requests.post('{}/login/login'.format(self.url),
+        r = self.session.post('{}/login/login'.format(self.url),
                           headers=self._handle_auth_headers(auth_string=auth_string))
 
         json_response = r.json()
@@ -102,7 +103,7 @@ class CyclosAPI(object):
 
     def refresh_token(self):
         """Refresh Cyclos token."""
-        r = requests.post('{}/login/replaceSession'.format(self.url), headers=self._handle_auth_headers())
+        r = self.session.post('{}/login/replaceSession'.format(self.url), headers=self._handle_auth_headers())
 
         json_response = r.json()
 
@@ -216,7 +217,7 @@ class CyclosAPI(object):
         for key, value in kwargs.items():
             query = "{}&{}={}".format(query, key, value)
 
-        r = requests.get(query, headers=self._handle_auth_headers())
+        r = self.session.get(query, headers=self._handle_auth_headers())
 
         return self._handle_api_response(r)
 
@@ -229,7 +230,7 @@ class CyclosAPI(object):
         else:
             query = '{}/{}'.format(self.url, method)
 
-        r = requests.post(query, json=data, headers=self._handle_auth_headers({}))
+        r = self.session.post(query, json=data, headers=self._handle_auth_headers({}))
 
         return self._handle_api_response(r)
 
@@ -242,7 +243,7 @@ class CyclosAPI(object):
         else:
             query = '{}/{}'.format(self.url, method)
 
-        r = requests.patch(query, json=data, headers=self._handle_auth_headers())
+        r = self.session.patch(query, json=data, headers=self._handle_auth_headers())
 
         return self._handle_api_response(r)
 
@@ -255,6 +256,6 @@ class CyclosAPI(object):
         else:
             query = '{}/{}'.format(self.url, method)
 
-        r = requests.delete(query, headers=self._handle_auth_headers())
+        r = self.session.delete(query, headers=self._handle_auth_headers())
 
         return self._handle_api_response(r)
