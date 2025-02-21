@@ -944,6 +944,7 @@ def verifier_existence_compte(request):
     log.debug("serializer.errors={}".format(serializer.errors))
 
     email = serializer.validated_data['email']
+    type = serializer.validated_data['type']
 
     dolibarr = DolibarrAPI()
     dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
@@ -964,17 +965,31 @@ def verifier_existence_compte(request):
         # fiche Adhérent existante.
         member = response[0]
 
-        url = '{}/{}/ouverture-compte?token={}'.format(
-            settings.CEL_PUBLIC_URL,
-            request.data['language'],
-            member['array_options']['options_token'])
+        if type == "compte":
+            url = '{}/{}/ouverture-compte?token={}'.format(
+                settings.CEL_PUBLIC_URL,
+                request.data['language'],
+                member['array_options']['options_token'])
 
-        # On active la langue choisie par l'utilisateur.
-        activate(serializer.validated_data['language'])
+            # On active la langue choisie par l'utilisateur.
+            activate(serializer.validated_data['language'])
 
-        subject = _('Votre ouverture de compte en ligne Eusko')
-        body = render_to_string('mails/ouverture_compte_token.txt', {'url': url, 'user': member})
-        sendmail_euskalmoneta(subject=subject, body=body, to_email=email)
+            subject = _('Votre ouverture de compte en ligne Eusko')
+            body = render_to_string('mails/ouverture_compte_token.txt', {'url': url, 'user': member})
+            sendmail_euskalmoneta(subject=subject, body=body, to_email=email)
+
+        elif type == "adhesion":
+            url = '{}/{}/adhesion?token={}'.format(
+                settings.CEL_PUBLIC_URL,
+                request.data['language'],
+                member['array_options']['options_token'])
+
+            # On active la langue choisie par l'utilisateur.
+            activate(serializer.validated_data['language'])
+
+            subject = _('Votre adhesion en ligne Eusko')
+            body = render_to_string('mails/adhesion_token.txt', {'url': url, 'user': member})
+            sendmail_euskalmoneta(subject=subject, body=body, to_email=email)
 
         return Response({'data': member}, status=status.HTTP_200_OK)
 
@@ -1507,3 +1522,96 @@ def create_dolibarr_user_linked_to_member(dolibarr, login):
                                                            settings.DOLIBARR_CONSTANTS['groups']['adherents']))
     if res != 1:
         raise Exception('Unable to set group.')
+
+@api_view(['GET'])
+@permission_classes((AllowAny, ))
+def batch_add_mandats(request):
+    """
+        Récupérer les membres d'euskal moneta et créer un mandat de prélèvement si besoin
+
+        Conditions:
+        - prélèvement de cotisation en Eusko (prelevement_auto_cotisation_eusko = 1)
+        - montant de prélèvement suppérieur à 0 (prelevement_cotisation_montant > 0)
+        - Actif (statut = 1)
+    """
+    try:
+        # Connexion à Dolibarr et Cyclos avec l'utilisateur Anonyme.
+        dolibarr = DolibarrAPI()
+        dolibarr_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
+                                        password=settings.APPS_ANONYMOUS_PASSWORD)
+        cyclos = CyclosAPI(mode='login')
+        cyclos_token = cyclos.login(
+            auth_string=b64encode(bytes('{}:{}'.format(settings.APPS_ANONYMOUS_LOGIN,
+                                                       settings.APPS_ANONYMOUS_PASSWORD), 'utf-8')).decode('ascii'))
+
+        #on récupère le numéro de compte d'euskal moneta
+        debiteur_cyclos_id = cyclos.get_member_id_from_login('Z00001', token=cyclos_token)
+        debiteur_name = 'Euskal Moneta'
+        accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=[debiteur_cyclos_id, None])
+        numero_compte_debiteur = accounts_summaries_data['result'][0]['number']
+
+    except Exception as e:
+        log.exception(e)
+        return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    try:
+        members = dolibarr.get(model='members',
+                                sqlfilters="statut=1",
+                                api_key=dolibarr_token)
+
+        # Filtrer les résultat car dolibarr ne permet pas de sqlfilter sur array_options
+        filtered_members = [
+            member for member in members
+            if (
+                    member.get('array_options', {}).get('options_prelevement_auto_cotisation_eusko') == '1'
+                    and float(member.get('array_options', {}).get('options_prelevement_cotisation_montant', 0)) > 0
+            )
+        ]
+
+    except DolibarrAPIException:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+
+    if not filtered_members:
+        return Response({'error': 'Aucun membre trouvé'}, status=status.HTTP_400_BAD_REQUEST)
+
+    for crediteur in filtered_members:
+        try:
+            #crediteur_cyclos_id = cyclos.get_member_id_from_login(crediteur['login'], token=cyclos_token)
+            # Pour avoir le nom du débiteur, on fait une recherche dans Cyclos par son numéro de compte.
+            data = cyclos.post(method='user/search', data={'keywords': crediteur['login']})
+            if data['result']['totalCount'] == 0:
+                log.debug("Account number not found in Cyclos")
+            crediteur_cyclos_id = data['result']['pageItems'][0]['id']
+            crediteur_name = cyclos.post(method='user/load', data=crediteur_cyclos_id)['result']['name']
+
+            accounts_summaries_data = cyclos.post(method='account/getAccountsSummary', data=[crediteur_cyclos_id, None])
+            numero_compte_crediteur = accounts_summaries_data['result'][0]['number']
+
+            # Si ce mandat existe déjà, on force l'état à VALIDE
+            try:
+                mandat = Mandat.objects.get(numero_compte_crediteur=numero_compte_crediteur,
+                                            numero_compte_debiteur=numero_compte_debiteur)
+                if mandat:
+                    mandat.statut = Mandat.VALIDE
+                    mandat.save()
+
+            #sinon on le créé
+            except Mandat.DoesNotExist:
+                mandat = Mandat.save(
+                    nom_debiteur=debiteur_name,
+                    numero_compte_crediteur=numero_compte_crediteur,
+                    numero_compte_debiteur=numero_compte_debiteur,
+                    nom_crediteur=crediteur_name,
+                    statut=Mandat.VALIDE
+                )
+
+
+
+        except CyclosAPIException:
+            log.debug("Member not found in Cyclos")
+
+    return Response({
+        'message': 'Members retrieved successfully',
+        'data': filtered_members,
+        'count': len(filtered_members)
+    }, status=status.HTTP_200_OK)

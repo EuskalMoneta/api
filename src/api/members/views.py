@@ -113,7 +113,7 @@ class MembersAPIView(BaseAPIView):
                              if item['email'] == email][0]
                 return Response(user_data)
             except forms.ValidationError:
-                return Response({'error': 'You need to provide a *VALID* ?email parameter! (Format: E12345)'},
+                return Response({'error': 'You need to provide a *VALID* ?email parameter! (Format: email@domaine.fr )'},
                                 status=status.HTTP_400_BAD_REQUEST)
         elif token:
             try:

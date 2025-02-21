@@ -150,6 +150,7 @@ class CreerCompteVeeSerializer(serializers.Serializer):
 
 class VerifierCompteSerializer(serializers.Serializer):
     email = serializers.EmailField()
+    type = serializers.CharField()
     language = serializers.CharField(max_length=2)
 
     def validate_language(self, value):
