@@ -48,12 +48,17 @@ def import_csv(request, filename):
 
     for row in reader:
         try:
+            try:
+                date=datetime.strptime(row['date-execution'], '%d/%m/%Y %H:%M:%S')
+            except :
+                date=datetime.strptime(row['date-execution'], '%d/%m/%y %H:%M')
+            log.critical(date)
             echeance = models.Echeance(
                 ref=row['reference'],
                 adherent_name=row['debiteur'],
                 adherent_id=row['code'],
                 montant=float(row['montant'].replace(',', '.').strip(' €').replace(' ', '')),
-                date=datetime.strptime(row['date-execution'], '%d/%m/%Y %H:%M:%S'),
+                date=date,
                 operation_date=None)
 
             echeance.save()

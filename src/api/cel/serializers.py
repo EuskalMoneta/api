@@ -140,6 +140,7 @@ class CreerCompteVeeSerializer(serializers.Serializer):
     country_id = serializers.IntegerField()
     phone = serializers.CharField()
     id_document = serializers.CharField()
+    id_document_verso = serializers.CharField(required=False)
     idcheck_report = serializers.CharField()
     birth = serializers.DateField()
     password = serializers.CharField()
@@ -150,6 +151,7 @@ class CreerCompteVeeSerializer(serializers.Serializer):
 
 class VerifierCompteSerializer(serializers.Serializer):
     email = serializers.EmailField()
+    type = serializers.CharField()
     language = serializers.CharField(max_length=2)
 
     def validate_language(self, value):

@@ -123,6 +123,8 @@ urlpatterns = [
     url(r'^verifier-existence-compte/$', cel_views.verifier_existence_compte),
     url(r'^adherer/$', cel_views.adherer),
     url(r'^enregistrer-mandat-cotisation/$', cel_views.enregistrer_mandat_cotisation),
+    url(r'^batch-add-mandats/$', cel_views.batch_add_mandats),
+
 ]
 
 urlpatterns += router.urls
