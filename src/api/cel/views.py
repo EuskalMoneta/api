@@ -1014,8 +1014,13 @@ def creer_compte(request):
     log.debug("creer_compte()")
 
     log.debug("request.data={}".format(request.data))
-    serializer = serializers.CreerCompteSerializer(data=request.data)
-    serializer.is_valid(raise_exception=True)
+    try:
+        serializer = serializers.CreerCompteSerializer(data=request.data)
+    except Exception as e:
+        log.exception(e)
+    serializer.is_valid(raise_exception=False)
+    #serializer.is_valid(raise_exception=True)
+    log.critical(serializer.errors)
     log.debug("serializer.validated_data={}".format(serializer.validated_data))
     log.debug("serializer.errors={}".format(serializer.errors))
 
