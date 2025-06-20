@@ -484,7 +484,7 @@ def execute_virement(dolibarr, cyclos, virement):
         # recevoir une notification lorsqu'il reçoit un virement. Si c'est le cas, on lui envoie un email.
         destinataire_dolibarr = dolibarr.get(model='members',
                                              sqlfilters="login='{}'".format(destinataire_cyclos['username']))[0]
-        if destinataire_dolibarr['array_options']['options_notifications_virements']:
+        if destinataire_dolibarr['array_options']['options_notifications_virements'] == '1':
             # Activate user pre-selected language
             activate(destinataire_dolibarr['array_options']['options_langue'])
             # Translate subject & body for this email
@@ -1104,9 +1104,11 @@ def creer_compte(request):
         # Envoi d'un mail de notification.
         dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(num_adherent))[0]
         activate('fr')
+        sujet = render_to_string('mails/ouverture_compte.txt',
+                {'dolibarr_member': dolibarr_member, 'iban': 'NULL'}).strip('\n')
         texte = render_to_string('mails/ouverture_compte.txt',
-                                 {'dolibarr_member': dolibarr_member}).strip('\n')
-        sendmail_euskalmoneta(subject=texte, body=texte)
+                {'dolibarr_member': dolibarr_member, 'iban': serializer.validated_data['iban'][0:2]}).strip('\n')
+        sendmail_euskalmoneta(subject=sujet, body=texte)
         # Envoyer un mail d'information à l'adhérent.e.
         sendmailHTML_euskalmoneta(
             subject="📋 Votre compte eusko - À lire attentivement // 📋 Zure eusko kontua - Artoski irakurtzekoa",
