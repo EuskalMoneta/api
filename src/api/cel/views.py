@@ -1107,7 +1107,7 @@ def creer_compte(request):
         sujet = render_to_string('mails/ouverture_compte.txt',
                 {'dolibarr_member': dolibarr_member, 'iban': 'NULL'}).strip('\n')
         texte = render_to_string('mails/ouverture_compte.txt',
-                {'dolibarr_member': dolibarr_member, 'iban': serializer.validated_data['iban'][0:2]}).strip('\n')
+                {'dolibarr_member': dolibarr_member, 'iban': serializer.validated_data['iban'][0:2].upper()}).strip('\n')
         sendmail_euskalmoneta(subject=sujet, body=texte)
         # Envoyer un mail d'information à l'adhérent.e.
         sendmailHTML_euskalmoneta(
