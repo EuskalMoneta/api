@@ -30,3 +30,7 @@ node_modules/
 .npm/
 .idea/
 venv/
+
+exportCyclos4Anonymisee.sql
+exportDolibarrAnonymisee.sql
+.README_pass.md
