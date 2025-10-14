@@ -113,7 +113,7 @@ Une fois ces scripts passés: l'API démarre enfin Django, et le développement 
 #### Docker compose 2025
 Il est possible que les données de test dans Cyclos ne s'initialisent pas correctement lors du lancement du docker compose.
 On peut le faire manuellement avec les étapes suivantes : 
-```
+``` shell
 docker compose exec api bash
 cd /cyclos
 PASS=$(echo -n admin:admin | base64)
@@ -122,6 +122,25 @@ python init_test_data.py http://cyclos-app:8080/ $PASS
 ```
 Les données de test cyclos devraient maintenant être disponible sur http://localhost:8081/eusko
 
+Restaurer la base cyclos
+``` shell
+docker exec -i api-cyclos-db-1 psql -U postgres -c "DROP DATABASE IF EXISTS cyclos;"
+docker exec -i api-cyclos-db-1 psql -U postgres -c "CREATE DATABASE cyclos;"
+cat exportCyclos4Anonymisee.sql | docker exec -i api-cyclos-db-1 psql -U cyclos -d cyclos
+```
+
+Restaurer la base dolibarr
+``` shell
+sudo docker exec -i api-dolibarr-db-1 \
+  mysql -u pass -ppass -e "DROP DATABASE IF EXISTS pass;"    
+
+sudo docker exec -i api-dolibarr-db-1  \
+  mysql -u pass -ppass -e "CREATE DATABASE pass CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;"
+
+
+cat exportDolibarrAnonymisee.sql | sudo docker exec -i api-dolibarr-db-1 \
+  mysql -u pass -ppass pass
+```
 
 ### commandes utiles
 
