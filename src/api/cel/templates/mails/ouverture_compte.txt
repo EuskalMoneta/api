@@ -9,3 +9,6 @@
 {{ nom }} ({{ num_adherent }}) a ouvert un compte et signé un mandat de prélèvement SEPA pour le change automatique mensuel.
 {% endblocktrans %}
 {% endif %}
+{% if iban != 'NULL' and iban != 'FR' %}
+Attention IBAN n'est pas en FR
+{% endif %}

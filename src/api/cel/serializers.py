@@ -140,6 +140,7 @@ class CreerCompteVeeSerializer(serializers.Serializer):
     country_id = serializers.IntegerField()
     phone = serializers.CharField()
     id_document = serializers.CharField()
+    id_document_verso = serializers.CharField(required=False)
     idcheck_report = serializers.CharField()
     birth = serializers.DateField()
     password = serializers.CharField()
