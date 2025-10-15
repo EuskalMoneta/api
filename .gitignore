@@ -33,4 +33,5 @@ venv/
 
 exportCyclos4Anonymisee.sql
 exportDolibarrAnonymisee.sql
+exportAPI.sql
 .README_pass.md
