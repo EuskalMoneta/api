@@ -142,6 +142,13 @@ cat exportDolibarrAnonymisee.sql | sudo docker exec -i api-dolibarr-db-1 \
   mysql -u pass -ppass pass
 ```
 
+Restaurer la base API/django
+``` shell
+sudo docker cp exportAPI.sql $(sudo docker compose ps -q django-db):/tmp/exportAPI.sql
+
+sudo docker compose exec django-db psql -U django_user -d django_db -f /tmp/exportAPI.sql
+```
+
 ### commandes utiles
 
 
