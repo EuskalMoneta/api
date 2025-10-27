@@ -1,0 +1,40 @@
+{% load staticfiles i18n %}
+{% load suffixe_k %}
+
+{% trans "Bonjour" %},
+
+{% blocktrans %}
+Nous vous confirmons la résiliation de votre adhésion à l’Eusko. Votre solde et vos opérations ont été traités conformément à nos conditions générales, et votre compte est désormais clôturé.
+{% endblocktrans %}
+
+{% blocktrans %}
+Nous tenons à vous remercier sincèrement pour votre engagement dans l’Eusko et votre contribution à une économie plus locale et solidaire.
+{% endblocktrans %}
+
+{% blocktrans %}
+Si vous souhaitez, à l’avenir, rejoindre à nouveau le réseau ou en savoir plus sur nos projets, notre équipe reste à votre disposition.
+{% endblocktrans %}
+
+{% trans "Avec nos remerciements" %},
+{% trans "L'équipe d'Euskal Moneta" %}
+
+{% trans "==================================================" %},
+{% trans "Egun on" %},
+
+{% blocktrans %}
+Baieztatzen dugu zure eusko kidetzaren haustea. Zure kontuko saldoa eta eragiketak gure baldintza orokorren arabera tratatuak izan dira, eta zure kontua orain itxia da.
+{% endblocktrans %}
+
+{% blocktrans %}
+Eskertzen dizugu Euskoaren alde hartu duzun engaiamendua eta ekonomia tokikoago eta solidarioago baten alde egin duzun ekarpena.
+{% endblocktrans %}
+
+{% blocktrans %}
+Etorkizunean berriz ere sarean sartu edo gure egitasmoei buruz gehiago jakin nahi baduzu, gure taldea zure eskura gelditzen da.
+{% endblocktrans %}
+
+{% trans "Adeitasunez" %},
+{% trans "Euskal Monetaren taldea" %}
+
+
+
