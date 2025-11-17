@@ -1587,7 +1587,7 @@ def resiliation_adherent(request):
                             {})
     sendmail_euskalmoneta(subject=subject, body=body, to_email=member['email'])
 
-    subject = _("Résiliation de votre compte Eusko {}".format(member['email']))
+    subject = _("Résiliation de votre compte Eusko (copie) {} {}".format(member_login,member['email']))
     sendmail_euskalmoneta(subject=subject, body=body)
 
     return Response(status.HTTP_200_OK)
