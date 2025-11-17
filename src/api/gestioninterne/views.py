@@ -11,7 +11,8 @@ from rest_framework.decorators import api_view, permission_classes, renderer_cla
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework_csv.renderers import CSVRenderer
-
+from django.template.loader import render_to_string
+from django.utils.translation import activate, gettext as _
 from cyclos_api import CyclosAPI, CyclosAPIException
 from dolibarr_api import DolibarrAPI, DolibarrAPIException
 from gestioninterne import serializers
@@ -1479,6 +1480,8 @@ def resiliation_adherent(request):
     log.debug("serializer.errors={}".format(serializer.errors))
     member_login = serializer.validated_data['member_login']
 
+
+
     # Connexion à Dolibarr et Cyclos.
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
@@ -1577,5 +1580,14 @@ def resiliation_adherent(request):
         dolibarr.put(model='thirdparties/{}'.format(tiers_dolibarr['id']), data=data_modify_tiers)
     except DolibarrAPIException:
         log.debug("Pas de fiche Tiers")
+
+    #envoi d'un emai
+    subject = _("Résiliation de votre compte Eusko")
+    body = render_to_string('mails/send_mail_resiliation.txt',
+                            {})
+    sendmail_euskalmoneta(subject=subject, body=body, to_email=member['email'])
+
+    subject = _("Résiliation de votre compte Eusko (copie) {} {}".format(member_login,member['email']))
+    sendmail_euskalmoneta(subject=subject, body=body)
 
     return Response(status.HTTP_200_OK)

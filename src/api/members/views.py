@@ -169,7 +169,7 @@ class MembersAPIView(BaseAPIView):
                     texte = render_to_string('mails/modification_iban.txt',
                                              {'dolibarr_member': member,
                                              'nouvel_iban': data['array_options']['options_iban']}).strip('\n')
-                    sendmail_euskalmoneta(subject=sujet, body=texte)
+                    sendmail_euskalmoneta(subject=sujet, body=texte, to_email='gestion@euskalmoneta.org')
 
             except KeyError:
                 pass
