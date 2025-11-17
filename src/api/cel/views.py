@@ -1633,6 +1633,3 @@ def batch_add_mandats(request):
         'data': filtered_members,
         'count': len(filtered_members)
     }, status=status.HTTP_200_OK)
-
-@api_view(['POST'])
-@permission_classes((AllowAny, ))
