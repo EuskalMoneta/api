@@ -92,7 +92,7 @@ class MandatViewSet(viewsets.ModelViewSet):
 
         # Notification par email au débiteur.
         debiteur_dolibarr = dolibarr.get(model='members',
-                                         sqlfilters="login='{}'".format(debiteur['username']))[0]
+                sqlfilters="login:=:'{}'".format(debiteur['username']))[0]
         # Activation de la langue choisie par l'adhérent et traduction du sujet et du corps de l'email.
         activate(debiteur_dolibarr['array_options']['options_langue'])
         subject = _("Compte Eusko : demande d'autorisation de prélèvements")
@@ -199,7 +199,7 @@ def notifier_crediteur(request, mandat, template):
     crediteur_id = data['result']['pageItems'][0]['id']
     crediteur = cyclos.post(method='user/load', data=crediteur_id)['result']
     crediteur_dolibarr = dolibarr.get(model='members',
-                                      sqlfilters="login='{}'".format(crediteur['username']))[0]
+            sqlfilters="login:=:'{}'".format(crediteur['username']))[0]
     # Activation de la langue choisie par l'adhérent et traduction du sujet et du corps de l'email.
     activate(crediteur_dolibarr['array_options']['options_langue'])
     subject = _("Compte Eusko : demande d'autorisation de prélèvements")
