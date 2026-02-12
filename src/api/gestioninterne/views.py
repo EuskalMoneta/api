@@ -832,7 +832,7 @@ def calculate_3_percent(request):
             # association il parraine en 1er choix.
             # Si c'est une asso 3%, c'est elle qui reçoit les dons.
             try:
-                member_data = dolibarr.get(model='members', sqlfilters="login='{}'".format(member_id))[0]
+                member_data = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(member_id))[0]
             except DolibarrAPIException:
                 # Si on ne parvient pas à récupérer l'adhérent-e dans Dolibarr,
                 # on ignore l'erreur et on considère simplement qu'on n'a
@@ -1271,7 +1271,7 @@ def execute_changes_par_virement(request):
         try:
             # On récupère les données de l'adhérent.
             try:
-                member = dolibarr.get(model='members', sqlfilters="login='{}'".format(change['member_login']))[0]
+                member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(change['member_login']))[0]
             except DolibarrAPIException:
                 raise Exception("Adhérent.e non trouvé.e dans Dolibarr")
 
@@ -1354,7 +1354,7 @@ def paiement_cotisation_eusko_numerique(request):
     # On se connecte à Dolibarr et on récupère les données de l'adhérent.
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(serializer.data['member_login']))[0]
+        member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(serializer.data['member_login']))[0]
     except DolibarrAPIException as e:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except:
@@ -1529,7 +1529,7 @@ def resiliation_adherent(request):
 
     # Récupérer l'adhérent dans Dolibarr.
     try:
-        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(member_login))[0]
+        member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(member_login))[0]
     except:
         return Response({'error': "Impossible de récupérer l'adhérent.e dans Dolibarr."},
                         status=status.HTTP_500_INTERNAL_SERVER_ERROR)
@@ -1569,7 +1569,7 @@ def resiliation_adherent(request):
     # - si c'est une cessation d'activité, on la passe à l'état Clos
     # - si ce n'est pas une cessation d'activité, on passe le champ "Prospect / Prestataire agréé" à Prospect
     try:
-        tiers_dolibarr = dolibarr.get(model='thirdparties', sqlfilters="code_client='{}'".format(member_login))[0]
+        tiers_dolibarr = dolibarr.get(model='thirdparties', sqlfilters="code_client:=:'{}'".format(member_login))[0]
         data_modify_tiers = {
             'name': tiers_dolibarr['name'] + ' (résilié)'
         }

@@ -290,7 +290,7 @@ def change_euro_eusko(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.data['member_login']))[0]
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(request.data['member_login']))[0]
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except IndexError:
@@ -342,7 +342,7 @@ def reconversion(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.data['member_login']))[0]
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(request.data['member_login']))[0]
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except IndexError:
@@ -673,7 +673,7 @@ def cash_deposit(request):
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         bdc_code = request.data['login_bdc']
-        bdc_name = dolibarr.get(model='users', sqlfilters="login='{}'".format(bdc_code))[0]['lastname']
+        bdc_name = dolibarr.get(model='users', sqlfilters="login:=:'{}'".format(bdc_code))[0]['lastname']
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (IndexError, KeyError):
@@ -750,7 +750,7 @@ def sortie_retour_eusko(request):
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
         bdc_code = request.data['login_bdc']
-        bdc_name = dolibarr.get(model='users', sqlfilters="login='{}'".format(bdc_code))[0]['lastname']
+        bdc_name = dolibarr.get(model='users', sqlfilters="login:=:'{}'".format(bdc_code))[0]['lastname']
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except (IndexError, KeyError):
@@ -819,7 +819,7 @@ def depot_eusko_numerique(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.data['member_login']))[0]
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(request.data['member_login']))[0]
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except IndexError:
@@ -885,7 +885,7 @@ def retrait_eusko_numerique(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.data['member_login']))[0]
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(request.data['member_login']))[0]
     except DolibarrAPIException:
         return Response({'error': 'Unable to connect to Dolibarr!'}, status=status.HTTP_400_BAD_REQUEST)
     except IndexError:

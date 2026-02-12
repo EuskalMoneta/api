@@ -47,14 +47,14 @@ def first_connection(request):
         valid_login = Member.validate_num_adherent(request.data['login'])
 
         try:
-            dolibarr.get(model='users', sqlfilters="login='{}'".format(request.data['login']), api_key=dolibarr_token)
+            dolibarr.get(model='users', sqlfilters="login:=:'{}'".format(request.data['login']), api_key=dolibarr_token)
             return Response({'error': 'User already exist!'}, status=status.HTTP_201_CREATED)
         except DolibarrAPIException:
             pass
 
         if valid_login:
             # We want to search in members by login (N° Adhérent)
-            response = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.data['login']), api_key=dolibarr_token)
+            response = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(request.data['login']), api_key=dolibarr_token)
             member = [item
                          for item in response
                          if item['login'] == request.data['login']][0]
@@ -137,7 +137,7 @@ def validate_first_connection(request):
                                         password=settings.APPS_ANONYMOUS_PASSWORD)
         # We check if the user already exist, if he already exist we return a 400
         try:
-            dolibarr.get(model='users', sqlfilters="login='{}'".format(token_data['login']), api_key=dolibarr_token)
+            dolibarr.get(model='users', sqlfilters="login:=:'{}'".format(token_data['login']), api_key=dolibarr_token)
             return Response({'error': 'User already exist!'}, status=status.HTTP_201_CREATED)
         except DolibarrAPIException:
             pass
@@ -180,7 +180,7 @@ def lost_password(request):
 
         if valid_login:
             # We want to search in members by login (N° Adhérent)
-            response = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.data['login']), api_key=dolibarr_token)
+            response = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(request.data['login']), api_key=dolibarr_token)
             user_data = [item
                          for item in response
                          if item['login'] == request.data['login']][0]
@@ -483,7 +483,7 @@ def execute_virement(dolibarr, cyclos, virement):
         # On récupère dans Dolibarr les informations sur le destinataire du virement, pour savoir s'il souhaite
         # recevoir une notification lorsqu'il reçoit un virement. Si c'est le cas, on lui envoie un email.
         destinataire_dolibarr = dolibarr.get(model='members',
-                                             sqlfilters="login='{}'".format(destinataire_cyclos['username']))[0]
+                sqlfilters="login:=:'{}'".format(destinataire_cyclos['username']))[0]
         if destinataire_dolibarr['array_options']['options_notifications_virements'] == '1':
             # Activate user pre-selected language
             activate(destinataire_dolibarr['array_options']['options_langue'])
@@ -618,7 +618,7 @@ def user_rights(request):
     # Get useful data from Dolibarr for this user
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member_data = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))[0]
+        member_data = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(request.user))[0]
 
         # return Response(member_data)
         now = arrow.now('Europe/Paris')
@@ -683,7 +683,7 @@ def euskokart_update_pin(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))[0]
+        member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(request.user))[0]
 
         # Activate user pre-selected language
         activate(member['array_options']['options_langue'])
@@ -705,7 +705,7 @@ def euskokart_update_pin(request):
 def accept_cgu(request):
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member_data = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))[0]
+        member_data = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(request.user))[0]
 
         data = {'array_options': member_data['array_options']}
         data['array_options'].update({'options_accepte_cgu_eusko_numerique': True})
@@ -720,7 +720,7 @@ def accept_cgu(request):
 def refuse_cgu(request):
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        member_data = dolibarr.get(model='members', sqlfilters="login='{}'".format(request.user))[0]
+        member_data = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(request.user))[0]
 
         data = {'array_options': member_data['array_options']}
         data['array_options'].update({'options_accepte_cgu_eusko_numerique': False})
@@ -953,7 +953,7 @@ def verifier_existence_compte(request):
     try:
         response = dolibarr.get(model='members',
                                 typeid=3, #FIXME Particulier
-                                sqlfilters="email='{}' and statut=1".format(email),
+                                sqlfilters="email:=:'{}' and statut:=:1".format(email),
                                 api_key=dolibarr_token)
     except DolibarrAPIException:
         return Response(status=status.HTTP_404_NOT_FOUND)
@@ -1102,7 +1102,7 @@ def creer_compte(request):
         # Enregistrer la question/réponse de sécurité.
         create_security_qa(num_adherent, serializer.validated_data['question'], serializer.validated_data['answer'])
         # Envoi d'un mail de notification.
-        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(num_adherent))[0]
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(num_adherent))[0]
         activate('fr')
         sujet = render_to_string('mails/ouverture_compte.txt',
                 {'dolibarr_member': dolibarr_member, 'iban': 'NULL'}).strip('\n')
@@ -1181,7 +1181,7 @@ def adherer(request):
         # Créer l'utilisateur Cyclos.
         create_cyclos_user(cyclos_token, 'adherents_sans_compte', '{} {}'.format(firstname, lastname), num_adherent)
         # Envoi d'un mail de notification.
-        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(num_adherent))[0]
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(num_adherent))[0]
         activate('fr')
         texte = render_to_string('mails/adhesion.txt',
                                  {'dolibarr_member': dolibarr_member}).strip('\n')
@@ -1228,7 +1228,7 @@ def enregistrer_mandat_cotisation(request):
                                              filename="{}-Mandat-SEPA.pdf".format(num_adherent),
                                              filecontent=serializer.validated_data['sepa_document'])
         # Envoi d'un mail de notification.
-        dolibarr_member = dolibarr.get(model='members', sqlfilters="login='{}'".format(num_adherent))[0]
+        dolibarr_member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(num_adherent))[0]
         activate('fr')
         texte = render_to_string('mails/signature_mandat_cotisation.txt',
                                  {'dolibarr_member': dolibarr_member}).strip('\n')
@@ -1314,7 +1314,7 @@ def update_dolibarr_member(dolibarr, login, data):
     :param login: numéro d'adhérent
     :return: rowid de l'adhérent mis à jour
     """
-    member = dolibarr.get(model='members', sqlfilters="login='{}'".format(login))[0]
+    member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(login))[0]
     dolibarr_member_rowid = member['id']
     dolibarr_data = {}
     for key in ('lastname', 'firstname', 'email', 'address', 'zip', 'town', 'country_id', 'civility_id'):
@@ -1527,7 +1527,7 @@ def create_dolibarr_user_linked_to_member(dolibarr, login):
     :param login: numéro d'adhérent
     :return:
     """
-    member = dolibarr.get(model='members', sqlfilters="login='{}'".format(login))[0]
+    member = dolibarr.get(model='members', sqlfilters="login:=:'{}'".format(login))[0]
     dolibarr_user_id = dolibarr.post(model='users', data={
         'login': login,
         'admin': 0,
@@ -1574,7 +1574,7 @@ def batch_add_mandats(request):
 
     try:
         members = dolibarr.get(model='members',
-                                sqlfilters="statut=1",
+                sqlfilters="statut:=:1",
                                 api_key=dolibarr_token)
 
         # Filtrer les résultat car dolibarr ne permet pas de sqlfilter sur array_options

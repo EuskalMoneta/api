@@ -34,7 +34,7 @@ def login(request):
             # we detected that our "username" variable is an email, we try to connect to dolibarr with it
             dolibarr_anonymous_token = dolibarr.login(login=settings.APPS_ANONYMOUS_LOGIN,
                                                       password=settings.APPS_ANONYMOUS_PASSWORD)
-            user_results = dolibarr.get(model='members', sqlfilters="email='{}' and statut=1".format(request.data['username']),
+            user_results = dolibarr.get(model='members', sqlfilters="email:=:'{}' and statut:=:1".format(request.data['username']),
                                         api_key=dolibarr_anonymous_token)
             user_data = [item
                          for item in user_results
@@ -71,7 +71,7 @@ def verify_usergroup(request):
             # validate (or not) the fact that our "username" variable is an email
             validate_email(request.query_params['username'])
 
-            user_results = dolibarr.get(model='members', sqlfilters="email='{}' and statut=1".format(request.query_params['username']))
+            user_results = dolibarr.get(model='members', sqlfilters="email:=:'{}' and statut:=:1".format(request.query_params['username']))
             user_data = [item
                          for item in user_results
                          if item['email'] == request.query_params['username']][0]
@@ -79,13 +79,13 @@ def verify_usergroup(request):
                 return Response({'error': 'Unable to get user ID from your username!'},
                                 status=status.HTTP_400_BAD_REQUEST)
 
-            user_results = dolibarr.get(model='users', sqlfilters="login='{}'".format(user_data['login']))
+            user_results = dolibarr.get(model='users', sqlfilters="login:=:'{}'".format(user_data['login']))
 
             user_id = [item
                        for item in user_results
                        if item['email'] == request.query_params['username']][0]['id']
         except forms.ValidationError:
-            user_results = dolibarr.get(model='users', sqlfilters="login='{}'".format(request.query_params['username']))
+            user_results = dolibarr.get(model='users', sqlfilters="login:=:'{}'".format(request.query_params['username']))
 
             user_id = [item
                        for item in user_results
@@ -119,7 +119,7 @@ def get_usergroups(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        user_results = dolibarr.get(model='users', sqlfilters="login='{}'".format(request.query_params['username']))
+        user_results = dolibarr.get(model='users', sqlfilters="login:=:'{}'".format(request.query_params['username']))
 
         user_id = [item
                    for item in user_results
@@ -187,7 +187,7 @@ def countries(request):
     # Dolibarr, on ne garde que l'identifiant et le nom de chaque pays,
     # et on trie la liste par ordre alphabétique, à l'exception de la
     # France qui est placée en premier.
-    countries = dolibarr.get(model='setup/dictionary/countries', lang='fr_FR', limit='0', sqlfilters='active=1')
+    countries = dolibarr.get(model='setup/dictionary/countries', lang='fr_FR', limit='0', sqlfilters='active:=:1')
     france_id = next(c for c in countries if c['label'] == 'France')['id']
     countries = [{'id': c['id'], 'label': c['label']} for c in countries if c['label'] != 'France']
     countries.sort(key=lambda c: c['label'])
@@ -238,7 +238,7 @@ def get_user_data(request):
 
     try:
         dolibarr = DolibarrAPI(api_key=request.user.profile.dolibarr_token)
-        user_results = dolibarr.get(model='users', sqlfilters="login='{}'".format(username))
+        user_results = dolibarr.get(model='users', sqlfilters="login:=:'{}'".format(username))
 
         user_data = [item
                      for item in user_results
