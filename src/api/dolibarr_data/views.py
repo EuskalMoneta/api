@@ -99,7 +99,7 @@ def verify_usergroup(request):
     usergroups_ids = [item['id']
                       for item in usergroups_res]
     try:
-        group_constant_id = str(settings.DOLIBARR_CONSTANTS['groups'][request.query_params['usergroup']])
+        group_constant_id = settings.DOLIBARR_CONSTANTS['groups'][request.query_params['usergroup']]
     except KeyError:
         return Response(status=status.HTTP_204_NO_CONTENT)
 
