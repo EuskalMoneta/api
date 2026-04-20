@@ -953,7 +953,7 @@ def verifier_existence_compte(request):
     try:
         response = dolibarr.get(model='members',
                                 typeid=3, #FIXME Particulier
-                                sqlfilters="email:=:'{}' and statut:=:1".format(email),
+                                sqlfilters="(email:=:'{}') and (statut:=:1)".format(email),
                                 api_key=dolibarr_token)
     except DolibarrAPIException:
         return Response(status=status.HTTP_404_NOT_FOUND)

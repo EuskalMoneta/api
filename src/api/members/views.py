@@ -94,7 +94,7 @@ class MembersAPIView(BaseAPIView):
         elif name and len(name) >= 3:
             # We want to search in members by name (firstname, lastname or societe)
             try:
-                sqlfilters = "(firstname :like: '%25{name}%25' or lastname :like: '%25{name}%25' or societe :like: '%25{name}%25') and statut:=:1".format(name=name)
+                sqlfilters = "((firstname:like:'%25{name}%25') or (lastname:like:'%25{name}%25') or (societe:like:'%25{name}%25')) and (statut:=:1)".format(name=name)
                 response = self.dolibarr.get(model='members', sqlfilters=sqlfilters, api_key=dolibarr_token)
             except DolibarrAPIException:
                 return Response(status=status.HTTP_204_NO_CONTENT)
@@ -107,7 +107,7 @@ class MembersAPIView(BaseAPIView):
         elif email:
             try:
                 validate_email(email)
-                user_results = self.dolibarr.get(model='members', sqlfilters="email:=:'{}' and statut:=:1".format(email), api_key=dolibarr_token)
+                user_results = self.dolibarr.get(model='members', sqlfilters="(email:=:'{}') and (statut:=:1)".format(email), api_key=dolibarr_token)
                 user_data = [item
                              for item in user_results
                              if item['email'] == email][0]
