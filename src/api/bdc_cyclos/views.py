@@ -180,7 +180,7 @@ def entree_stock(request):
     for payment in request.data['selected_payments']:
         try:
             porteur = [
-                value['linkedEntityValue']['id']
+                value['stringValue']
                 for value in payment['customValues']
                 if value['field']['id'] == str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']) and
                 value['field']['internalName'] == 'porteur'
@@ -217,7 +217,7 @@ def entree_stock(request):
             'customValues': [
                 {
                     'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                    'linkedEntityValue': porteur  # ID du porteur
+                    'stringValue': porteur # ID du porteur
                 },
             ],
             'description': description,
@@ -264,7 +264,7 @@ def sortie_stock(request):
         'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                'linkedEntityValue': request.data['porteur']  # ID du porteur
+                'stringValue': request.data['porteur']  # ID du porteur
             },
         ],
         'description': request.data['description'],
@@ -710,7 +710,7 @@ def cash_deposit(request):
         cash_deposit_data.update({'customValues': [
             {
                 'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                'linkedEntityValue': porteur  # ID du porteur
+                'stringValue': porteur  # ID du porteur
             },
         ]})
 
@@ -782,7 +782,7 @@ def sortie_retour_eusko(request):
                 },
                 {
                     'field': str(settings.CYCLOS_CONSTANTS['transaction_custom_fields']['porteur']),
-                    'linkedEntityValue': request.data['porteur']  # ID du porteur
+                    'stringValue': request.data['porteur']  # ID du porteur
                 },
             ],
             # "Sortie retour d'eusko - Bxxx - Nom du BDC
